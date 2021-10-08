@@ -1,0 +1,3 @@
+*.o
+.vscode/
+assimp-5.0.1/
