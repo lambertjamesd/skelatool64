@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include "src/SceneWriter.h"
+
 /**
  * F3DEX2 - 32 vertices in buffer
  * F3D - 16 vetcies in buffer
@@ -17,7 +19,7 @@ int main() {
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
 
     const aiScene* scene = importer.ReadFile(
-        "/home/james/Documents/Blender/OnlyCube.fbx", 
+        "/home/james/Documents/Blender/ArmatureTest.fbx", 
         aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         aiProcess_LimitBoneWeights |
@@ -32,7 +34,11 @@ int main() {
         return 1;
     }
 
-    std::cout << "Hello World!" << (size_t)scene << std::endl;
+    DisplayListSettings settings = DisplayListSettings();
+
+    settings.mScale = 32.0f;
+
+    generateMeshFromSceneToFile(scene, "output/example.c", settings);
     
     return 0;
 }

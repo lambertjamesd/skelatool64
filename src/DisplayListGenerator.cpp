@@ -23,8 +23,8 @@ void flushVertices(std::set<int>& currentVertices, std::vector<aiFace*>& current
 
     VertexData vertexData[MAX_VERTEX_CACHE_SIZE];
 
-    for (auto vertexIndex = verticesAsVector.begin(); vertexIndex != verticesAsVector.end(); ++vertexIndex) {
-        vertexData[*vertexIndex] = VertexData(vertexBuffer, verticesAsVector[*vertexIndex], -1);
+    for (unsigned int vertexIndex = 0; vertexIndex < verticesAsVector.size() && vertexIndex < MAX_VERTEX_CACHE_SIZE; ++vertexIndex) {
+        vertexData[vertexIndex] = VertexData(vertexBuffer, verticesAsVector[vertexIndex], -1);
     }
     
     unsigned int cacheLocation[MAX_VERTEX_CACHE_SIZE];
@@ -40,20 +40,20 @@ void flushVertices(std::set<int>& currentVertices, std::vector<aiFace*>& current
         int cacheIndex;
         
         if (index < verticesAsVector.size()) {
-            vertexIndex = cacheLocation[vertexIndex];
-            cacheIndex = verticesAsVector[vertexIndex];
+            vertexIndex = verticesAsVector[index];
+            cacheIndex = cacheLocation[index];
             vertexMapping[vertexIndex] = cacheIndex;
         }
 
-        if (index == verticesAsVector.size() || vertexIndex != lastVertexIndex + 1 || cacheIndex != lastCacheLocation + 1) {
+        if (index == verticesAsVector.size() || (index != 0 && (vertexIndex != lastVertexIndex + 1 || cacheIndex != lastCacheLocation + 1))) {
             output.AddCommand(std::unique_ptr<DisplayListCommand>(new VTXCommand(
-                vertexCount + 1, 
+                vertexCount, 
                 lastCacheLocation + 1 - vertexCount, 
                 vertexBuffer, 
                 lastVertexIndex + 1 - vertexCount
             )));
 
-            vertexCount = 0;
+            vertexCount = 1;
         } else {
             ++vertexCount;
         }

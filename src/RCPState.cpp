@@ -1,6 +1,8 @@
 
 #include "./RCPState.h"
 
+#include <set>
+
 VertexData::VertexData() :
     mVertexBuffer(-1),
     mVertexIndex(-1),
@@ -21,9 +23,53 @@ const bool VertexData::operator==(const VertexData& other) {
         mMatrixIndex == other.mMatrixIndex;
 }
 
-RCPState::RCPState(int maxVertexCount) :
-    mMaxVertices(maxVertexCount) {
+RCPState::RCPState(unsigned int maxVertexCount, unsigned int maxMatrixDepth, bool canPopMultiple) :
+    mMaxVertices(maxVertexCount),
+    mMaxMatrixDepth(maxMatrixDepth),
+    mCanPopMultiple(canPopMultiple) {
 
+}
+
+ErrorCode RCPState::TraverseToBone(Bone* bone, DisplayList& output) {
+    std::set<Bone*> bonesToPop(mBoneMatrixStack.begin(), mBoneMatrixStack.end());
+
+    Bone* curr = bone;
+
+    while (curr) {
+        bonesToPop.erase(curr);
+        curr = curr->GetParent();
+    }
+
+    if (mCanPopMultiple) {
+        output.AddCommand(std::unique_ptr<DisplayListCommand>(new PopMatrixCommand(bonesToPop.size())));
+    } else {
+        for (unsigned int i = 0; i < bonesToPop.size(); ++i) {
+            output.AddCommand(std::unique_ptr<DisplayListCommand>(new PopMatrixCommand(1)));
+        }
+    }
+
+    mBoneMatrixStack.resize(mBoneMatrixStack.size() - bonesToPop.size());
+
+    std::vector<Bone*> bonesToAdd;
+
+    curr = bone;
+
+    while (curr != nullptr && (mBoneMatrixStack.size() == 0 || *mBoneMatrixStack.rbegin() != curr)) {
+        bonesToAdd.push_back(curr);
+        curr = curr->GetParent();
+    }
+
+    for (auto curr = bonesToAdd.rbegin(); curr != bonesToAdd.rend(); ++curr) {
+        if (mBoneMatrixStack.size() == mMaxMatrixDepth) {
+            return ErrorCode::MatrixStackOverflow;
+        }
+
+        mBoneMatrixStack.push_back(*curr);
+        output.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand((*curr)->GetName())));
+        output.AddCommand(std::unique_ptr<DisplayListCommand>(new PushMatrixCommand((*curr)->GetIndex(), false)));
+    }
+
+    return ErrorCode::None;
 }
 
 void RCPState::AssignSlots(VertexData* newVertices, unsigned int* slotIndex, unsigned int vertexCount) {
@@ -48,10 +94,10 @@ void RCPState::AssignSlots(VertexData* newVertices, unsigned int* slotIndex, uns
     unsigned int nextTarget = 0;
     unsigned int nextSource = 0;
 
-    while (nextTarget < mMaxVertices || nextSource < vertexCount) {
-        if (nextTarget < mMaxVertices && usedSlots[nextTarget]) {
+    while (nextTarget < mMaxVertices && nextSource < vertexCount) {
+        if (usedSlots[nextTarget]) {
             ++nextTarget;
-        } else if (nextSource < vertexCount && assignedVertices[nextSource]) {
+        } else if (assignedVertices[nextSource]) {
             ++nextSource;
         } else {
             slotIndex[nextSource] = nextTarget;

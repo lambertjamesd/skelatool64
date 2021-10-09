@@ -7,9 +7,12 @@
 #include <iostream>
 
 enum class DisplayListCommandType {
+    COMMENT,
     G_VTX,
     G_TRI1,
     G_TRI2,
+    G_MTX,
+    G_POPMTX,
 };
 
 class DisplayList;
@@ -17,10 +20,20 @@ class CFileDefinition;
 
 struct DisplayListCommand {
     DisplayListCommand(DisplayListCommandType type);
+    virtual ~DisplayListCommand();
 
     DisplayListCommandType mType;
 
-    virtual void GenerateCommand(CFileDefinition& fileDefinition, std::ostringstream& output) = 0;
+    virtual bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) = 0;
+};
+
+
+struct CommentCommand : DisplayListCommand {
+    CommentCommand(std::string comment);
+
+    std::string mComment;
+
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 };
 
 struct VTXCommand : DisplayListCommand {
@@ -36,7 +49,7 @@ struct VTXCommand : DisplayListCommand {
     int mVertexBufferID;
     int mVertexBufferOffset;
 
-    void GenerateCommand(CFileDefinition& fileDefinition, std::ostringstream& output);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 };
 
 struct TRI1Command : DisplayListCommand {
@@ -46,7 +59,7 @@ struct TRI1Command : DisplayListCommand {
     int mB;
     int mC;
 
-    void GenerateCommand(CFileDefinition& fileDefinition, std::ostringstream& output);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 };
 
 struct TRI2Command : DisplayListCommand {
@@ -60,7 +73,7 @@ struct TRI2Command : DisplayListCommand {
     int mB1;
     int mC1;
 
-    void GenerateCommand(CFileDefinition& fileDefinition, std::ostringstream& output);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 };
 
 struct CallDisplayListCommand {
@@ -69,12 +82,30 @@ struct CallDisplayListCommand {
     int mTargetDL;
     int mOffset;
 
-    std::string GenerateCommand(CFileDefinition& fileDefinition);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+};
+
+struct PushMatrixCommand : DisplayListCommand {
+    PushMatrixCommand(unsigned int matrixOffset, bool replace);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+
+    unsigned int mMatrixOffset;
+    bool mReplace;
+};
+
+struct PopMatrixCommand : DisplayListCommand {
+    PopMatrixCommand(unsigned int popCount);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+
+    unsigned int mPopCount;
 };
 
 class DisplayList {
 public:
+    DisplayList(std::string name);
     void AddCommand(std::unique_ptr<DisplayListCommand> command);
+
+    void Generate(CFileDefinition& fileDefinition, std::ostream& output);
 private:
     std::string mName;
     std::vector<std::unique_ptr<DisplayListCommand>> mDisplayList;
