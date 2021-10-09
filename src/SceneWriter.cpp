@@ -7,6 +7,7 @@
 #include "./DisplayListGenerator.h"
 #include "./BoneHierarchy.h"
 #include "./ExtendedMesh.h"
+#include "./RenderChunk.h"
 
 DisplayListSettings::DisplayListSettings():
     mPrefix(""),
@@ -32,10 +33,15 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, DisplayLi
         extendedMeshes.push_back(std::unique_ptr<ExtendedMesh>(new ExtendedMesh(scene->mMeshes[i], bones)));
     }
 
-    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+    std::vector<RenderChunk> renderChunks;
+
+    extractChunks(extendedMeshes, renderChunks);
+    orderChunks(renderChunks);
+
+    for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
         // todo apply material
-        int vertexBuffer = fileDefinition.GetVertexBuffer(scene->mMeshes[i], VertexType::PosUVColor);
-        generateGeometry(scene->mMeshes[i], rcpState, vertexBuffer, displayList, settings.mHasTri2);
+        int vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh->mMesh, VertexType::PosUVColor);
+        generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
     }
 
     fileDefinition.GenerateVertexBuffers(output, settings.mScale);

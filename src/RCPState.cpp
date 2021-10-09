@@ -41,7 +41,9 @@ ErrorCode RCPState::TraverseToBone(Bone* bone, DisplayList& output) {
     }
 
     if (mCanPopMultiple) {
-        output.AddCommand(std::unique_ptr<DisplayListCommand>(new PopMatrixCommand(bonesToPop.size())));
+        if (bonesToPop.size() != 0) {
+            output.AddCommand(std::unique_ptr<DisplayListCommand>(new PopMatrixCommand(bonesToPop.size())));
+        }
     } else {
         for (unsigned int i = 0; i < bonesToPop.size(); ++i) {
             output.AddCommand(std::unique_ptr<DisplayListCommand>(new PopMatrixCommand(1)));

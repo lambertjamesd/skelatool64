@@ -5,7 +5,8 @@
 #include "./RCPState.h"
 #include "./DisplayList.h"
 #include "./CFileDefinition.h"
+#include "./RenderChunk.h"
 
-void generateGeometry(aiMesh* mesh, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2);
+void generateGeometry(RenderChunk& mesh, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2);
 
 #endif

@@ -29,6 +29,8 @@ public:
     static Bone* StepDownTowards(Bone* ancestor, Bone* decendant);
 
     static bool CompareBones(Bone* a, Bone* b);
+    // return -1 if a is null
+    static int GetBoneIndex(Bone* a);
 private:
     int mIndex;
     std::string mName;

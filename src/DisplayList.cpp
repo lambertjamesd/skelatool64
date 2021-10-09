@@ -82,9 +82,9 @@ PushMatrixCommand::PushMatrixCommand(unsigned int matrixOffset, bool replace):
 }
 
 bool PushMatrixCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
-    output << "gsSPMatrix((*Mtx)MATRIX_TRANSFORM_SEGMENT + " << mMatrixOffset << ",";
+    output << "gsSPMatrix((*Mtx)MATRIX_TRANSFORM_SEGMENT + " << mMatrixOffset << ", ";
     
-    output << "G_MTX_MODELVIEW | G_MTX_MUL |";
+    output << "G_MTX_MODELVIEW | G_MTX_MUL | ";
     
     if (mReplace) {
         output << "G_MTX_NOPUSH";

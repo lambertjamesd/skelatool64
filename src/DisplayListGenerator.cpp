@@ -17,9 +17,20 @@ bool doesFaceFit(std::set<int>& indices, aiFace* face, unsigned int maxVertices)
     return indices.size() + misses <= maxVertices;
 }
 
-void flushVertices(std::set<int>& currentVertices, std::vector<aiFace*>& currentFaces, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
+void flushVertices(RenderChunk& chunk, std::set<int>& currentVertices, std::vector<aiFace*>& currentFaces, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
     std::vector<int> verticesAsVector(currentVertices.begin(), currentVertices.end());
-    std::sort(verticesAsVector.begin(), verticesAsVector.end());
+
+    std::sort(verticesAsVector.begin(), verticesAsVector.end(), 
+        [=](int a, int b) -> bool {
+        Bone* boneA = chunk.mMesh->mVertexBones[a];
+        Bone* boneB = chunk.mMesh->mVertexBones[b];
+
+        if (boneA != boneB && (boneA == chunk.mBonePair.first || boneB == chunk.mBonePair.second)) {
+            return true;
+        }
+
+        return a < b;
+    });
 
     VertexData vertexData[MAX_VERTEX_CACHE_SIZE];
 
@@ -33,19 +44,27 @@ void flushVertices(std::set<int>& currentVertices, std::vector<aiFace*>& current
     int lastVertexIndex = -1;
     int lastCacheLocation = MAX_VERTEX_CACHE_SIZE;
     int vertexCount = 0;
+    Bone* lastBone = nullptr;
     std::map<int, int> vertexMapping;
 
     for (unsigned int index = 0; index <= verticesAsVector.size(); ++index) {
         int vertexIndex;
         int cacheIndex;
+        Bone* bone = nullptr;
         
         if (index < verticesAsVector.size()) {
             vertexIndex = verticesAsVector[index];
             cacheIndex = cacheLocation[index];
             vertexMapping[vertexIndex] = cacheIndex;
+            bone = chunk.mMesh->mVertexBones[vertexIndex];
         }
 
-        if (index == verticesAsVector.size() || (index != 0 && (vertexIndex != lastVertexIndex + 1 || cacheIndex != lastCacheLocation + 1))) {
+        if (index == verticesAsVector.size() || 
+            (index != 0 && (
+                vertexIndex != lastVertexIndex + 1 || 
+                cacheIndex != lastCacheLocation + 1 || bone != lastBone
+            ))) {
+            state.TraverseToBone(lastBone, output);
             output.AddCommand(std::unique_ptr<DisplayListCommand>(new VTXCommand(
                 vertexCount, 
                 lastCacheLocation + 1 - vertexCount, 
@@ -60,6 +79,7 @@ void flushVertices(std::set<int>& currentVertices, std::vector<aiFace*>& current
 
         lastVertexIndex = vertexIndex;
         lastCacheLocation = cacheIndex;
+        lastBone = bone;
     }
 
     for (unsigned int faceIndex = 0; faceIndex < currentFaces.size(); ++faceIndex) {
@@ -83,26 +103,28 @@ void flushVertices(std::set<int>& currentVertices, std::vector<aiFace*>& current
     }
 }
 
-void generateGeometry(aiMesh* mesh, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
+void generateGeometry(RenderChunk& chunk, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
     std::set<int> currentVertices;
     std::vector<aiFace*> currentFaces;
 
-    for (unsigned int faceIndex = 0; faceIndex <= mesh->mNumFaces; ++faceIndex) {
-        if (faceIndex == mesh->mNumFaces || !doesFaceFit(currentVertices, &mesh->mFaces[faceIndex], state.GetMaxVertices())) {
-            flushVertices(currentVertices, currentFaces, state, vertexBuffer, output, hasTri2);
+    const std::vector<aiFace*>& faces = chunk.GetFaces();
+
+    for (unsigned int faceIndex = 0; faceIndex <= faces.size(); ++faceIndex) {
+        if (faceIndex == faces.size() || !doesFaceFit(currentVertices, faces[faceIndex], state.GetMaxVertices())) {
+            flushVertices(chunk, currentVertices, currentFaces, state, vertexBuffer, output, hasTri2);
 
             currentVertices.clear();
             currentFaces.clear();
 
-            if (faceIndex == mesh->mNumFaces) {
+            if (faceIndex == faces.size()) {
                 break;
             }
         }
 
-        for (unsigned int vertexIndex = 0; vertexIndex < mesh->mFaces[faceIndex].mNumIndices; ++vertexIndex) {
-            currentVertices.insert(mesh->mFaces[faceIndex].mIndices[vertexIndex]);
+        for (unsigned int vertexIndex = 0; vertexIndex < faces[faceIndex]->mNumIndices; ++vertexIndex) {
+            currentVertices.insert(faces[faceIndex]->mIndices[vertexIndex]);
         }
 
-        currentFaces.push_back(&mesh->mFaces[faceIndex]);
+        currentFaces.push_back(faces[faceIndex]);
     }
 }

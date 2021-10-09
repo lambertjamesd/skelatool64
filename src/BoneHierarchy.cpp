@@ -73,6 +73,14 @@ bool Bone::CompareBones(Bone* a, Bone* b) {
     }
 }
 
+int Bone::GetBoneIndex(Bone* a) {
+    if (a == nullptr) {
+        return -1;
+    } else {
+        return a->mIndex;
+    }
+}
+
 void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones) {
     if (knownBones.find(node->mName.C_Str()) != knownBones.end()) {
         aiVector3D restPosition;
