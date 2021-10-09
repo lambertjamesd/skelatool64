@@ -8,13 +8,13 @@ SRC_FILES = main.cpp $(wildcard ./src/*.cpp)
 OBJ_FILES =	$(SRC_FILES:.cpp=.o)
 
 .PHONY: default
-default: dlgen
+default: skeletool64
 
 %.o: %.cpp
 	g++ $(GCC_FLAGS) -c $< -o $@
 
-dlgen: $(OBJ_FILES)
-	g++ -g -o dlgen $(OBJ_FILES) $(LINKER_FLAGS)
+skeletool64: $(OBJ_FILES)
+	g++ -g -o skeletool64 $(OBJ_FILES) $(LINKER_FLAGS)
 
 clean:
-	rm $(OBJ_FILES) dlgen
+	rm $(OBJ_FILES) skeletool64
