@@ -5,6 +5,8 @@
 
 #include "./DisplayList.h"
 #include "./DisplayListGenerator.h"
+#include "./BoneHierarchy.h"
+#include "./ExtendedMesh.h"
 
 DisplayListSettings::DisplayListSettings():
     mPrefix(""),
@@ -20,6 +22,15 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, DisplayLi
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     CFileDefinition fileDefinition(settings.mPrefix);
     DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
+    BoneHierarchy bones;
+
+    bones.SearchForBonesInScene(scene);
+
+    std::vector<std::unique_ptr<ExtendedMesh>> extendedMeshes;
+
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        extendedMeshes.push_back(std::unique_ptr<ExtendedMesh>(new ExtendedMesh(scene->mMeshes[i], bones)));
+    }
 
     for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
         // todo apply material

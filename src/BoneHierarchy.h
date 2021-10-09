@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <set>
+#include <map>
 #include "ErrorCode.h"
 
 class Bone {
@@ -18,6 +19,16 @@ public:
     int GetIndex();
     const std::string& GetName();
     Bone* GetParent();
+
+    static Bone* FindCommonAncestor(Bone* a, Bone* b);
+    /**
+     *  Assumes ancestor is an ancestor of decendant
+     *  Returns the child bone of ancestor that is an ancestor
+     *  of decendant or is decendant
+     */
+    static Bone* StepDownTowards(Bone* ancestor, Bone* decendant);
+
+    static bool CompareBones(Bone* a, Bone* b);
 private:
     int mIndex;
     std::string mName;
@@ -31,8 +42,11 @@ private:
 class BoneHierarchy {
 public:
     void SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones);
+    void SearchForBonesInScene(const aiScene* scene);
+    Bone* BoneForName(std::string name);
 private:
     std::vector<std::unique_ptr<Bone>> mBones;
+    std::map<std::string, Bone*> mBoneByName;
 };
 
 #endif

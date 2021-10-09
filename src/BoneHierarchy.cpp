@@ -25,6 +25,54 @@ Bone* Bone::GetParent() {
     return mParent;
 }
 
+Bone* Bone::FindCommonAncestor(Bone* a, Bone* b) {
+    std::set<Bone*> hierarchyDifference;
+
+    Bone* curr = a;
+
+    while (curr) {
+        hierarchyDifference.insert(curr);
+        curr = curr->mParent;
+    }
+
+    curr = b;
+    
+    while (curr) {
+        hierarchyDifference.erase(curr);
+        curr = curr->mParent;
+    }
+
+    curr = a;
+
+    while (hierarchyDifference.find(curr) != hierarchyDifference.end()) {
+        curr = curr->mParent;
+    }
+
+    return curr;
+}
+
+Bone* Bone::StepDownTowards(Bone* ancestor, Bone* decendant) {
+    Bone* curr = decendant;
+
+    while (curr && curr->mParent != ancestor) {
+        curr = curr->mParent;
+    }
+
+    return curr;
+}
+
+bool Bone::CompareBones(Bone* a, Bone* b) {
+    if (a == nullptr && b == nullptr) {
+        return false;
+    } else if (a == nullptr) {
+        return true;
+    } else if (b == nullptr) {
+        return false;
+    } else {
+        return a->mIndex < b->mIndex;
+    }
+}
+
 void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones) {
     if (knownBones.find(node->mName.C_Str()) != knownBones.end()) {
         aiVector3D restPosition;
@@ -40,9 +88,34 @@ void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::s
         )));
 
         currentBoneParent = mBones[mBones.size() - 1].get();
+        mBoneByName.insert(std::pair<std::string, Bone*>(node->mName.C_Str(), currentBoneParent));
     }
 
     for (unsigned int i = 0; i < node->mNumChildren; ++i) {
         SearchForBones(node->mChildren[i], currentBoneParent, knownBones);
+    }
+}
+
+void BoneHierarchy::SearchForBonesInScene(const aiScene* scene) {
+    std::set<std::string> knownBones;
+
+    for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
+        aiMesh* mesh = scene->mMeshes[meshIndex];
+
+        for (unsigned int boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
+            knownBones.insert(mesh->mBones[boneIndex]->mName.C_Str());
+        }
+    }
+
+    SearchForBones(scene->mRootNode, nullptr, knownBones);
+}
+
+Bone* BoneHierarchy::BoneForName(std::string name) {
+    auto result = mBoneByName.find(name);
+
+    if (result == mBoneByName.end()) {
+        return nullptr;
+    } else {
+        return result->second;
     }
 }
