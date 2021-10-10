@@ -1,12 +1,13 @@
 
 #include "BoneHierarchy.h"
 
-Bone::Bone(int index, std::string name, Bone* parent, const aiVector3D& restPosition, const aiQuaternion& restRotation):
+Bone::Bone(int index, std::string name, Bone* parent, const aiVector3D& restPosition, const aiQuaternion& restRotation, const aiVector3D& restScale):
     mIndex(index),
     mName(name),
     mParent(parent),
     mRestPosition(restPosition),
-    mRestRotation(restRotation) {
+    mRestRotation(restRotation),
+    mRestScale(restScale) {
 
     if (mParent) {
         mParent->mChildren.push_back(this);
@@ -23,6 +24,13 @@ const std::string& Bone::GetName() {
 
 Bone* Bone::GetParent() {
     return mParent;
+}
+
+void Bone::GenerateRestPosiitonData(std::ostream& output) {
+    output <<
+        "{{" << mRestPosition.x << ", " << mRestPosition.y << ", " << mRestPosition.z << "}, {" <<
+        mRestRotation.x << ", " << mRestRotation.y << ", " << mRestRotation.z << ", " << mRestRotation.w << "}, {" <<
+        mRestScale.x << ", " << mRestScale.y << ", " << mRestScale.z << "}}";
 }
 
 Bone* Bone::FindCommonAncestor(Bone* a, Bone* b) {
@@ -85,14 +93,16 @@ void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::s
     if (knownBones.find(node->mName.C_Str()) != knownBones.end()) {
         aiVector3D restPosition;
         aiQuaternion restRotation;
-        node->mTransformation.DecomposeNoScaling(restRotation, restPosition);
+        aiVector3D restScale;
+        node->mTransformation.Decompose(restScale, restRotation, restPosition);
 
         mBones.push_back(std::unique_ptr<Bone>(new Bone(
             mBones.size(),
             node->mName.C_Str(),
             currentBoneParent,
             restPosition,
-            restRotation
+            restRotation,
+            restScale
         )));
 
         currentBoneParent = mBones[mBones.size() - 1].get();
@@ -126,4 +136,26 @@ Bone* BoneHierarchy::BoneForName(std::string name) {
     } else {
         return result->second;
     }
+}
+
+void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, std::ostream& output) {
+    if (mBones.size() == 0) return;
+
+    output << "struct Transform " << variableName << "[] = {" << std::endl;
+
+    for (unsigned int boneIndex = 0; boneIndex < mBones.size(); ++boneIndex) {
+        output << "    ";
+        mBones[boneIndex]->GenerateRestPosiitonData(output);
+        output << "," << std::endl;
+    }
+
+    output << "};" << std::endl;
+}
+
+bool BoneHierarchy::HasData() const {
+    return mBones.size() > 0;
+}
+
+unsigned int BoneHierarchy::GetBoneCount() const {
+    return mBones.size();
 }

@@ -1,7 +1,7 @@
 #include "CFileDefinition.h"
 #include <stdio.h>
 
-VertexBufferDefinition::VertexBufferDefinition(aiMesh* targetMesh, std::string name, VertexType vertexType):
+VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType):
     mTargetMesh(targetMesh),
     mName(name),
     mVertexType(vertexType) {
@@ -47,10 +47,16 @@ unsigned char convertByteRange(float value) {
 ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
     output << "Vtx " << mName << "[] = {" << std::endl;
     
-    for (unsigned int i = 0; i < mTargetMesh->mNumVertices; ++i) {
+    for (unsigned int i = 0; i < mTargetMesh->mMesh->mNumVertices; ++i) {
         output << "    {{{";
 
-        aiVector3D pos = mTargetMesh->mVertices[i] * scale;
+        aiVector3D pos = mTargetMesh->mMesh->mVertices[i];
+
+        if (mTargetMesh->mPointInverseTransform[i]) {
+            pos = (*mTargetMesh->mPointInverseTransform[i]) * pos;
+        }
+
+        pos = pos * scale;
 
         short converted;
 
@@ -66,10 +72,10 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
         if (code != ErrorCode::None) return code;
         output << converted << "}, 0, {";
 
-        if (mTargetMesh->mTextureCoords == nullptr) {
+        if (mTargetMesh->mMesh->mTextureCoords == nullptr) {
             output << "0, 0}, {";
         } else {
-            aiVector3D uv = mTargetMesh->mTextureCoords[0][i];
+            aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
             code = convertToShort(uv.x, converted);
             if (code != ErrorCode::None) return code;
@@ -82,8 +88,13 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
 
         switch (mVertexType) {
         case VertexType::PosUVNormal:
-            if (mTargetMesh->HasNormals()) {
-                aiVector3D normal = mTargetMesh->mNormals[i];
+            if (mTargetMesh->mMesh->HasNormals()) {
+                aiVector3D normal = mTargetMesh->mMesh->mNormals[i];
+
+                if (mTargetMesh->mPointInverseTransform[i]) {
+                    normal = (*mTargetMesh->mNormalInverseTransform[i]) * normal;
+                }
+                
                 output 
                     << convertNormalizedRange(normal.x) << ", " 
                     << convertNormalizedRange(normal.y) << ", " 
@@ -93,8 +104,8 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
             }
             break;
         case VertexType::PosUVColor:
-            if (mTargetMesh->mColors[0] != nullptr) {
-                aiColor4D color = mTargetMesh->mColors[0][i];
+            if (mTargetMesh->mMesh->mColors[0] != nullptr) {
+                aiColor4D color = mTargetMesh->mMesh->mColors[0][i];
                 output 
                     << convertByteRange(color.r) << ", " 
                     << convertByteRange(color.g) << ", " 
@@ -120,7 +131,7 @@ CFileDefinition::CFileDefinition(std::string prefix):
 
 }
 
-int CFileDefinition::GetVertexBuffer(aiMesh* mesh, VertexType vertexType) {
+int CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) {
     int result = 0;
 
     for (auto existing = mVertexBuffers.begin(); existing != mVertexBuffers.end(); ++existing) {
@@ -133,8 +144,8 @@ int CFileDefinition::GetVertexBuffer(aiMesh* mesh, VertexType vertexType) {
 
     std::string requestedName;
 
-    if (mesh->mName.length) {
-        requestedName = mesh->mName.C_Str();
+    if (mesh->mMesh->mName.length) {
+        requestedName = mesh->mMesh->mName.C_Str();
     } else {
         requestedName = "_mesh";
     }
@@ -183,19 +194,35 @@ int CFileDefinition::GetNextID() {
     return mNextID++;
 }
 
+void makeCCompatible(std::string& target) {
+    for (unsigned int i = 0; i < target.length(); ++i) {
+        char curr = target[i];
+
+        if (!(curr >= 'a' && curr <= 'z') && !(curr >= 'A' && curr <= 'Z') && !(curr >= '0' && curr <= '0') && curr != '_') {
+            target[i] = '_';
+        }
+    }
+
+    if (target.length() > 0 && target[0] >= '0' && target[0] <= '9') {
+        target = '_' + target;
+    }
+}
+
 std::string CFileDefinition::GetUniqueName(std::string requestedName) {
-    std::string result = requestedName;
+    std::string result = mPrefix + "_" + requestedName;
+    makeCCompatible(result);
 
     int index = 1;
     
     while (mUsedNames.find(result) != mUsedNames.end()) {
         char strBuffer[8];
         snprintf(strBuffer, 8, "_%d", index);
-        result = requestedName + strBuffer;
+        result = mPrefix + "_" + requestedName + strBuffer;
+        makeCCompatible(result);
         ++index;
     }
 
     mUsedNames.insert(result);
 
-    return mPrefix + result;
+    return result;
 }

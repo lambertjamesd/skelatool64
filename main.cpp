@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "src/SceneWriter.h"
+#include "src/SceneModification.h"
 
 /**
  * F3DEX2 - 32 vertices in buffer
@@ -15,7 +16,6 @@ int main() {
     Assimp::Importer importer;
 
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 1);
-    importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, 32);
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
 
     const aiScene* scene = importer.ReadFile(
@@ -23,11 +23,18 @@ int main() {
         aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         aiProcess_LimitBoneWeights |
-        aiProcess_ImproveCacheLocality |
         aiProcess_SortByPType |
         aiProcess_OptimizeMeshes |
         aiProcess_OptimizeGraph
     );
+
+    splitSceneByBones(const_cast<aiScene*>(scene));
+
+    // TOOO - change for other versions of f3d
+    importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, 32);
+    importer.ApplyPostProcessing(aiProcess_ImproveCacheLocality);
+
+    // importer.ApplyCustomizedPostProcessing();
 
     if (scene == nullptr) {
         std::cout << "Error loading input file: " << importer.GetErrorString() << std::endl;
@@ -37,8 +44,9 @@ int main() {
     DisplayListSettings settings = DisplayListSettings();
 
     settings.mScale = 32.0f;
+    settings.mPrefix = "example";
 
-    generateMeshFromSceneToFile(scene, "output/example.c", settings);
+    generateMeshFromSceneToFile(scene, "output/example", settings);
     
     return 0;
 }

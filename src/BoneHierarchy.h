@@ -10,15 +10,20 @@
 #include <string>
 #include <set>
 #include <map>
+#include <ostream>
+
 #include "ErrorCode.h"
+
 
 class Bone {
 public:
-    Bone(int index, std::string name, Bone* parent, const aiVector3D& restPosition, const aiQuaternion& restRotation);
+    Bone(int index, std::string name, Bone* parent, const aiVector3D& restPosition, const aiQuaternion& restRotation, const aiVector3D& restScale);
 
     int GetIndex();
     const std::string& GetName();
     Bone* GetParent();
+
+    void GenerateRestPosiitonData(std::ostream& output);
 
     static Bone* FindCommonAncestor(Bone* a, Bone* b);
     /**
@@ -37,6 +42,7 @@ private:
     Bone* mParent;
     aiVector3D mRestPosition;
     aiQuaternion mRestRotation;
+    aiQuaternion mRestScale;
 
     std::vector<Bone*> mChildren;
 };
@@ -46,6 +52,10 @@ public:
     void SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones);
     void SearchForBonesInScene(const aiScene* scene);
     Bone* BoneForName(std::string name);
+    bool HasData() const;
+    unsigned int GetBoneCount() const;
+
+    void GenerateRestPosiitonData(const std::string& variableName, std::ostream& output);
 private:
     std::vector<std::unique_ptr<Bone>> mBones;
     std::map<std::string, Bone*> mBoneByName;

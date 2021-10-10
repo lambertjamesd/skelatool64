@@ -105,6 +105,7 @@ public:
     DisplayList(std::string name);
     void AddCommand(std::unique_ptr<DisplayListCommand> command);
 
+    const std::string& GetName();
     void Generate(CFileDefinition& fileDefinition, std::ostream& output);
 private:
     std::string mName;

@@ -2,6 +2,8 @@
 
 #include <fstream>
 #include <sstream>
+#include <filesystem>
+#include <algorithm>
 
 #include "./DisplayList.h"
 #include "./DisplayListGenerator.h"
@@ -19,7 +21,7 @@ DisplayListSettings::DisplayListSettings():
 
 }
 
-void generateMeshFromScene(const aiScene* scene, std::ostream& output, DisplayListSettings& settings) {
+void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings) {
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     CFileDefinition fileDefinition(settings.mPrefix);
     DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
@@ -40,18 +42,63 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, DisplayLi
 
     for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
         // todo apply material
-        int vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh->mMesh, VertexType::PosUVColor);
+        int vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, VertexType::PosUVColor);
         generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
     }
+
+    rcpState.TraverseToBone(nullptr, displayList);
 
     fileDefinition.GenerateVertexBuffers(output, settings.mScale);
 
     displayList.Generate(fileDefinition, output);
+
+    headerFile << "#ifndef _" << settings.mPrefix << "_H" << std::endl;
+    headerFile << "#define _" << settings.mPrefix << "_H" << std::endl;
+    headerFile << std::endl;
+
+    headerFile << "#include <ultra64.h>" << std::endl;
+    if (bones.HasData()) {
+        headerFile << "#include \"math/transform.h\"" << std::endl;
+    }
+
+    headerFile << std::endl;
+    headerFile << "extern Gfx " << displayList.GetName() << "[];" << std::endl;
+
+    if (bones.HasData()) {
+        std::string bonesName = fileDefinition.GetUniqueName("default_bones");
+        bones.GenerateRestPosiitonData(bonesName, animationFile);
+        headerFile << "extern struct Transform " << bonesName << "[];" << std::endl;
+        std::string boneCountName = bonesName + "_COUNT";
+        std::transform(boneCountName.begin(), boneCountName.end(), boneCountName.begin(), ::toupper);
+        headerFile << "#define " << boneCountName << " " << bones.GetBoneCount() << std::endl;
+    }
+
+    headerFile << std::endl;
+    headerFile << "#endif";
 }
 
 void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings) {
-    std::ofstream output;
-    output.open(filename, std::ios_base::out | std::ios_base::trunc);
-    generateMeshFromScene(scene, output, settings);
-    output.close();
+    std::ostringstream output;
+    std::ostringstream header;
+    std::ostringstream animation;
+    generateMeshFromScene(scene, output, header, animation, settings);
+
+    std::ofstream outputFile;
+    outputFile.open(filename + "_geo.inc.h", std::ios_base::out | std::ios_base::trunc);
+    outputFile << output.str();
+    outputFile.close();
+
+    std::ofstream outputHeader;
+    outputHeader.open(filename + ".h", std::ios_base::out | std::ios_base::trunc);
+    outputHeader << header.str();
+    outputHeader.close();
+
+    std::string animationContent = animation.str();
+
+    if (animationContent.length()) {
+        std::ofstream animOutput;
+        animOutput.open(filename + "_anim.inc.h", std::ios_base::out | std::ios_base::trunc);
+        animOutput << animationContent;
+        animOutput.close();
+    }
 }

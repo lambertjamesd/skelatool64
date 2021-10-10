@@ -6,6 +6,8 @@
 ExtendedMesh::ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy) :
     mMesh(mesh) {
     mVertexBones.resize(mMesh->mNumVertices);
+    mPointInverseTransform.resize(mMesh->mNumVertices);
+    mNormalInverseTransform.resize(mMesh->mNumVertices);
 
     std::set<Bone*> bonesAsSet;
 
@@ -13,18 +15,28 @@ ExtendedMesh::ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy) :
         aiBone* bone = mMesh->mBones[boneIndex];
         Bone* hierarchyBone = boneHierarchy.BoneForName(bone->mName.C_Str());
         bonesAsSet.insert(hierarchyBone);
+
+        aiMatrix3x3 normalTransform(bone->mOffsetMatrix);
+        normalTransform = normalTransform.Transpose().Inverse();
+
         for (unsigned int vertexIndex = 0; vertexIndex < bone->mNumWeights; ++vertexIndex) {
-            mVertexBones[bone->mWeights[vertexIndex].mVertexId] = hierarchyBone;
+            unsigned int vertexId = bone->mWeights[vertexIndex].mVertexId;
+            mVertexBones[vertexId] = hierarchyBone;
+            mPointInverseTransform[vertexId] = &bone->mOffsetMatrix;
+            mNormalInverseTransform[vertexId] = new aiMatrix3x3(normalTransform);
         }
     }
-
-    mUsesBones = std::vector<Bone*>(bonesAsSet.begin(), bonesAsSet.end());
-
-    std::sort(mUsesBones.begin(), mUsesBones.end(), Bone::CompareBones);
 
     PopulateFacesForBone();
 }
 
+ExtendedMesh::~ExtendedMesh() {
+    for (unsigned int i = 0; i < mNormalInverseTransform.size(); ++i) {
+        if (mNormalInverseTransform[i]) {
+            delete mNormalInverseTransform[i];
+        }
+    }
+}
 
 bool ExtendedMesh::isFaceOneBone(aiFace* face) {
     Bone* bone = mVertexBones[face->mIndices[0]];

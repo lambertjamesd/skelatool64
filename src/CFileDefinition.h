@@ -8,6 +8,7 @@
 #include <ostream>
 
 #include "./ErrorCode.h"
+#include "./ExtendedMesh.h"
 
 enum class VertexType {
     PosUVNormal,
@@ -16,9 +17,9 @@ enum class VertexType {
 
 class VertexBufferDefinition {
 public:
-    VertexBufferDefinition(aiMesh* targetMesh, std::string name, VertexType vertexType);
+    VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType);
 
-    aiMesh* mTargetMesh;
+    ExtendedMesh* mTargetMesh;
     std::string mName;
     VertexType mVertexType;
 
@@ -29,7 +30,7 @@ private:
 class CFileDefinition {
 public:
     CFileDefinition(std::string prefix);
-    int GetVertexBuffer(aiMesh* mesh, VertexType vertexType);
+    int GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType);
 
     const std::string GetVertexBufferName(int vertexBufferID);
     std::string GetUniqueName(std::string requestedName);

@@ -16,7 +16,7 @@ struct DisplayListSettings {
     bool mCanPopMultipleMatrices;
 };
 
-void generateMeshFromScene(const aiScene* scene, std::ostream& output, DisplayListSettings& settings);
+void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings);
 void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings);
 
 #endif

@@ -124,6 +124,10 @@ void DisplayList::AddCommand(std::unique_ptr<DisplayListCommand> command) {
     mDisplayList.push_back(std::move(command));
 }
 
+const std::string& DisplayList::GetName() {
+    return mName;
+}
+
 void DisplayList::Generate(CFileDefinition& fileDefinition, std::ostream& output) {
     output << "Gfx " << mName << "[] = {" << std::endl;
 
