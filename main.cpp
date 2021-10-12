@@ -3,6 +3,7 @@
 #include <assimp/postprocess.h>
 
 #include <iostream>
+#include <fstream>
 
 #include "src/SceneWriter.h"
 #include "src/SceneModification.h"

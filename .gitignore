@@ -1,6 +1,8 @@
 *.o
+*.d
 .vscode/
-assimp-5.0.1/
+assimp/
+yaml-cpp/
 output/
 skeletool64
 dna.txt

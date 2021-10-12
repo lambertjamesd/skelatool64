@@ -93,6 +93,7 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
 
                 if (mTargetMesh->mPointInverseTransform[i]) {
                     normal = (*mTargetMesh->mNormalInverseTransform[i]) * normal;
+                    normal.Normalize();
                 }
                 
                 output 

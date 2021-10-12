@@ -1,7 +1,7 @@
 
-GCC_FLAGS = -Wall -Werror -g -I./assimp-5.0.1/include
+GCC_FLAGS = -Wall -Werror -g -I./assimp/include -I./yaml-cpp/include
 
-LINKER_FLAGS = -L./assimp-5.0.1/lib -lassimp
+LINKER_FLAGS = -L./assimp/bin -L./yaml-cpp -lassimp -lyaml-cpp
 
 SRC_FILES = main.cpp $(wildcard src/*.cpp)
 
@@ -24,6 +24,9 @@ skeletool64: $(OBJ_FILES)
 
 clean:
 	rm $(OBJ_FILES) skeletool64
+
+init:
+	
 
 install: skeletool64
 	cp skeletool64 ~/.local/bin
