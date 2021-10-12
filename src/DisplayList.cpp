@@ -82,7 +82,7 @@ PushMatrixCommand::PushMatrixCommand(unsigned int matrixOffset, bool replace):
 }
 
 bool PushMatrixCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
-    output << "gsSPMatrix((*Mtx)MATRIX_TRANSFORM_SEGMENT + " << mMatrixOffset << ", ";
+    output << "gsSPMatrix((Mtx*)MATRIX_TRANSFORM_SEGMENT_ADDRESS + " << mMatrixOffset << ", ";
     
     output << "G_MTX_MODELVIEW | G_MTX_MUL | ";
     
@@ -108,7 +108,7 @@ bool PopMatrixCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ost
     }
 
     if (mPopCount > 1) {
-        output << "gSPPopMatrixN(G_MTX_MODELVIEW, " << mPopCount << ")";
+        output << "gsSPPopMatrixN(G_MTX_MODELVIEW, " << mPopCount << ")";
     } else {
         output << "gsSPPopMatrix(G_MTX_MODELVIEW)";
     }

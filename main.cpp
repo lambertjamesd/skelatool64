@@ -6,20 +6,27 @@
 
 #include "src/SceneWriter.h"
 #include "src/SceneModification.h"
+#include "src/CommandLineParser.h"
 
 /**
  * F3DEX2 - 32 vertices in buffer
  * F3D - 16 vetcies in buffer
  */
 
-int main() {
+int main(int argc, char *argv[]) {
+    CommandLineArguments args;
+
+    if (!parseCommandLineArguments(argc, argv, args)) {
+        return 1;
+    }
+
     Assimp::Importer importer;
 
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 1);
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
 
     const aiScene* scene = importer.ReadFile(
-        "/home/james/Documents/Blender/ArmatureTest.fbx", 
+        args.mInputFile, 
         aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         aiProcess_LimitBoneWeights |
@@ -44,9 +51,9 @@ int main() {
     DisplayListSettings settings = DisplayListSettings();
 
     settings.mScale = 32.0f;
-    settings.mPrefix = "example";
+    settings.mPrefix = args.mPrefix;
 
-    generateMeshFromSceneToFile(scene, "output/example", settings);
+    generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
     
     return 0;
 }

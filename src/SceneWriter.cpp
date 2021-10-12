@@ -48,6 +48,12 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
 
     rcpState.TraverseToBone(nullptr, displayList);
 
+
+    if (bones.HasData()) {
+        output << "#include \"sk64/skelatool_defs.h\"" << std::endl;
+        output << std::endl;
+    }
+
     fileDefinition.GenerateVertexBuffers(output, settings.mScale);
 
     displayList.Generate(fileDefinition, output);
@@ -64,7 +70,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
     headerFile << std::endl;
     headerFile << "extern Gfx " << displayList.GetName() << "[];" << std::endl;
 
-    if (bones.HasData()) {
+    if (bones.HasData()) {        
         std::string bonesName = fileDefinition.GetUniqueName("default_bones");
         bones.GenerateRestPosiitonData(bonesName, animationFile);
         headerFile << "extern struct Transform " << bonesName << "[];" << std::endl;
