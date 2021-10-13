@@ -29,6 +29,9 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
                 case 's':
                     output.mScale = (float)atof(curr);
                     break;
+                case 'm':
+                    output.mMaterialFiles.push_back(curr);
+                    break;
             }
 
             lastParameter = '\0';
@@ -44,6 +47,10 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
             strcmp(curr, "-s") == 0 || 
             strcmp(curr, "--scale") == 0) {
             lastParameter = 's';
+        } else if (
+            strcmp(curr, "-m") == 0 || 
+            strcmp(curr, "--materials") == 0) {
+            lastParameter = 'm';
         } else {
             if (curr[0] == '-') {
                 hasError = true;

@@ -2,6 +2,7 @@
 #define _COMMAND_LINE_PARSER_H
 
 #include <string>
+#include <vector>
 #include <string.h>
 #include <iostream>
 
@@ -9,6 +10,7 @@ struct CommandLineArguments {
     std::string mInputFile;
     std::string mOutputFile;
     std::string mPrefix;
+    std::vector<std::string> mMaterialFiles;
     float mScale;
 };
 

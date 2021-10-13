@@ -8,6 +8,13 @@
 #include "src/SceneWriter.h"
 #include "src/SceneModification.h"
 #include "src/CommandLineParser.h"
+#include "src/MaterialParser.h"
+
+bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
+    std::fstream file(filename);
+
+    return true;
+}
 
 /**
  * F3DEX2 - 32 vertices in buffer
@@ -47,10 +54,22 @@ int main(int argc, char *argv[]) {
     importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, settings.mVertexCacheSize);
     importer.ApplyPostProcessing(aiProcess_ImproveCacheLocality);
 
+    bool hasError = false;
+
+    for (auto materialFile = args.mMaterialFiles.begin(); materialFile != args.mMaterialFiles.end(); ++materialFile) {
+        if (!parseMaterials(*materialFile, settings)) {
+            hasError = true;
+        }
+    }
+
     // importer.ApplyCustomizedPostProcessing();
 
     if (scene == nullptr) {
-        std::cout << "Error loading input file: " << importer.GetErrorString() << std::endl;
+        std::cerr << "Error loading input file: " << importer.GetErrorString() << std::endl;
+        hasError = true;
+    }
+
+    if (hasError) {
         return 1;
     }
 

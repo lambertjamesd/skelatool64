@@ -3,7 +3,8 @@
 
 Material::Material() : 
     mCycleMode(CycleMode::Unknown),
-    mCullMode(CullMode::Unknown)
+    mCullMode(CullMode::Unknown),
+    mRenderMode()
     {
 
 }

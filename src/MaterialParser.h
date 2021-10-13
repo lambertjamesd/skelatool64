@@ -23,6 +23,6 @@ struct ParseResult {
     std::vector<ParseError> mErrors;
 };
 
-void parseMaterialFile(std::istream& input, ParseResult* output);
+void parseMaterialFile(std::istream& input, ParseResult& output);
 
 #endif

@@ -5,6 +5,8 @@
 #include <assimp/scene.h>
 #include <sstream>
 #include <string>
+#include <map>
+#include "./Material.h"
 
 struct DisplayListSettings {
     DisplayListSettings();
@@ -14,6 +16,7 @@ struct DisplayListSettings {
     float mScale;
     int mMaxMatrixDepth;
     bool mCanPopMultipleMatrices;
+    std::map<std::string, Material> mMaterials;
 };
 
 void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings);
