@@ -97,6 +97,7 @@ aiMesh* subMesh(aiMesh* mesh, std::vector<aiFace*> faces) {
     result->mVertices = new aiVector3D[result->mNumVertices];
     result->mMaterialIndex = mesh->mMaterialIndex;
     result->mMethod = mesh->mMethod;
+    result->mName = mesh->mName;
     if (mesh->mNormals) result->mNormals = new aiVector3D[result->mNumVertices];
     if (mesh->mTextureCoords[0]) result->mTextureCoords[0] = new aiVector3D[result->mNumVertices];
     if (mesh->mColors[0]) result->mColors[0] = new aiColor4D[result->mNumVertices];

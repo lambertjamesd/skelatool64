@@ -9,6 +9,7 @@ struct CommandLineArguments {
     std::string mInputFile;
     std::string mOutputFile;
     std::string mPrefix;
+    float mScale;
 };
 
 bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArguments& output);

@@ -23,7 +23,7 @@ skeletool64: $(OBJ_FILES)
 	g++ -g -o skeletool64 $(OBJ_FILES) $(LINKER_FLAGS)
 
 clean:
-	rm $(OBJ_FILES) skeletool64
+	rm -r build/
 
 init:
 	

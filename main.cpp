@@ -38,8 +38,13 @@ int main(int argc, char *argv[]) {
 
     splitSceneByBones(const_cast<aiScene*>(scene));
 
+    DisplayListSettings settings = DisplayListSettings();
+
+    settings.mScale = args.mScale;
+    settings.mPrefix = args.mPrefix;
+
     // TOOO - change for other versions of f3d
-    importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, 32);
+    importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, settings.mVertexCacheSize);
     importer.ApplyPostProcessing(aiProcess_ImproveCacheLocality);
 
     // importer.ApplyCustomizedPostProcessing();
@@ -48,11 +53,6 @@ int main(int argc, char *argv[]) {
         std::cout << "Error loading input file: " << importer.GetErrorString() << std::endl;
         return 1;
     }
-
-    DisplayListSettings settings = DisplayListSettings();
-
-    settings.mScale = 32.0f;
-    settings.mPrefix = args.mPrefix;
 
     generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
     

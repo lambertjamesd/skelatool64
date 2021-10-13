@@ -5,6 +5,7 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
     output.mInputFile = "";
     output.mOutputFile = "";
     output.mPrefix = "output";
+    output.mScale = 256.0f;
 
     char lastParameter = '\0';
     bool hasError = false;
@@ -25,6 +26,9 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
                 case 'n':
                     output.mPrefix = curr;
                     break;
+                case 's':
+                    output.mScale = (float)atof(curr);
+                    break;
             }
 
             lastParameter = '\0';
@@ -36,6 +40,10 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
             strcmp(curr, "-n") == 0 || 
             strcmp(curr, "--name") == 0) {
             lastParameter = 'n';
+        } else if (
+            strcmp(curr, "-s") == 0 || 
+            strcmp(curr, "--scale") == 0) {
+            lastParameter = 's';
         } else {
             if (curr[0] == '-') {
                 hasError = true;
