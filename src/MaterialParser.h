@@ -10,7 +10,6 @@
 struct MaterialFile {
 public:
     std::map<std::string, Material> mMaterials;
-    std::string defaultMaterial;
 };
 
 struct ParseError {

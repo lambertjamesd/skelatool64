@@ -93,7 +93,7 @@ struct RenderModePossibility gRenderModePossibilities[] = {
 };
 
 void parseRenderMode(const YAML::Node& node, RenderMode& renderMode, ParseResult& output) {
-    if (node.IsNull()) {
+    if (!node.IsDefined()) {
         return;
     }
 

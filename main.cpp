@@ -11,7 +11,11 @@
 #include "src/MaterialParser.h"
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
-    std::fstream file(filename);
+    std::fstream file(filename, std::ios::in);
+
+    struct ParseResult parseResult;
+    parseMaterialFile(file, parseResult);
+    output.mMaterials.insert(parseResult.mMaterialFile.mMaterials.begin(), parseResult.mMaterialFile.mMaterials.end());
 
     return true;
 }
@@ -61,8 +65,6 @@ int main(int argc, char *argv[]) {
             hasError = true;
         }
     }
-
-    // importer.ApplyCustomizedPostProcessing();
 
     if (scene == nullptr) {
         std::cerr << "Error loading input file: " << importer.GetErrorString() << std::endl;

@@ -1,4 +1,5 @@
 
 Materials:
   Material Name A:
+    RenderMode: G_RM_AA_ZB_OPA_SURF
     CycleMode: G_RM_ZB_OPA_SURF
