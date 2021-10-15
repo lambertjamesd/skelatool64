@@ -72,7 +72,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
 
     if (bones.HasData()) {        
         std::string bonesName = fileDefinition.GetUniqueName("default_bones");
-        bones.GenerateRestPosiitonData(bonesName, animationFile);
+        bones.GenerateRestPosiitonData(bonesName, animationFile, settings.mScale);
         headerFile << "extern struct Transform " << bonesName << "[];" << std::endl;
         std::string boneCountName = bonesName + "_COUNT";
         std::transform(boneCountName.begin(), boneCountName.end(), boneCountName.begin(), ::toupper);

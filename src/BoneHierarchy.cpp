@@ -26,9 +26,9 @@ Bone* Bone::GetParent() {
     return mParent;
 }
 
-void Bone::GenerateRestPosiitonData(std::ostream& output) {
+void Bone::GenerateRestPosiitonData(std::ostream& output, float scale) {
     output <<
-        "{{" << mRestPosition.x << ", " << mRestPosition.y << ", " << mRestPosition.z << "}, {" <<
+        "{{" << (mRestPosition.x * scale) << ", " << (mRestPosition.y * scale) << ", " << (mRestPosition.z * scale) << "}, {" <<
         mRestRotation.x << ", " << mRestRotation.y << ", " << mRestRotation.z << ", " << mRestRotation.w << "}, {" <<
         mRestScale.x << ", " << mRestScale.y << ", " << mRestScale.z << "}}";
 }
@@ -138,14 +138,14 @@ Bone* BoneHierarchy::BoneForName(std::string name) {
     }
 }
 
-void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, std::ostream& output) {
+void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, std::ostream& output, float scale) {
     if (mBones.size() == 0) return;
 
     output << "struct Transform " << variableName << "[] = {" << std::endl;
 
     for (unsigned int boneIndex = 0; boneIndex < mBones.size(); ++boneIndex) {
         output << "    ";
-        mBones[boneIndex]->GenerateRestPosiitonData(output);
+        mBones[boneIndex]->GenerateRestPosiitonData(output, scale);
         output << "," << std::endl;
     }
 

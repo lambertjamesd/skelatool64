@@ -23,7 +23,7 @@ public:
     const std::string& GetName();
     Bone* GetParent();
 
-    void GenerateRestPosiitonData(std::ostream& output);
+    void GenerateRestPosiitonData(std::ostream& output, float scale);
 
     static Bone* FindCommonAncestor(Bone* a, Bone* b);
     /**
@@ -55,7 +55,7 @@ public:
     bool HasData() const;
     unsigned int GetBoneCount() const;
 
-    void GenerateRestPosiitonData(const std::string& variableName, std::ostream& output);
+    void GenerateRestPosiitonData(const std::string& variableName, std::ostream& output, float scale);
 private:
     std::vector<std::unique_ptr<Bone>> mBones;
     std::map<std::string, Bone*> mBoneByName;
