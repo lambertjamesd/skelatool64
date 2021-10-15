@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <string.h>
 #include <sstream>
+#include <string>
+#include <stdexcept>
 
 ParseError::ParseError(const std::string& message) :
     mMessage(message) {
@@ -16,6 +18,32 @@ std::string formatError(const std::string& message, const YAML::Mark& mark) {
     output << "error at line " << mark.line + 1 << ", column "
            << mark.column + 1 << ": " << message;
     return output.str();
+}
+
+int parseInteger(const YAML::Node& node, ParseResult& output, int min, int max) {
+    if (!node.IsDefined() || !node.IsScalar()) {
+        output.mErrors.push_back(ParseError(formatError("Expected a number", node.Mark())));
+        return 0;
+    }
+    
+    int result = 0;
+
+    try {
+        result = std::atoi(node.Scalar().c_str());
+    } catch (std::invalid_argument const& err) {
+        output.mErrors.push_back(ParseError(formatError("Expected a number", node.Mark())));
+        return 0;
+    }
+
+    if (result < min || result > max) {
+        std::stringstream errorMessage;
+        errorMessage << "Expected a number between " << min << " and " << max;
+        output.mErrors.push_back(ParseError(formatError(errorMessage.str(), node.Mark())));
+        return result;
+    }
+
+
+    return result;
 }
 
 enum class RenderModeIndex {
@@ -121,8 +149,77 @@ void parseRenderMode(const YAML::Node& node, RenderMode& renderMode, ParseResult
     renderMode.mRenderMode2 = arrayEnd->mName;
 }
 
+const char* gCycleTypeNames[(int)CycleType::Count] = {
+    "Unknown",
+    "G_CYC_1CYCLE",
+    "G_CYC_2CYCLE",
+    "G_CYC_COPY",
+    "G_CYC_FILL",
+};
+
+void parseCycleType(const YAML::Node& node, CycleType& cycleType, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return;
+    }
+
+    if (!node.IsScalar()) {
+        output.mErrors.push_back(ParseError(formatError("CycleType should be G_CYC_1CYCLE, G_CYC_2CYCLE, G_CYC_COPY, or G_CYC_FILL", node.Mark())));
+        return;
+    }
+
+    std::string asString = node.as<std::string>();
+    
+    for (unsigned i = 0; i < (unsigned)CycleType::Count; ++i) {
+        if (asString == gCycleTypeNames[i]) {
+            cycleType = (CycleType)i;
+            return;
+        }
+    }
+
+    output.mErrors.push_back(ParseError(formatError("CycleType should be G_CYC_1CYCLE, G_CYC_2CYCLE, G_CYC_COPY, or G_CYC_FILL", node.Mark())));
+    return;
+}
+
+void parseMaterialColor(const YAML::Node& node, MaterialColor& color, ParseResult& output) {
+    color.mIsDefined = node.IsDefined();
+    if (!color.mIsDefined) {
+        return;
+    }
+
+    if (!node.IsMap()) {
+        output.mErrors.push_back(ParseError(formatError("Color is expected to be map with r,g,b", node.Mark())));
+    }
+
+    color.r = parseInteger(node["r"], output, 0, 255);
+    color.g = parseInteger(node["r"], output, 0, 255);
+    color.b = parseInteger(node["r"], output, 0, 255);
+}
+
+void parsePrimColor(const YAML::Node& node, PrimitiveColor& color, ParseResult& output) {
+    parseMaterialColor(node, color, output);
+
+    if (!node.IsDefined() || !node.IsMap()) {
+        return;
+    }
+
+    YAML::Node m = node["m"];
+    if (m.IsDefined()) {
+        color.m = parseInteger(m, output, 0, 255);
+    }
+    
+    YAML::Node l = node["l"];
+    if (l.IsDefined()) {
+        color.l = parseInteger(l, output, 0, 255);
+    }
+} 
+
 void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output) {
     parseRenderMode(node["RenderMode"], material.mRenderMode, output);
+    parseCycleType(node["CycleType"], material.mCycleType, output);
+    parsePrimColor(node["PrimColor"], material.mPrimColor, output);
+    parseMaterialColor(node["EnvColor"], material.mEnvColor, output);
+    parseMaterialColor(node["FogColor"], material.mFogColor, output);
+    parseMaterialColor(node["BlendColor"], material.mBlendColor, output);
 }
 
 void parseMaterialFile(std::istream& input, ParseResult& output) {

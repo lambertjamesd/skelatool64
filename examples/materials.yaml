@@ -3,3 +3,19 @@ Materials:
   Material Name A:
     RenderMode: G_RM_AA_ZB_OPA_SURF
     CycleMode: G_RM_ZB_OPA_SURF
+    PrimColor:
+      r: 255
+      g: 0
+      b: 0
+    EnvColor:
+      r: 128
+      g: 128
+      b: 128
+    FogColor:
+      r: 200
+      g: 100
+      b: 50
+    BlendColor:
+      r: 180
+      g: 120
+      b: 100
