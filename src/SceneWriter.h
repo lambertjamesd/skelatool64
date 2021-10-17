@@ -16,6 +16,7 @@ struct DisplayListSettings {
     float mScale;
     int mMaxMatrixDepth;
     bool mCanPopMultipleMatrices;
+    unsigned short mTicksPerSecond;
     std::map<std::string, Material> mMaterials;
 };
 

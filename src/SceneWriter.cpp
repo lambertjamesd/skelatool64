@@ -4,12 +4,15 @@
 #include <sstream>
 #include <filesystem>
 #include <algorithm>
+#include <vector>
+#include <string>
 
 #include "./DisplayList.h"
 #include "./DisplayListGenerator.h"
 #include "./BoneHierarchy.h"
 #include "./ExtendedMesh.h"
 #include "./RenderChunk.h"
+#include "AnimationTranslator.h"
 
 DisplayListSettings::DisplayListSettings():
     mPrefix(""),
@@ -17,11 +20,35 @@ DisplayListSettings::DisplayListSettings():
     mHasTri2(true),
     mScale(256.0f),
     mMaxMatrixDepth(10),
-    mCanPopMultipleMatrices(true) {
-
+    mCanPopMultipleMatrices(true),
+    mTicksPerSecond(30) {
 }
 
-void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings) {
+std::vector<SKAnimationHeader> generateAnimationData(const aiScene* scene, BoneHierarchy& bones, CFileDefinition& fileDef, float modelScale, unsigned short targetTicksPerSecond, std::ostream& output, std::ostream& animationDef) {
+    std::vector<SKAnimationHeader> animations;
+
+    for (unsigned i = 0; i < scene->mNumAnimations; ++i) {
+        SKAnimation animation;
+        if (translateAnimationToSK(*scene->mAnimations[i], animation, bones, modelScale, targetTicksPerSecond)) {
+            std::string animationName = fileDef.GetUniqueName(scene->mAnimations[i]->mName.C_Str());
+            unsigned short firstChunkSize = formatAnimationChunks(animationName, animation.chunks, output);
+
+            SKAnimationHeader header;
+            header.firstChunkSize = firstChunkSize;
+            header.ticksPerSecond = targetTicksPerSecond;
+            header.maxTicks = animation.maxTicks;
+            header.animationName = animationName;
+
+            animations.push_back(header);
+
+            animationDef << "extern unsigned short " << animationName << "[];" << std::endl;
+        }
+    }
+
+    return animations;
+}
+
+void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, std::ostream& animationDef, DisplayListSettings& settings) {
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     CFileDefinition fileDefinition(settings.mPrefix);
     DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
@@ -65,6 +92,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
     headerFile << "#include <ultra64.h>" << std::endl;
     if (bones.HasData()) {
         headerFile << "#include \"math/transform.h\"" << std::endl;
+        headerFile << "#include \"sk64/skelatool_animation_clip.h\"" << std::endl;
     }
 
     headerFile << std::endl;
@@ -77,6 +105,16 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
         std::string boneCountName = bonesName + "_COUNT";
         std::transform(boneCountName.begin(), boneCountName.end(), boneCountName.begin(), ::toupper);
         headerFile << "#define " << boneCountName << " " << bones.GetBoneCount() << std::endl;
+
+        std::string animationsName = fileDefinition.GetUniqueName("animations");
+        auto animations = generateAnimationData(scene, bones, fileDefinition, settings.mScale, settings.mTicksPerSecond, animationFile, animationDef);
+        animationDef << "struct SKAnimationHeader " << animationsName << "[] = {" << std::endl;
+        for (auto it = animations.begin(); it != animations.end(); ++it) {
+            animationDef << "    {" << it->firstChunkSize << ", " << it->ticksPerSecond << ", " << it->maxTicks << ", (struct SKAnimationChunk*)" << it->animationName << "}," << std::endl;
+        }
+        animationDef << "};" << std::endl;
+
+        headerFile << "extern struct SKAnimationHeader " << animationsName << "[];" << std::endl;
     }
 
     headerFile << std::endl;
@@ -87,7 +125,8 @@ void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, Dis
     std::ostringstream output;
     std::ostringstream header;
     std::ostringstream animation;
-    generateMeshFromScene(scene, output, header, animation, settings);
+    std::ostringstream animationDef;
+    generateMeshFromScene(scene, output, header, animation, animationDef, settings);
 
     std::ofstream outputFile;
     outputFile.open(filename + "_geo.inc.h", std::ios_base::out | std::ios_base::trunc);
@@ -106,5 +145,10 @@ void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, Dis
         animOutput.open(filename + "_anim.inc.h", std::ios_base::out | std::ios_base::trunc);
         animOutput << animationContent;
         animOutput.close();
+
+        std::ofstream animDefOutput;
+        animDefOutput.open(filename + "_animdef.inc.h", std::ios_base::out | std::ios_base::trunc);
+        animDefOutput << animationDef.str();
+        animDefOutput.close();
     }
 }
