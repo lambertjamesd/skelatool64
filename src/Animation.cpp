@@ -60,7 +60,7 @@ unsigned short generateAnimationData(std::vector<SKAnimationChunk>& chunks, std:
         generateAnimationChunk(*it, output);
 
         // add padding
-        while (output.size() < ALIGN_TO_16(output.size())) {
+        while (output.size() * 2 < ALIGN_TO_16(output.size() * 2)) {
             output.push_back(0);
         }
     }

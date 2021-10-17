@@ -62,9 +62,15 @@ void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float mod
             keyframe.keyframe.usedAttributes = SKBoneAttrMaskRotation;
             keyframe.keyframe.boneIndex = (unsigned char)targetBone->GetIndex();
 
-            keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.x * std::numeric_limits<short>::max()));
-            keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.y * std::numeric_limits<short>::max()));
-            keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.z * std::numeric_limits<short>::max()));
+            if (quatKey->mValue.w < 0.0f) {
+                keyframe.keyframe.attributeData.push_back((short)(-quatKey->mValue.x * std::numeric_limits<short>::max()));
+                keyframe.keyframe.attributeData.push_back((short)(-quatKey->mValue.y * std::numeric_limits<short>::max()));
+                keyframe.keyframe.attributeData.push_back((short)(-quatKey->mValue.z * std::numeric_limits<short>::max()));
+            } else {
+                keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.x * std::numeric_limits<short>::max()));
+                keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.y * std::numeric_limits<short>::max()));
+                keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.z * std::numeric_limits<short>::max()));
+            }
             output.push_back(keyframe);
         }
 
@@ -151,7 +157,7 @@ void buildInitialState(std::map<unsigned short, SKBoneKeyframeChain*>& firstKeyF
 }
 
 bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output, BoneHierarchy& bones, float modelScale, unsigned short targetTicksPerSecond) {
-    float timeScalar = (float)targetTicksPerSecond / (float)input.mTicksPerSecond;
+    float timeScalar = (float)targetTicksPerSecond / (float)1000.0f;
 
     std::vector<SKBoneKeyframeChain> keyframes;
     populateKeyframes(input, bones, modelScale, timeScalar, keyframes);
@@ -184,12 +190,16 @@ bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output
             currentChunk.nextChunkTick = std::numeric_limits<unsigned short>::max();
         }
 
-        output.chunks.push_back(currentChunk);
+        if (currentChunk.keyframes.size()) {
+            output.chunks.push_back(currentChunk);
+        }
 
         currentChunk.nextChunkSize = 0;
         currentChunk.nextChunkTick = 0;
         currentChunk.keyframes.clear();
     }
+
+    output.chunks.rbegin()->nextChunkTick = std::numeric_limits<unsigned short>::max();
 
     return true;
 }
