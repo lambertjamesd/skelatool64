@@ -47,6 +47,11 @@ int main(int argc, char *argv[]) {
         aiProcess_OptimizeGraph
     );
 
+    if (scene == nullptr) {
+        std::cerr << "Error loading input file: " << importer.GetErrorString() << std::endl;
+        return 1;
+    }
+
     splitSceneByBones(const_cast<aiScene*>(scene));
 
     DisplayListSettings settings = DisplayListSettings();
@@ -64,11 +69,6 @@ int main(int argc, char *argv[]) {
         if (!parseMaterials(*materialFile, settings)) {
             hasError = true;
         }
-    }
-
-    if (scene == nullptr) {
-        std::cerr << "Error loading input file: " << importer.GetErrorString() << std::endl;
-        hasError = true;
     }
 
     if (hasError) {
