@@ -332,6 +332,7 @@ bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output
     std::map<unsigned short, SKBoneKeyframeChain*> firstKeyFrame;
     connectKeyframeChain(keyframes, firstKeyFrame);
     removeRedundantKeyframes(keyframes, firstKeyFrame);
+    markConstantKeyframes(firstKeyFrame);
 
     struct SKAnimationChunk currentChunk;
     currentChunk.nextChunkSize = 0;
