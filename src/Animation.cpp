@@ -5,7 +5,7 @@
 #include <iomanip>
 
 #define ALIGN_TO_16(input)    (((input) + 15) & ~15)
-#define NO_CHUNK        std::numeric_limits<unsigned short>::max()
+#define NO_CHUNK              0
 
 SKBoneKeyframe::SKBoneKeyframe():
     boneIndex(0),

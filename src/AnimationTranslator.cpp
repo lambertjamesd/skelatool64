@@ -6,11 +6,113 @@
 #include <climits>
 #include <algorithm>
 
+#define KEYFRAME_REMOVE_TOLERNACE   8
+
 struct SKBoneKeyframeChain {
     SKBoneKeyframe keyframe;
     unsigned short tick;
+    bool isNeeded;
+    int removalScore;
     struct SKBoneKeyframeChain* next;
+    struct SKBoneKeyframeChain* prev;
 };
+
+bool chainIsLess(SKBoneKeyframeChain* a, SKBoneKeyframeChain* b) {
+    return a->removalScore > b->removalScore;
+}
+
+aiQuaternion getRotation(SKBoneKeyframe& keyframe) {
+    aiQuaternion result;
+    result.x = (float)keyframe.attributeData[0] / (float)std::numeric_limits<short>::max();
+    result.y = (float)keyframe.attributeData[1] / (float)std::numeric_limits<short>::max();
+    result.z = (float)keyframe.attributeData[2] / (float)std::numeric_limits<short>::max();
+
+    float wsqrd = 1.0f - (result.x * result.x + result.y * result.y + result.z + result.z);
+    
+    if (wsqrd < 0.0f) {
+        result.w = 0.0f;
+    } else {
+        result.w = sqrtf(wsqrd);
+    }
+
+    return result;
+}
+
+void writeRotation(aiQuaternion& quaternion, std::vector<short>& output) {
+    if (quaternion.w < 0.0f) {
+        output.push_back((short)(-quaternion.x * std::numeric_limits<short>::max()));
+        output.push_back((short)(-quaternion.y * std::numeric_limits<short>::max()));
+        output.push_back((short)(-quaternion.z * std::numeric_limits<short>::max()));
+    } else {
+        output.push_back((short)(quaternion.x * std::numeric_limits<short>::max()));
+        output.push_back((short)(quaternion.y * std::numeric_limits<short>::max()));
+        output.push_back((short)(quaternion.z * std::numeric_limits<short>::max()));
+    }
+}
+
+void guessInterpolatedValue(struct SKBoneKeyframeChain* prev, struct SKBoneKeyframeChain* next, unsigned short tick, bool isRotation, std::vector<short>& guessedValues) {
+    if (!next || !prev) {
+        return;
+    }
+
+    unsigned short timeOffset = next->tick - prev->tick;
+    unsigned short timeToCurr = tick - prev->tick;
+
+    if (isRotation) {
+        aiQuaternion prevRotation = getRotation(prev->keyframe);
+        aiQuaternion nextRotation = getRotation(next->keyframe);
+
+        aiQuaternion interpolatedQuat;
+
+        aiQuaternion::Interpolate(
+            interpolatedQuat,
+            prevRotation, 
+            nextRotation, 
+            (float)timeToCurr / (float)timeOffset
+        );
+
+        writeRotation(interpolatedQuat, guessedValues);
+    } else {
+        for (unsigned i = 0; i < prev->keyframe.attributeData.size(); ++i) {
+            short valueOffset = next->keyframe.attributeData[i] - prev->keyframe.attributeData[i];
+            guessedValues.push_back(prev->keyframe.attributeData[i] + valueOffset * timeToCurr / timeOffset);
+        }
+    }
+}
+
+bool isKeyframeNeeded(struct SKBoneKeyframeChain* prev, struct SKBoneKeyframeChain* curr, struct SKBoneKeyframeChain* next) {
+    if (!next || !prev) {
+        return true;
+    }
+    
+    std::vector<short> guessedValues;
+    guessInterpolatedValue(prev, next, curr->tick, (curr->keyframe.usedAttributes & SKBoneAttrMaskRotation) != 0, guessedValues);
+
+    for (unsigned i = 0; i < curr->keyframe.attributeData.size(); ++i) {
+        if (abs(guessedValues[i] - curr->keyframe.attributeData[i]) > KEYFRAME_REMOVE_TOLERNACE) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+int keyframeRemovalError(struct SKBoneKeyframeChain* prev, struct SKBoneKeyframeChain* curr, struct SKBoneKeyframeChain* next) {
+    if (!next || !prev) {
+        return std::numeric_limits<int>::max();
+    }
+
+    int result = 0;
+
+    std::vector<short> guessedValues;
+    guessInterpolatedValue(prev, next, curr->tick, (curr->keyframe.usedAttributes & SKBoneAttrMaskRotation) != 0, guessedValues);
+
+    for (unsigned i = 0; i < curr->keyframe.attributeData.size(); ++i) {
+        result += abs(guessedValues[i] - curr->keyframe.attributeData[i]);
+    }
+
+    return result;
+}
 
 unsigned short keyForKeyframe(const SKBoneKeyframe& keyframe) {
     return ((unsigned short)keyframe.boneIndex << 8) | (unsigned short)keyframe.usedAttributes;
@@ -44,6 +146,7 @@ void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float mod
             SKBoneKeyframeChain keyframe;
             keyframe.tick = (unsigned short)(vectorKey->mTime * timeScalar + 0.5f);
             keyframe.next = nullptr;
+            keyframe.prev = nullptr;
             keyframe.keyframe.usedAttributes = SKBoneAttrMaskPosition;
             keyframe.keyframe.boneIndex = (unsigned char)targetBone->GetIndex();
 
@@ -59,18 +162,10 @@ void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float mod
             SKBoneKeyframeChain keyframe;
             keyframe.tick = (unsigned short)(quatKey->mTime * timeScalar + 0.5f);
             keyframe.next = nullptr;
+            keyframe.prev = nullptr;
             keyframe.keyframe.usedAttributes = SKBoneAttrMaskRotation;
             keyframe.keyframe.boneIndex = (unsigned char)targetBone->GetIndex();
-
-            if (quatKey->mValue.w < 0.0f) {
-                keyframe.keyframe.attributeData.push_back((short)(-quatKey->mValue.x * std::numeric_limits<short>::max()));
-                keyframe.keyframe.attributeData.push_back((short)(-quatKey->mValue.y * std::numeric_limits<short>::max()));
-                keyframe.keyframe.attributeData.push_back((short)(-quatKey->mValue.z * std::numeric_limits<short>::max()));
-            } else {
-                keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.x * std::numeric_limits<short>::max()));
-                keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.y * std::numeric_limits<short>::max()));
-                keyframe.keyframe.attributeData.push_back((short)(quatKey->mValue.z * std::numeric_limits<short>::max()));
-            }
+            writeRotation(quatKey->mValue, keyframe.keyframe.attributeData);
             output.push_back(keyframe);
         }
 
@@ -80,6 +175,7 @@ void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float mod
             SKBoneKeyframeChain keyframe;
             keyframe.tick = (unsigned short)(vectorKey->mTime * timeScalar + 0.5f);
             keyframe.next = nullptr;
+            keyframe.prev = nullptr;
             keyframe.keyframe.usedAttributes = SKBoneAttrMaskScale;
             keyframe.keyframe.boneIndex = (unsigned char)targetBone->GetIndex();
 
@@ -100,9 +196,76 @@ void connectKeyframeChain(std::vector<SKBoneKeyframeChain>& keyframes, std::map<
 
         if (prev != firstKeyframe.end()) {
             it->next = prev->second;
+            prev->second->prev = &*it;
+        } else {
+            it->next = nullptr;
         }
 
         firstKeyframe[key] = &(*it);
+    }
+
+    for (auto it = firstKeyframe.begin(); it != firstKeyframe.end(); ++it) {
+        it->second->prev = nullptr;
+    }
+}
+
+void removeRedundantKeyframes(std::vector<SKBoneKeyframeChain>& keyframes, std::map<unsigned short, SKBoneKeyframeChain*>& firstKeyframe) {
+    std::vector<SKBoneKeyframeChain*> byRemovalScore;
+
+    for (auto it = firstKeyframe.begin(); it != firstKeyframe.end(); ++it) {
+        SKBoneKeyframeChain* prev = nullptr;
+        SKBoneKeyframeChain* curr = it->second;
+
+        while (curr) {
+            curr->removalScore = keyframeRemovalError(prev, curr, curr->next);
+            byRemovalScore.push_back(curr);
+            std::push_heap(byRemovalScore.begin(), byRemovalScore.end(), chainIsLess);
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+
+    while (byRemovalScore.size()) {
+        SKBoneKeyframeChain* curr = byRemovalScore.front();
+        curr->isNeeded = isKeyframeNeeded(curr->prev, curr, curr->next);
+
+        if (!curr->isNeeded) {
+            curr->next->prev = curr->prev;
+            curr->prev->next = curr->next;
+            curr->next = nullptr;
+            curr->prev = nullptr;
+        }
+
+        std::pop_heap(byRemovalScore.begin(), byRemovalScore.end(), chainIsLess);
+        byRemovalScore.pop_back();
+    }
+
+    auto currentRead = keyframes.begin();
+    auto currentWrite = keyframes.begin();
+
+    while (currentRead != keyframes.end()) {
+        if (currentRead->isNeeded) {
+            *currentWrite = *currentRead;
+            ++currentWrite;
+        }
+        ++currentRead;
+    }
+
+    keyframes.resize(currentWrite - keyframes.begin());
+    firstKeyframe.clear();
+    connectKeyframeChain(keyframes, firstKeyframe);
+}
+
+void markConstantKeyframes(std::map<unsigned short, SKBoneKeyframeChain*>& firstKeyframe) {
+    for (auto it = firstKeyframe.begin(); it != firstKeyframe.end(); ++it) {
+        SKBoneKeyframeChain* curr = it->second;
+
+        while (curr && curr->next) {
+            if (curr->keyframe.attributeData == curr->next->keyframe.attributeData) {
+                curr->keyframe.usedAttributes |= curr->keyframe.usedAttributes << 4;
+            }
+            curr = curr->next;
+        }
     }
 }
 
@@ -168,6 +331,7 @@ bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output
 
     std::map<unsigned short, SKBoneKeyframeChain*> firstKeyFrame;
     connectKeyframeChain(keyframes, firstKeyFrame);
+    removeRedundantKeyframes(keyframes, firstKeyFrame);
 
     struct SKAnimationChunk currentChunk;
     currentChunk.nextChunkSize = 0;
