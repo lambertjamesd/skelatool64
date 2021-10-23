@@ -20,7 +20,7 @@ ErrorCode convertToShort(float value, short& output) {
     return ErrorCode::None;
 }
 
-char convertNormalizedRange(float value) {
+int convertNormalizedRange(float value) {
     int result = (int)(value * 128.0f);
 
     if (result < std::numeric_limits<char>::min()) {
@@ -32,7 +32,7 @@ char convertNormalizedRange(float value) {
     }
 }
 
-unsigned char convertByteRange(float value) {
+unsigned convertByteRange(float value) {
     int result = (int)(value * 256.0f);
 
     if (result < std::numeric_limits<unsigned char>::min()) {
@@ -44,7 +44,7 @@ unsigned char convertByteRange(float value) {
     }
 }
 
-ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
+ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, aiQuaternion rotate) {
     output << "Vtx " << mName << "[] = {" << std::endl;
     
     for (unsigned int i = 0; i < mTargetMesh->mMesh->mNumVertices; ++i) {
@@ -54,6 +54,8 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
 
         if (mTargetMesh->mPointInverseTransform[i]) {
             pos = (*mTargetMesh->mPointInverseTransform[i]) * pos;
+        } else {
+            pos = rotate.Rotate(pos);
         }
 
         pos = pos * scale;
@@ -77,11 +79,11 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
-            code = convertToShort(uv.x, converted);
+            code = convertToShort(uv.x * (1 << 10), converted);
             if (code != ErrorCode::None) return code;
             output << converted << ", ";
 
-            code = convertToShort(uv.y, converted);
+            code = convertToShort(uv.y * (1 << 10), converted);
             if (code != ErrorCode::None) return code;
             output << converted << "}, {";
         }
@@ -94,12 +96,14 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale) {
                 if (mTargetMesh->mPointInverseTransform[i]) {
                     normal = (*mTargetMesh->mNormalInverseTransform[i]) * normal;
                     normal.Normalize();
+                } else {
+                    normal = rotate.Rotate(normal);
                 }
                 
                 output 
                     << convertNormalizedRange(normal.x) << ", " 
                     << convertNormalizedRange(normal.y) << ", " 
-                    << convertNormalizedRange(normal.z) << "}, 0}}";
+                    << convertNormalizedRange(normal.z) << ", 255}}}";
             } else {
                 output << "0, 0, 0, 255}}}";
             }
@@ -180,9 +184,9 @@ const std::string CFileDefinition::GetVertexBufferName(int vertexBufferID) {
 }
 
 
-ErrorCode CFileDefinition::GenerateVertexBuffers(std::ostream& output, float scale) {
+ErrorCode CFileDefinition::GenerateVertexBuffers(std::ostream& output, float scale, aiQuaternion rotate) {
     for (auto buffer = mVertexBuffers.begin(); buffer != mVertexBuffers.end(); ++buffer) {
-        buffer->second.Generate(output, scale);
+        buffer->second.Generate(output, scale, rotate);
 
         output << std::endl;
         output << std::endl;

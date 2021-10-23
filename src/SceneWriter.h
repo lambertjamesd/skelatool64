@@ -18,6 +18,7 @@ struct DisplayListSettings {
     bool mCanPopMultipleMatrices;
     unsigned short mTicksPerSecond;
     std::map<std::string, Material> mMaterials;
+    aiQuaternion mRotateModel;
 };
 
 void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings);

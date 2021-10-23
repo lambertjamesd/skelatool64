@@ -38,7 +38,7 @@ aiQuaternion getRotation(SKBoneKeyframe& keyframe) {
     return result;
 }
 
-void writeRotation(aiQuaternion& quaternion, std::vector<short>& output) {
+void writeRotation(const aiQuaternion& quaternion, std::vector<short>& output) {
     if (quaternion.w < 0.0f) {
         output.push_back((short)(-quaternion.x * std::numeric_limits<short>::max()));
         output.push_back((short)(-quaternion.y * std::numeric_limits<short>::max()));
@@ -127,10 +127,10 @@ bool keyframeSortFn(const SKBoneKeyframeChain& a, const SKBoneKeyframeChain& b) 
         return a.keyframe.boneIndex < b.keyframe.boneIndex;
     }
 
-    return a.keyframe.usedAttributes < b.keyframe.usedAttributes;
+    return (a.keyframe.usedAttributes & 0x7) < (b.keyframe.usedAttributes & 0x7);
 }
 
-void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float modelScale, float timeScalar, std::vector<SKBoneKeyframeChain>& output) {
+void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float modelScale, float timeScalar, std::vector<SKBoneKeyframeChain>& output, aiQuaternion rotation) {
     for (unsigned i = 0; i < input.mNumChannels; ++i) {
         aiNodeAnim* node = input.mChannels[i];
 
@@ -150,9 +150,15 @@ void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float mod
             keyframe.keyframe.usedAttributes = SKBoneAttrMaskPosition;
             keyframe.keyframe.boneIndex = (unsigned char)targetBone->GetIndex();
 
-            keyframe.keyframe.attributeData.push_back((short)(vectorKey->mValue.x * modelScale));
-            keyframe.keyframe.attributeData.push_back((short)(vectorKey->mValue.y * modelScale));
-            keyframe.keyframe.attributeData.push_back((short)(vectorKey->mValue.z * modelScale));
+            aiVector3D origin = vectorKey->mValue;
+
+            if (!targetBone->GetParent()) {
+                origin = rotation.Rotate(origin);
+            }
+
+            keyframe.keyframe.attributeData.push_back((short)(origin.x * modelScale));
+            keyframe.keyframe.attributeData.push_back((short)(origin.y * modelScale));
+            keyframe.keyframe.attributeData.push_back((short)(origin.z * modelScale));
             output.push_back(keyframe);
         }
 
@@ -165,7 +171,11 @@ void populateKeyframes(const aiAnimation& input, BoneHierarchy& bones, float mod
             keyframe.prev = nullptr;
             keyframe.keyframe.usedAttributes = SKBoneAttrMaskRotation;
             keyframe.keyframe.boneIndex = (unsigned char)targetBone->GetIndex();
-            writeRotation(quatKey->mValue, keyframe.keyframe.attributeData);
+            if (targetBone->GetParent()) {
+                writeRotation(quatKey->mValue, keyframe.keyframe.attributeData);
+            } else {
+                writeRotation(rotation * quatKey->mValue, keyframe.keyframe.attributeData);
+            }
             output.push_back(keyframe);
         }
 
@@ -319,11 +329,11 @@ void buildInitialState(std::map<unsigned short, SKBoneKeyframeChain*>& firstKeyF
     combineChunk(keyframes, output);
 }
 
-bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output, BoneHierarchy& bones, float modelScale, unsigned short targetTicksPerSecond) {
+bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output, BoneHierarchy& bones, float modelScale, unsigned short targetTicksPerSecond, aiQuaternion rotation) {
     float timeScalar = (float)targetTicksPerSecond / (float)1000.0f;
 
     std::vector<SKBoneKeyframeChain> keyframes;
-    populateKeyframes(input, bones, modelScale, timeScalar, keyframes);
+    populateKeyframes(input, bones, modelScale, timeScalar, keyframes, rotation);
 
     if (keyframes.size() == 0) {
         return false;

@@ -20,6 +20,75 @@ bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     return true;
 }
 
+bool getVectorByName(const aiScene* scene, const std::string name, aiVector3D& result) {
+    int axis;
+    if (!scene->mMetaData->Get(name, axis)) {
+        return false;
+    }
+
+    switch (axis) {
+        case 0: result = aiVector3D(1.0f, 0.0f, 0.0f); break;
+        case 1: result = aiVector3D(0.0f, 1.0f, 0.0f); break;
+        case 2: result = aiVector3D(0.0f, 0.0f, 1.0f); break;
+        default: return false;
+    }
+
+    int upSign;
+    if (scene->mMetaData->Get(name + "Sign", upSign)) {
+        if (upSign < 0) {
+            result = -result;
+        }
+    }
+
+    return true;
+}
+
+float angleBetween(const aiVector3D& a, const aiVector3D& b) {
+    return acos(a * b / (a - b).SquareLength());
+}
+
+aiQuaternion getUpRotation(const aiScene* scene) {
+    // aiVector3D upVector(0.0f, 0.0f, 0.0f);
+    // aiVector3D frontVector(0.0f, 0.0f, 0.0f);
+    // aiVector3D originalUpVector(0.0f, 0.0f, 1.0f);
+    // aiVector3D originalFrontVector(0.0f, 1.0f, 0.0f);
+
+    // aiQuaternion result;
+
+    // if (getVectorByName(scene, "UpAxis", upVector)) {
+    //     getVectorByName(scene, "OriginalUpAxis", originalUpVector);
+
+    //     aiVector3D modifiedUp = result.Rotate(originalUpVector);
+
+    //     aiVector3D upRotateVector = modifiedUp ^ upVector;
+    //     float vectorAngles = angleBetween(originalFrontVector, frontVector);
+
+    //     if (upRotateVector.SquareLength() > 0.01f) {
+    //         result = aiQuaternion(upRotateVector, vectorAngles) * result;
+    //     } else if (vectorAngles < -0.5f) {
+    //         result = aiQuaternion(M_PI, 0.0f, 0.0f) * result;
+    //     }
+    // }
+
+    // if (getVectorByName(scene, "FrontAxis", frontVector)) {
+    //     getVectorByName(scene, "OriginalFrontAxis", frontVector);
+
+    //     aiVector3D forwardRotateVector = originalFrontVector ^ frontVector;
+    //     float vectorAngles = angleBetween(originalFrontVector, frontVector);
+    //     aiQuaternion result;
+        
+    //     if (forwardRotateVector.SquareLength() > 0.01f) {
+    //         result = aiQuaternion(forwardRotateVector, vectorAngles) * result;
+    //     } else if (vectorAngles < -0.5f) {/*  */
+    //         result = aiQuaternion(M_PI, 0.0f, 0.0f) * result;
+    //     }
+    // }
+
+    // return result;
+
+    return aiQuaternion(aiVector3D(1.0f, 0.0f, 0.0f), -M_PI * 0.5f) * aiQuaternion(aiVector3D(0.0f, 0.0f, 1.0f), M_PI * 0.5f);
+}
+
 /**
  * F3DEX2 - 32 vertices in buffer
  * F3D - 16 vetcies in buffer
@@ -58,6 +127,7 @@ int main(int argc, char *argv[]) {
 
     settings.mScale = args.mScale;
     settings.mPrefix = args.mPrefix;
+    settings.mRotateModel = getUpRotation(scene);
 
     // TOOO - change for other versions of f3d
     importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, settings.mVertexCacheSize);

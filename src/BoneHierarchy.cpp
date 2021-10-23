@@ -26,10 +26,13 @@ Bone* Bone::GetParent() {
     return mParent;
 }
 
-void Bone::GenerateRestPosiitonData(std::ostream& output, float scale) {
+void Bone::GenerateRestPosiitonData(std::ostream& output, float scale, const aiQuaternion& rotation) {
+    aiVector3D restPosition = rotation.Rotate(mRestPosition);
+    aiQuaternion restRotation = rotation * mRestRotation;
+
     output <<
-        "{{" << (mRestPosition.x * scale) << ", " << (mRestPosition.y * scale) << ", " << (mRestPosition.z * scale) << "}, {" <<
-        mRestRotation.x << ", " << mRestRotation.y << ", " << mRestRotation.z << ", " << mRestRotation.w << "}, {" <<
+        "{{" << (restPosition.x * scale) << ", " << (restPosition.y * scale) << ", " << (restPosition.z * scale) << "}, {" <<
+        restRotation.x << ", " << restRotation.y << ", " << restRotation.z << ", " << restRotation.w << "}, {" <<
         mRestScale.x << ", " << mRestScale.y << ", " << mRestScale.z << "}}";
 }
 
@@ -138,14 +141,18 @@ Bone* BoneHierarchy::BoneForName(std::string name) {
     }
 }
 
-void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, std::ostream& output, float scale) {
+void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, std::ostream& output, float scale, aiQuaternion rotation) {
     if (mBones.size() == 0) return;
 
     output << "struct Transform " << variableName << "[] = {" << std::endl;
 
     for (unsigned int boneIndex = 0; boneIndex < mBones.size(); ++boneIndex) {
         output << "    ";
-        mBones[boneIndex]->GenerateRestPosiitonData(output, scale);
+        if (mBones[boneIndex]->GetParent()) {
+            mBones[boneIndex]->GenerateRestPosiitonData(output, scale, aiQuaternion());
+        } else {
+            mBones[boneIndex]->GenerateRestPosiitonData(output, scale, rotation);
+        }
         output << "," << std::endl;
     }
 

@@ -5,6 +5,6 @@
 #include "Animation.h"
 #include "BoneHierarchy.h"
 
-bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output, BoneHierarchy& bones, float modelScale, unsigned short targetTicksPerSecond);
+bool translateAnimationToSK(const aiAnimation& input, struct SKAnimation& output, BoneHierarchy& bones, float modelScale, unsigned short targetTicksPerSecond, aiQuaternion rotate);
 
 #endif

@@ -23,7 +23,7 @@ public:
     std::string mName;
     VertexType mVertexType;
 
-    ErrorCode Generate(std::ostream& output, float scale);
+    ErrorCode Generate(std::ostream& output, float scale, aiQuaternion rotate);
 private:
 };
 
@@ -35,7 +35,7 @@ public:
     const std::string GetVertexBufferName(int vertexBufferID);
     std::string GetUniqueName(std::string requestedName);
 
-    ErrorCode GenerateVertexBuffers(std::ostream& output, float scale);
+    ErrorCode GenerateVertexBuffers(std::ostream& output, float scale, aiQuaternion rotate);
 private:
     int GetNextID();
 
