@@ -128,6 +128,8 @@ int main(int argc, char *argv[]) {
     settings.mScale = args.mScale;
     settings.mPrefix = args.mPrefix;
     settings.mRotateModel = getUpRotation(scene);
+    settings.mExportAnimation = args.mExportAnimation;
+    settings.mExportGeometry = args.mExportGeometry;
 
     // TOOO - change for other versions of f3d
     importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, settings.mVertexCacheSize);

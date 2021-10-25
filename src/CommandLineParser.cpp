@@ -6,6 +6,8 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
     output.mOutputFile = "";
     output.mPrefix = "output";
     output.mScale = 256.0f;
+    output.mExportAnimation = true;
+    output.mExportGeometry = true;
 
     char lastParameter = '\0';
     bool hasError = false;
@@ -51,6 +53,10 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
             strcmp(curr, "-m") == 0 || 
             strcmp(curr, "--materials") == 0) {
             lastParameter = 'm';
+        } else if (
+            strcmp(curr, "-a") == 0 || 
+            strcmp(curr, "--animations-only") == 0) {
+            output.mExportGeometry = false;
         } else {
             if (curr[0] == '-') {
                 hasError = true;

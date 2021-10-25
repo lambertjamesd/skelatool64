@@ -19,6 +19,8 @@ struct DisplayListSettings {
     unsigned short mTicksPerSecond;
     std::map<std::string, Material> mMaterials;
     aiQuaternion mRotateModel;
+    bool mExportAnimation;
+    bool mExportGeometry;
 };
 
 void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings);

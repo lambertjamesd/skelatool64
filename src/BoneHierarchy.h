@@ -14,6 +14,7 @@
 
 #include "ErrorCode.h"
 
+class CFileDefinition;
 
 class Bone {
 public:
@@ -49,13 +50,14 @@ private:
 
 class BoneHierarchy {
 public:
-    void SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones);
+    void SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones, bool parentIsBone);
     void SearchForBonesInScene(const aiScene* scene);
+    Bone* BoneByIndex(unsigned index);
     Bone* BoneForName(std::string name);
     bool HasData() const;
     unsigned int GetBoneCount() const;
 
-    void GenerateRestPosiitonData(const std::string& variableName, std::ostream& output, float scale, aiQuaternion rotation);
+    void GenerateRestPosiitonData(CFileDefinition& fileDef, const std::string& variableName, std::ostream& output, std::ostream& headerFile, float scale, aiQuaternion rotation);
 private:
     std::vector<std::unique_ptr<Bone>> mBones;
     std::map<std::string, Bone*> mBoneByName;

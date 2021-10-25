@@ -12,6 +12,8 @@ struct CommandLineArguments {
     std::string mPrefix;
     std::vector<std::string> mMaterialFiles;
     float mScale;
+    bool mExportAnimation;
+    bool mExportGeometry;
 };
 
 bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArguments& output);

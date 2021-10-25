@@ -1,5 +1,6 @@
 
 #include "BoneHierarchy.h"
+#include "CFileDefinition.h"
 
 Bone::Bone(int index, std::string name, Bone* parent, const aiVector3D& restPosition, const aiQuaternion& restRotation, const aiVector3D& restScale):
     mIndex(index),
@@ -92,7 +93,7 @@ int Bone::GetBoneIndex(Bone* a) {
     }
 }
 
-void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones) {
+void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::set<std::string>& knownBones, bool parentIsBone) {
     if (knownBones.find(node->mName.C_Str()) != knownBones.end()) {
         aiVector3D restPosition;
         aiQuaternion restRotation;
@@ -110,10 +111,12 @@ void BoneHierarchy::SearchForBones(aiNode* node, Bone* currentBoneParent, std::s
 
         currentBoneParent = mBones[mBones.size() - 1].get();
         mBoneByName.insert(std::pair<std::string, Bone*>(node->mName.C_Str(), currentBoneParent));
+
+        parentIsBone = true;
     }
 
     for (unsigned int i = 0; i < node->mNumChildren; ++i) {
-        SearchForBones(node->mChildren[i], currentBoneParent, knownBones);
+        SearchForBones(node->mChildren[i], currentBoneParent, knownBones, parentIsBone);
     }
 }
 
@@ -128,7 +131,11 @@ void BoneHierarchy::SearchForBonesInScene(const aiScene* scene) {
         }
     }
 
-    SearchForBones(scene->mRootNode, nullptr, knownBones);
+    SearchForBones(scene->mRootNode, nullptr, knownBones, false);
+}
+
+Bone* BoneHierarchy::BoneByIndex(unsigned index) {
+    return mBones[index].get();
 }
 
 Bone* BoneHierarchy::BoneForName(std::string name) {
@@ -141,7 +148,7 @@ Bone* BoneHierarchy::BoneForName(std::string name) {
     }
 }
 
-void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, std::ostream& output, float scale, aiQuaternion rotation) {
+void BoneHierarchy::GenerateRestPosiitonData(CFileDefinition& fileDef, const std::string& variableName, std::ostream& output, std::ostream& headerFile, float scale, aiQuaternion rotation) {
     if (mBones.size() == 0) return;
 
     output << "struct Transform " << variableName << "[] = {" << std::endl;
@@ -154,6 +161,11 @@ void BoneHierarchy::GenerateRestPosiitonData(const std::string& variableName, st
             mBones[boneIndex]->GenerateRestPosiitonData(output, scale, rotation);
         }
         output << "," << std::endl;
+
+        std::string boneName = fileDef.GetUniqueName(mBones[boneIndex]->GetName() + "_BONE");
+        std::transform(boneName.begin(), boneName.end(), boneName.begin(), ::toupper);
+
+        headerFile << "#define " << boneName << " " << boneIndex << std::endl;
     }
 
     output << "};" << std::endl;

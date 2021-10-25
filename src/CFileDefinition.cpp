@@ -203,7 +203,7 @@ void makeCCompatible(std::string& target) {
     for (unsigned int i = 0; i < target.length(); ++i) {
         char curr = target[i];
 
-        if (!(curr >= 'a' && curr <= 'z') && !(curr >= 'A' && curr <= 'Z') && !(curr >= '0' && curr <= '0') && curr != '_') {
+        if (!(curr >= 'a' && curr <= 'z') && !(curr >= 'A' && curr <= 'Z') && !(curr >= '0' && curr <= '9') && curr != '_') {
             target[i] = '_';
         }
     }

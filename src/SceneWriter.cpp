@@ -21,7 +21,9 @@ DisplayListSettings::DisplayListSettings():
     mScale(256.0f),
     mMaxMatrixDepth(10),
     mCanPopMultipleMatrices(true),
-    mTicksPerSecond(30) {
+    mTicksPerSecond(30),
+    mExportAnimation(true),
+    mExportGeometry(true) {
 }
 
 std::vector<SKAnimationHeader> generateAnimationData(const aiScene* scene, BoneHierarchy& bones, CFileDefinition& fileDef, float modelScale, unsigned short targetTicksPerSecond, aiQuaternion rotate, std::ostream& output, std::ostream& animationDef) {
@@ -53,8 +55,14 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
     CFileDefinition fileDefinition(settings.mPrefix);
     DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
     BoneHierarchy bones;
+    bool shouldExportAnimations;
 
-    bones.SearchForBonesInScene(scene);
+    if (settings.mExportAnimation) {
+        bones.SearchForBonesInScene(scene);
+        shouldExportAnimations = bones.HasData();
+    } else {
+        shouldExportAnimations = false;
+    }
 
     std::vector<std::unique_ptr<ExtendedMesh>> extendedMeshes;
 
@@ -75,43 +83,68 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
 
     rcpState.TraverseToBone(nullptr, displayList);
 
+    if (settings.mExportGeometry) {
+        if (shouldExportAnimations) {
+            output << "#include \"sk64/skelatool_defs.h\"" << std::endl;
+            output << std::endl;
+        }
 
-    if (bones.HasData()) {
-        output << "#include \"sk64/skelatool_defs.h\"" << std::endl;
-        output << std::endl;
+        fileDefinition.GenerateVertexBuffers(output, settings.mScale, settings.mRotateModel);
+
+        displayList.Generate(fileDefinition, output);
     }
-
-    fileDefinition.GenerateVertexBuffers(output, settings.mScale, settings.mRotateModel);
-
-    displayList.Generate(fileDefinition, output);
 
     headerFile << "#ifndef _" << settings.mPrefix << "_H" << std::endl;
     headerFile << "#define _" << settings.mPrefix << "_H" << std::endl;
     headerFile << std::endl;
 
     headerFile << "#include <ultra64.h>" << std::endl;
-    if (bones.HasData()) {
+    if (shouldExportAnimations) {
         headerFile << "#include \"math/transform.h\"" << std::endl;
         headerFile << "#include \"sk64/skelatool_clip.h\"" << std::endl;
     }
 
     headerFile << std::endl;
-    headerFile << "extern Gfx " << displayList.GetName() << "[];" << std::endl;
+    if (settings.mExportGeometry) {
+        headerFile << "extern Gfx " << displayList.GetName() << "[];" << std::endl;
+    }
 
-    if (bones.HasData()) {        
+    if (shouldExportAnimations) {        
         std::string bonesName = fileDefinition.GetUniqueName("default_bones");
-        bones.GenerateRestPosiitonData(bonesName, animationFile, settings.mScale, settings.mRotateModel);
-        headerFile << "extern struct Transform " << bonesName << "[];" << std::endl;
+        std::string boneParentName = fileDefinition.GetUniqueName("bone_parent");
+        bones.GenerateRestPosiitonData(fileDefinition, bonesName, animationFile, headerFile, settings.mScale, settings.mRotateModel);
         std::string boneCountName = bonesName + "_COUNT";
         std::transform(boneCountName.begin(), boneCountName.end(), boneCountName.begin(), ::toupper);
         headerFile << "#define " << boneCountName << " " << bones.GetBoneCount() << std::endl;
+        headerFile << "extern struct Transform " << bonesName << "[];" << std::endl;
+        headerFile << "extern unsigned short " << boneParentName << "[];" << std::endl;
 
         std::string animationsName = fileDefinition.GetUniqueName("animations");
         auto animations = generateAnimationData(scene, bones, fileDefinition, settings.mScale, settings.mTicksPerSecond, settings.mRotateModel, animationFile, animationDef);
         animationDef << "struct SKAnimationHeader " << animationsName << "[] = {" << std::endl;
+        int index = 0;
         for (auto it = animations.begin(); it != animations.end(); ++it) {
-            animationDef << "    {" << it->firstChunkSize << ", " << it->ticksPerSecond << ", " << it->maxTicks << ", (struct SKAnimationChunk*)" << it->animationName << "}," << std::endl;
+            animationDef << "    {" << it->firstChunkSize << ", " << it->ticksPerSecond << ", " << it->maxTicks << ", 0, (struct SKAnimationChunk*)" << it->animationName << ", 0}," << std::endl;
+
+            std::string animationIndex = fileDefinition.GetUniqueName(it->animationName + "_INDEX");
+            std::transform(animationIndex.begin(), animationIndex.end(), animationIndex.begin(), ::toupper);
+            headerFile << "#define " << animationIndex << " " << index << std::endl;
+
+            ++index;
         }
+        animationDef << "};" << std::endl;
+
+        animationDef << "unsigned short " << boneParentName << "[] = {" << std::endl;
+
+        for (unsigned int boneIndex = 0; boneIndex < bones.GetBoneCount(); ++boneIndex) {
+            Bone* bone = bones.BoneByIndex(boneIndex);
+            if (bone->GetParent()) {
+                animationDef << "    " << bone->GetParent()->GetIndex() << ", " << std::endl;
+            } else {
+                animationDef << "    0xFFFF," << std::endl;
+            }
+        }
+
         animationDef << "};" << std::endl;
 
         headerFile << "extern struct SKAnimationHeader " << animationsName << "[];" << std::endl;
@@ -128,10 +161,12 @@ void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, Dis
     std::ostringstream animationDef;
     generateMeshFromScene(scene, output, header, animation, animationDef, settings);
 
-    std::ofstream outputFile;
-    outputFile.open(filename + "_geo.inc.h", std::ios_base::out | std::ios_base::trunc);
-    outputFile << output.str();
-    outputFile.close();
+    if (settings.mExportGeometry) {
+        std::ofstream outputFile;
+        outputFile.open(filename + "_geo.inc.h", std::ios_base::out | std::ios_base::trunc);
+        outputFile << output.str();
+        outputFile.close();
+    }
 
     std::ofstream outputHeader;
     outputHeader.open(filename + ".h", std::ios_base::out | std::ios_base::trunc);
