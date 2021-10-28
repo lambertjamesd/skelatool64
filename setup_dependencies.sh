@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 git submodule update --init --remote assimp
-git submodule update --init --remote yaml-cpp
+# git submodule update --init --remote yaml-cpp
 
 cd assimp
 cmake .
