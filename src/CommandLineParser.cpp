@@ -8,6 +8,7 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
     output.mScale = 256.0f;
     output.mExportAnimation = true;
     output.mExportGeometry = true;
+    output.mIsLevel = false;
 
     char lastParameter = '\0';
     bool hasError = false;
@@ -57,6 +58,11 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
             strcmp(curr, "-a") == 0 || 
             strcmp(curr, "--animations-only") == 0) {
             output.mExportGeometry = false;
+        } else if (
+            strcmp(curr, "-l") == 0 || 
+            strcmp(curr, "--level") == 0) {
+                    output.mIsLevel = true;
+                    output.mExportAnimation = false;
         } else {
             if (curr[0] == '-') {
                 hasError = true;

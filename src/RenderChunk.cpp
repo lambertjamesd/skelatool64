@@ -2,9 +2,10 @@
 #include "RenderChunk.h"
 #include <algorithm>
 
-RenderChunk::RenderChunk(std::pair<Bone*, Bone*> bonePair, ExtendedMesh* mesh): 
+RenderChunk::RenderChunk(std::pair<Bone*, Bone*> bonePair, ExtendedMesh* mesh, VertexType vertexType): 
     mBonePair(bonePair),
-    mMesh(mesh) {
+    mMesh(mesh),
+    mVertexType(vertexType) {
 
 }
 
@@ -24,12 +25,13 @@ void extractChunks(std::vector<std::unique_ptr<ExtendedMesh>>& meshes, std::vect
         for (auto boneSegment = (*it)->mFacesForBone.begin(); boneSegment != (*it)->mFacesForBone.end(); ++boneSegment) {
             result.push_back(RenderChunk(
                 std::make_pair(boneSegment->first, boneSegment->first),
-                it->get()
+                it->get(),
+                VertexType::PosUVNormal
             ));
         }
 
         for (auto pairSegment = (*it)->mBoneSpanningFaces.begin(); pairSegment != (*it)->mBoneSpanningFaces.end(); ++pairSegment) {
-            result.push_back(RenderChunk(pairSegment->first, it->get()));
+            result.push_back(RenderChunk(pairSegment->first, it->get(), VertexType::PosUVNormal));
         }
     }
 }

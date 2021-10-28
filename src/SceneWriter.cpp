@@ -13,6 +13,7 @@
 #include "./ExtendedMesh.h"
 #include "./RenderChunk.h"
 #include "AnimationTranslator.h"
+#include "MeshWriter.h"
 
 DisplayListSettings::DisplayListSettings():
     mPrefix(""),
@@ -51,9 +52,7 @@ std::vector<SKAnimationHeader> generateAnimationData(const aiScene* scene, BoneH
 }
 
 void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, std::ostream& animationDef, DisplayListSettings& settings) {
-    RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     CFileDefinition fileDefinition(settings.mPrefix);
-    DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
     BoneHierarchy bones;
     bool shouldExportAnimations;
 
@@ -75,13 +74,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
     extractChunks(extendedMeshes, renderChunks);
     orderChunks(renderChunks);
 
-    for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
-        // todo apply material
-        int vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, VertexType::PosUVNormal);
-        generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
-    }
-
-    rcpState.TraverseToBone(nullptr, displayList);
+    std::string renderDLName;
 
     if (settings.mExportGeometry) {
         if (shouldExportAnimations) {
@@ -89,9 +82,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
             output << std::endl;
         }
 
-        fileDefinition.GenerateVertexBuffers(output, settings.mScale, settings.mRotateModel);
-
-        displayList.Generate(fileDefinition, output);
+        renderDLName = generateMesh(fileDefinition, renderChunks, settings, output);
     }
 
     headerFile << "#ifndef _" << settings.mPrefix << "_H" << std::endl;
@@ -106,7 +97,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
 
     headerFile << std::endl;
     if (settings.mExportGeometry) {
-        headerFile << "extern Gfx " << displayList.GetName() << "[];" << std::endl;
+        headerFile << "extern Gfx " << renderDLName << "[];" << std::endl;
     }
 
     if (shouldExportAnimations) {        

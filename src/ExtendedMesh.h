@@ -6,6 +6,11 @@
 #include <vector>
 #include <map>
 
+enum class VertexType {
+    PosUVNormal,
+    PosUVColor,
+};
+
 class ExtendedMesh {
 public:
     ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy);

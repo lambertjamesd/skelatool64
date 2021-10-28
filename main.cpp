@@ -9,6 +9,7 @@
 #include "src/SceneModification.h"
 #include "src/CommandLineParser.h"
 #include "src/MaterialParser.h"
+#include "src/LevelWriter.h"
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
@@ -106,22 +107,26 @@ int main(int argc, char *argv[]) {
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 1);
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
 
-    const aiScene* scene = importer.ReadFile(
-        args.mInputFile, 
-        aiProcess_JoinIdenticalVertices |
+    unsigned int pFlags = aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         aiProcess_LimitBoneWeights |
         aiProcess_SortByPType |
-        aiProcess_OptimizeMeshes |
-        aiProcess_OptimizeGraph
-    );
+        aiProcess_OptimizeMeshes;
+
+    if (!args.mIsLevel) {
+        pFlags |= aiProcess_OptimizeGraph;
+    }
+
+    const aiScene* scene = importer.ReadFile(args.mInputFile, pFlags);
 
     if (scene == nullptr) {
         std::cerr << "Error loading input file: " << importer.GetErrorString() << std::endl;
         return 1;
     }
 
-    splitSceneByBones(const_cast<aiScene*>(scene));
+    if (!args.mIsLevel) {
+        splitSceneByBones(const_cast<aiScene*>(scene));
+    }
 
     DisplayListSettings settings = DisplayListSettings();
 
@@ -147,7 +152,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
+    if (args.mIsLevel) {
+        generateLevelFromSceneToFile(scene, args.mOutputFile, settings);
+    } else {
+        generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
+    }
     
     return 0;
 }

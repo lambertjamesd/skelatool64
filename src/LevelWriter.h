@@ -5,6 +5,8 @@
 #include <assimp/scene.h>
 #include "./DisplayListSettings.h"
 
+#define MAX_PLAYERS 4
+
 class BaseDefinition {
 public:
     aiVector3D position;
@@ -15,6 +17,8 @@ class LevelDefinition {
 public:
     std::vector<BaseDefinition> bases;
     std::vector<aiMesh*> geometryMeshes;
+    aiVector3D startPosition[MAX_PLAYERS];
+    unsigned maxPlayerCount;
 };
 
 void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings);

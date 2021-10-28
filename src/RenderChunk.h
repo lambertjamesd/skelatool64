@@ -9,11 +9,12 @@
 
 class RenderChunk {
 public:
-    RenderChunk(std::pair<Bone*, Bone*> bonePair, ExtendedMesh* mesh);
+    RenderChunk(std::pair<Bone*, Bone*> bonePair, ExtendedMesh* mesh, VertexType vertexType);
     // if bones are the same, chunk cooresponds to a single bone
     // the bones can be null
     std::pair<Bone*, Bone*> mBonePair;
     ExtendedMesh* mMesh;
+    VertexType mVertexType;
 
     const std::vector<aiFace*>& GetFaces();
 private:

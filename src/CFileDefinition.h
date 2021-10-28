@@ -10,11 +10,6 @@
 #include "./ErrorCode.h"
 #include "./ExtendedMesh.h"
 
-enum class VertexType {
-    PosUVNormal,
-    PosUVColor,
-};
-
 class VertexBufferDefinition {
 public:
     VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType);

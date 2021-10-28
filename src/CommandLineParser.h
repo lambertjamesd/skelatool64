@@ -14,6 +14,7 @@ struct CommandLineArguments {
     float mScale;
     bool mExportAnimation;
     bool mExportGeometry;
+    bool mIsLevel;
 };
 
 bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArguments& output);
