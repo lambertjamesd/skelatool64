@@ -27,10 +27,15 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
     }
 }
 
-void populateLevel(const aiScene* scene, class LevelDefinition& levelDef) {
-    populateLevelRecursive(scene, levelDef, scene->mRootNode, aiMatrix4x4());
+void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, DisplayListSettings& settings) {
+    populateLevelRecursive(scene, levelDef, scene->mRootNode, aiMatrix4x4(
+        aiVector3D(settings.mScale, settings.mScale, settings.mScale),
+        settings.mRotateModel,
+        aiVector3D(0.0f, 0.0f, 0.0f)
+    ));
 }
 
 void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings) {
-
+    class LevelDefinition levelDef;
+    populateLevel(scene, levelDef, settings);
 }
