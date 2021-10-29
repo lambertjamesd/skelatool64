@@ -27,6 +27,11 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
             levelDef.maxPlayerCount = std::max(levelDef.maxPlayerCount, base.team + 1);
         }
 
+        levelDef.minBoundary.x = std::min(levelDef.minBoundary.x, base.position.x);
+        levelDef.minBoundary.z = std::min(levelDef.minBoundary.z, base.position.z);
+
+        levelDef.maxBoundary.x = std::max(levelDef.maxBoundary.x, base.position.x);
+        levelDef.maxBoundary.z = std::max(levelDef.maxBoundary.z, base.position.z);
     }
 
     if (nodeName.rfind("Geometry", 0) == 0) {
@@ -106,6 +111,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
     fileContent << "    .playerStartLocations = " << startingPositions << "," << std::endl;
     fileContent << "    .baseCount = " << levelDef.bases.size() << "," << std::endl;
     fileContent << "    .bases = " << basesName << "," << std::endl;
+    fileContent << "    .levelBoundaries = {{" << levelDef.minBoundary.x << ", " << levelDef.minBoundary.z << "}, {" << levelDef.maxBoundary.x << ", " << levelDef.maxBoundary.z << "}}," << std::endl;
     fileContent << "    .sceneRender = " << geometryName << "," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;

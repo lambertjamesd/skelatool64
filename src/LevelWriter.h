@@ -19,6 +19,8 @@ public:
     std::vector<aiMesh*> geometryMeshes;
     aiVector3D startPosition[MAX_PLAYERS];
     unsigned maxPlayerCount;
+    aiVector3D minBoundary;
+    aiVector3D maxBoundary;
 };
 
 void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings);
