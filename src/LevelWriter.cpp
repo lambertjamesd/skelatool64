@@ -56,7 +56,7 @@ void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, Displa
 void generateLevelFromScene(const aiScene* scene, std::string headerFilename, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
     LevelDefinition levelDef;
     levelDef.maxPlayerCount = 0;
-    populateLevel(scene, levelDef);
+    populateLevel(scene, levelDef, settings);
     CFileDefinition fileDefinition(settings.mPrefix);
     BoneHierarchy blankBones;
 

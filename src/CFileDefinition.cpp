@@ -83,7 +83,7 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, ai
             if (code != ErrorCode::None) return code;
             output << converted << ", ";
 
-            code = convertToShort(uv.y * (1 << 10), converted);
+            code = convertToShort((1.0f - uv.y) * (1 << 10), converted);
             if (code != ErrorCode::None) return code;
             output << converted << "}, {";
         }
