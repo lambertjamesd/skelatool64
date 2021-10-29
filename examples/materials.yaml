@@ -1,5 +1,26 @@
 
+Resources:
+  resourceName:
+    Type: u8
+    IsArray: true
+    Content: |-
+      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+
+
 Materials:
+  Raw Material Name:
+    UsedResources: ["resourceName"]
+    Content: |-
+      gSPCommand(foo, bar),
+      gSPCommand(foo, bar),
+      gSPCommand(foo, bar),
+      gSPCommandWithResource(foo, bar, resourceName),
+      gSPCommand(foo, bar),
+      gSPCommand(foo, bar),
+
   Material Name A:
     RenderMode: G_RM_AA_ZB_OPA_SURF
     CycleMode: G_RM_ZB_OPA_SURF

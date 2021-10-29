@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <stdexcept>
+#include <map>
 
 ParseError::ParseError(const std::string& message) :
     mMessage(message) {
@@ -44,6 +45,15 @@ int parseInteger(const YAML::Node& node, ParseResult& output, int min, int max) 
 
 
     return result;
+}
+
+std::string parseString(const YAML::Node& node, ParseResult& output) {
+    if (!node.IsDefined() || !node.IsScalar()) {
+        output.mErrors.push_back(ParseError(formatError("Expected a string", node.Mark())));
+        return "";
+    }
+
+    return node.as<std::string>();
 }
 
 enum class RenderModeIndex {
@@ -213,24 +223,63 @@ void parsePrimColor(const YAML::Node& node, PrimitiveColor& color, ParseResult& 
     }
 } 
 
-void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output) {
+void parseMaterialResource(const YAML::Node& node, std::string& name, MaterialResource& resource, ParseResult& output) {
+    resource.mName = name;
+    resource.mName = parseString(node["Content"], output);
+    resource.mName = parseString(node["Type"], output);
+    resource.mName = node["Name"].as<bool>();
+}
+ 
+void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output, std::map<std::string, std::shared_ptr<MaterialResource>>& resources) {
     parseRenderMode(node["RenderMode"], material.mRenderMode, output);
     parseCycleType(node["CycleType"], material.mCycleType, output);
     parsePrimColor(node["PrimColor"], material.mPrimColor, output);
     parseMaterialColor(node["EnvColor"], material.mEnvColor, output);
     parseMaterialColor(node["FogColor"], material.mFogColor, output);
     parseMaterialColor(node["BlendColor"], material.mBlendColor, output);
+
+    const YAML::Node& content = node["Content"];
+
+    if (content.IsDefined()) {
+        material.mRawContent = content.as<std::string>();
+    }
+
+    const YAML::Node& usedResources = node["UsedResources"];
+
+    if (usedResources.IsDefined() && usedResources.IsSequence()) {
+        for (unsigned i = 0; i < usedResources.size(); ++i) {
+            std::string resourceName = parseString(usedResources[i], output);
+            auto resource = resources.find(resourceName);
+
+            if (resource == resources.end()) {
+                output.mErrors.push_back(ParseError(formatError("Could not find resource with given name", usedResources[i].Mark())));
+            } else {
+                material.mUsedResources.push_back(resource->second);
+            }
+        }
+    }
 }
 
 void parseMaterialFile(std::istream& input, ParseResult& output) {
     try {
         YAML::Node doc = YAML::Load(input);
 
+        std::map<std::string, std::shared_ptr<MaterialResource>> resources;
+        
+        const YAML::Node& resourceNodes = doc["Resources"];
+
+        for (auto it = resourceNodes.begin(); it != resourceNodes.end(); ++it) {
+            std::shared_ptr<MaterialResource> newResource(new MaterialResource());
+            std::string resourceName = it->first.as<std::string>();
+            parseMaterialResource(it->second, resourceName, *newResource, output);
+            resources[resourceName] = newResource;
+        }
+
         const YAML::Node& materials = doc["Materials"];
 
         for (auto it = materials.begin(); it != materials.end(); ++it) {
             Material newMaterial;
-            parseMaterial(it->second, newMaterial, output);
+            parseMaterial(it->second, newMaterial, output, resources);
             output.mMaterialFile.mMaterials[it->first.as<std::string>()] = newMaterial;
         }
     } catch (YAML::ParserException& e) {

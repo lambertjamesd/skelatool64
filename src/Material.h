@@ -2,7 +2,8 @@
 #define _MATERIAL_H
 
 #include <string>
-#include <optional>
+#include <vector>
+#include <memory>
 
 enum class CullMode {
     Unknown,
@@ -35,11 +36,20 @@ struct MaterialColor {
     unsigned char r;
     unsigned char g;
     unsigned char b;
+    unsigned char a;
 };
 
 struct PrimitiveColor : MaterialColor {
     unsigned char m;
     unsigned char l;
+};
+
+struct MaterialResource {
+public:
+    std::string mName;
+    std::string mContent;
+    std::string mType;
+    bool mIsArray;
 };
 
 class Material {
@@ -52,6 +62,9 @@ public:
     MaterialColor mEnvColor;
     MaterialColor mFogColor;
     MaterialColor mBlendColor;
+
+    std::string mRawContent;
+    std::vector<std::shared_ptr<MaterialResource>> mUsedResources;
 };
 
 #endif
