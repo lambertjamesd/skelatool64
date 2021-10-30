@@ -51,6 +51,36 @@ void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, Displa
         settings.mRotateModel,
         aiVector3D(0.0f, 0.0f, 0.0f)
     ));
+
+    for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
+        aiVector3D boundaryPoint = levelDef.boundary[i];
+
+        levelDef.minBoundary.x = std::min(levelDef.minBoundary.x, boundaryPoint.x);
+        levelDef.minBoundary.z = std::min(levelDef.minBoundary.z, boundaryPoint.z);
+
+        levelDef.maxBoundary.x = std::max(levelDef.maxBoundary.x, boundaryPoint.x);
+        levelDef.maxBoundary.z = std::max(levelDef.maxBoundary.z, boundaryPoint.z);
+    }
+}
+
+void generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ostream& fileContent) {
+    aiVector3D at = (from + to) * 0.5f;
+    aiVector3D offset = to - from;
+
+    at.y = 0.0f;
+    offset.y = 0.0f;
+
+    float tmp = offset.x;
+    offset.x = offset.z;
+    offset.z = -tmp;
+
+    if (at * offset > 0) {
+        offset - offset;
+    }
+
+    offset.Normalize();
+
+    fileContent << "{{" << at.x << ", " << at.z << "}, {" << offset.x << ", " << offset.z << "}}";
 }
 
 void generateLevelFromScene(const aiScene* scene, std::string headerFilename, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
@@ -110,6 +140,16 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 
+    std::string boundary = fileDefinition.GetUniqueName("Boundary");
+    fileContent << "struct SceneBoundary " << boundary << "[] = {" << std::endl;
+    for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
+        fileContent << "    ";
+        generateBoundaryEdge(levelDef.boundary[i], levelDef.boundary[(i + 1) % levelDef.boundary.size()], fileContent);
+        fileContent << "," << std::endl;
+    }
+    fileContent << "};" << std::endl;
+    fileContent << std::endl;
+
     fileContent << "struct LevelDefinition " << definitionName << " = {" << std::endl;
     fileContent << "    .maxPlayerCount = " << levelDef.maxPlayerCount << "," << std::endl;
     fileContent << "    .playerStartLocations = " << startingPositions << "," << std::endl;
@@ -117,6 +157,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
     fileContent << "    .bases = " << basesName << "," << std::endl;
     fileContent << "    .levelBoundaries = {{" << levelDef.minBoundary.x << ", " << levelDef.minBoundary.z << "}, {" << levelDef.maxBoundary.x << ", " << levelDef.maxBoundary.z << "}}," << std::endl;
     fileContent << "    .sceneRender = " << geometryName << "," << std::endl;
+    fileContent << "    .staticScene = {" << boundary << ", " << levelDef.boundary.size() << "}," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }

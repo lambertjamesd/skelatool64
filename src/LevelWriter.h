@@ -21,6 +21,7 @@ public:
     unsigned maxPlayerCount;
     aiVector3D minBoundary;
     aiVector3D maxBoundary;
+    std::vector<aiVector3D> boundary;
 };
 
 void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings);
