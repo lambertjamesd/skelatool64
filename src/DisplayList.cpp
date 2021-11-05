@@ -14,10 +14,19 @@ CommentCommand::CommentCommand(std::string comment):
 
 }
 
-std::string mComment;
-
 bool CommentCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
     output << "// " << mComment;
+    return false;
+}
+
+RawContentCommand::RawContentCommand(std::string content):
+    DisplayListCommand(DisplayListCommandType::RAW),
+    mContent(content) {
+
+}
+
+bool RawContentCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
+    output << mContent;
     return false;
 }
 
@@ -71,6 +80,17 @@ TRI2Command::TRI2Command(int a0, int b0, int c0, int a1, int b1, int c1) :
 
 bool TRI2Command::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
     output << "gsSP2Triangles(" << mA0 << ", " << mB0 << ", " << mC0 << ", 0, " << mA1 << ", " << mB1 << ", " << mC1 << ", 0)";
+    return true;
+}
+
+CallDisplayListByNameCommand::CallDisplayListByNameCommand(const std::string& dlName): 
+    DisplayListCommand(DisplayListCommandType::G_DL),
+    mDLName(dlName) {
+
+}
+
+bool CallDisplayListByNameCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
+    output << "gsSPDisplayList(" << mDLName << ")";
     return true;
 }
 

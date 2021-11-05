@@ -105,16 +105,15 @@ int main(int argc, char *argv[]) {
     Assimp::Importer importer;
 
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 1);
-    importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
 
     unsigned int pFlags = aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         aiProcess_LimitBoneWeights |
-        aiProcess_SortByPType |
         aiProcess_OptimizeMeshes;
 
     if (!args.mIsLevel) {
-        pFlags |= aiProcess_OptimizeGraph;
+        importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
+        pFlags |= aiProcess_OptimizeGraph | aiProcess_SortByPType;
     }
 
     const aiScene* scene = importer.ReadFile(args.mInputFile, pFlags);
@@ -131,8 +130,10 @@ int main(int argc, char *argv[]) {
     DisplayListSettings settings = DisplayListSettings();
 
     settings.mScale = args.mScale;
+    // settings.mScale = 1.0f;
     settings.mPrefix = args.mPrefix;
     settings.mRotateModel = getUpRotation(scene);
+    // settings.mRotateModel = aiQuaternion();
     settings.mExportAnimation = args.mExportAnimation;
     settings.mExportGeometry = args.mExportGeometry;
 

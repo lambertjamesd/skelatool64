@@ -8,11 +8,13 @@
 
 enum class DisplayListCommandType {
     COMMENT,
+    RAW,
     G_VTX,
     G_TRI1,
     G_TRI2,
     G_MTX,
     G_POPMTX,
+    G_DL,
 };
 
 class DisplayList;
@@ -32,6 +34,14 @@ struct CommentCommand : DisplayListCommand {
     CommentCommand(std::string comment);
 
     std::string mComment;
+
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+};
+
+struct RawContentCommand : DisplayListCommand {
+    RawContentCommand(std::string content);
+
+    std::string mContent;
 
     bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 };
@@ -81,6 +91,14 @@ struct CallDisplayListCommand {
 
     int mTargetDL;
     int mOffset;
+
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+};
+
+struct CallDisplayListByNameCommand : DisplayListCommand {
+    CallDisplayListByNameCommand(const std::string& dlName);
+
+    std::string mDLName;
 
     bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 };

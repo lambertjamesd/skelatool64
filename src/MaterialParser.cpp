@@ -225,9 +225,9 @@ void parsePrimColor(const YAML::Node& node, PrimitiveColor& color, ParseResult& 
 
 void parseMaterialResource(const YAML::Node& node, std::string& name, MaterialResource& resource, ParseResult& output) {
     resource.mName = name;
-    resource.mName = parseString(node["Content"], output);
-    resource.mName = parseString(node["Type"], output);
-    resource.mName = node["Name"].as<bool>();
+    resource.mContent = parseString(node["Content"], output);
+    resource.mType = parseString(node["Type"], output);
+    resource.mIsArray = node["IsArray"].as<bool>();
 }
  
 void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output, std::map<std::string, std::shared_ptr<MaterialResource>>& resources) {

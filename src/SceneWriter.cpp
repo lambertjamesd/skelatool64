@@ -82,7 +82,7 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
             output << std::endl;
         }
 
-        renderDLName = generateMesh(fileDefinition, renderChunks, settings, output);
+        renderDLName = generateMesh(scene, fileDefinition, renderChunks, settings, output);
     }
 
     headerFile << "#ifndef _" << settings.mPrefix << "_H" << std::endl;

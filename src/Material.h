@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
+#include <ostream>
+
+#include "DisplayList.h"
 
 enum class CullMode {
     Unknown,
@@ -52,6 +56,8 @@ public:
     bool mIsArray;
 };
 
+class CFileDefinition;
+
 class Material {
 public:
     Material();
@@ -65,6 +71,9 @@ public:
 
     std::string mRawContent;
     std::vector<std::shared_ptr<MaterialResource>> mUsedResources;
+
+    static void WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDef, std::ostream& output);
+    void WriteToDL(const std::map<std::string, std::string>& nameMapping, DisplayList& output);
 };
 
 #endif

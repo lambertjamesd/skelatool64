@@ -1,0 +1,12 @@
+#ifndef _STRING_UTILS_H
+#define _STRING_UTILS_H
+
+#include <string>
+
+std::string FindAndReplace(const std::string& source, const std::string& searchString, const std::string& replaceString);
+
+std::string Indent(const std::string& input, const std::string& whitespace);
+
+std::string Trim(const std::string& input);
+
+#endif

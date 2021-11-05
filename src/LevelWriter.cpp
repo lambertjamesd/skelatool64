@@ -10,6 +10,46 @@
 #include "CFileDefinition.h"
 #include "MeshWriter.h"
 
+void filterBoundaryMesh(aiMesh* mesh, const aiMatrix4x4& transform, std::vector<aiVector3D>& result) {
+    std::vector<aiVector3D> transformed;
+
+    for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
+        transformed.push_back(transform * mesh->mVertices[i]);
+    }
+
+    float minY = transformed[0].y;
+
+    for (unsigned i = 1; i < transformed.size(); ++i) {
+        minY = std::min(minY, transformed[i].y);
+    }
+
+    for (unsigned i = 0; i < transformed.size(); ++i) {
+        if (fabsf(transformed[i].y - minY) < 0.1f) {
+            result.push_back(transformed[i]);
+        }
+    }
+
+    std::sort(result.begin(), result.end(), [](const aiVector3D& a, const aiVector3D& b) -> bool {
+        float aAngle = atan2f(a.z, a.x);
+        float bAngle = atan2f(b.z, b.x);
+
+        return aAngle < bAngle;
+    });
+
+    // aiVector3D last = result[0];
+
+    // for (unsigned i = 1; i < result.size(); ++i) {
+    //     aiVector3D curr = result[i];
+
+    //     if ((last - curr).SquareLength() < 0.01f) {
+    //         result.erase(result.begin() + i);
+    //     } else {
+    //         last = curr;
+    //         ++i;
+    //     }
+    // }
+}
+
 void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, aiNode* node, const aiMatrix4x4& transform) {
     std::string nodeName = node->mName.C_Str();
 
@@ -40,17 +80,20 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
         }
     }
 
+    if (nodeName.rfind("Boundary", 0) == 0) {
+        if (node->mNumMeshes > 0) {
+            aiMesh* mesh = scene->mMeshes[node->mMeshes[0]];
+            filterBoundaryMesh(mesh, transform, levelDef.boundary);
+        }
+    }
+
     for (unsigned i = 0; i < node->mNumChildren; ++i) {
         populateLevelRecursive(scene, levelDef, node->mChildren[i], transform * node->mChildren[i]->mTransformation);
     }
 }
 
 void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, DisplayListSettings& settings) {
-    populateLevelRecursive(scene, levelDef, scene->mRootNode, aiMatrix4x4(
-        aiVector3D(settings.mScale, settings.mScale, settings.mScale),
-        settings.mRotateModel,
-        aiVector3D(0.0f, 0.0f, 0.0f)
-    ));
+    populateLevelRecursive(scene, levelDef, scene->mRootNode, aiMatrix4x4());
 
     for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
         aiVector3D boundaryPoint = levelDef.boundary[i];
@@ -63,9 +106,13 @@ void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, Displa
     }
 }
 
-void generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ostream& fileContent) {
+bool generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ostream& fileContent) {
     aiVector3D at = (from + to) * 0.5f;
     aiVector3D offset = to - from;
+
+    if (offset.SquareLength() < 0.1f) {
+        return false;
+    }
 
     at.y = 0.0f;
     offset.y = 0.0f;
@@ -75,12 +122,13 @@ void generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ost
     offset.z = -tmp;
 
     if (at * offset > 0) {
-        offset - offset;
+        offset = -offset;
     }
 
     offset.Normalize();
 
-    fileContent << "{{" << at.x << ", " << at.z << "}, {" << offset.x << ", " << offset.z << "}}";
+    fileContent << "    {{" << at.x << ", " << at.z << "}, {" << offset.x << ", " << offset.z << "}}," << std::endl;
+    return true;
 }
 
 void generateLevelFromScene(const aiScene* scene, std::string headerFilename, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
@@ -115,7 +163,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
         chunks.push_back(RenderChunk(std::pair<Bone*, Bone*>(nullptr, nullptr), &*meshes.rbegin(), VertexType::PosUVColor));
     }
 
-    std::string geometryName = generateMesh(fileDefinition, chunks, settings, fileContent);
+    std::string geometryName = generateMesh(scene, fileDefinition, chunks, settings, fileContent);
 
     std::string basesName = fileDefinition.GetUniqueName("Bases");
 
@@ -142,10 +190,11 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
 
     std::string boundary = fileDefinition.GetUniqueName("Boundary");
     fileContent << "struct SceneBoundary " << boundary << "[] = {" << std::endl;
+    unsigned actualBoundaryCount = 0;
     for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
-        fileContent << "    ";
-        generateBoundaryEdge(levelDef.boundary[i], levelDef.boundary[(i + 1) % levelDef.boundary.size()], fileContent);
-        fileContent << "," << std::endl;
+        if (generateBoundaryEdge(levelDef.boundary[i], levelDef.boundary[(i + 1) % levelDef.boundary.size()], fileContent)) {
+            ++actualBoundaryCount;
+        }
     }
     fileContent << "};" << std::endl;
     fileContent << std::endl;
@@ -157,7 +206,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
     fileContent << "    .bases = " << basesName << "," << std::endl;
     fileContent << "    .levelBoundaries = {{" << levelDef.minBoundary.x << ", " << levelDef.minBoundary.z << "}, {" << levelDef.maxBoundary.x << ", " << levelDef.maxBoundary.z << "}}," << std::endl;
     fileContent << "    .sceneRender = " << geometryName << "," << std::endl;
-    fileContent << "    .staticScene = {" << boundary << ", " << levelDef.boundary.size() << "}," << std::endl;
+    fileContent << "    .staticScene = {" << boundary << ", " << actualBoundaryCount << "}," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }
