@@ -8,6 +8,7 @@
 #include <ostream>
 
 #include "DisplayList.h"
+#include "ExtendedMesh.h"
 
 enum class CullMode {
     Unknown,
@@ -68,6 +69,8 @@ public:
     MaterialColor mEnvColor;
     MaterialColor mFogColor;
     MaterialColor mBlendColor;
+
+    VertexType mVetexType;
 
     std::string mRawContent;
     std::vector<std::shared_ptr<MaterialResource>> mUsedResources;

@@ -1,5 +1,6 @@
 #include "CFileDefinition.h"
 #include <stdio.h>
+#include "StringUtils.h"
 
 VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType):
     mTargetMesh(targetMesh),
@@ -197,20 +198,6 @@ ErrorCode CFileDefinition::GenerateVertexBuffers(std::ostream& output, float sca
 
 int CFileDefinition::GetNextID() {
     return mNextID++;
-}
-
-void makeCCompatible(std::string& target) {
-    for (unsigned int i = 0; i < target.length(); ++i) {
-        char curr = target[i];
-
-        if (!(curr >= 'a' && curr <= 'z') && !(curr >= 'A' && curr <= 'Z') && !(curr >= '0' && curr <= '9') && curr != '_') {
-            target[i] = '_';
-        }
-    }
-
-    if (target.length() > 0 && target[0] >= '0' && target[0] <= '9') {
-        target = '_' + target;
-    }
 }
 
 std::string CFileDefinition::GetUniqueName(std::string requestedName) {

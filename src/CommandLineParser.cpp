@@ -84,7 +84,7 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
         }
     }
 
-    if (output.mInputFile == "" || output.mOutputFile == "") {
+    if (output.mInputFile == "" || (output.mOutputFile == "" && !output.mIsLevelDef)) {
         std::cerr << "Input and output file are both required" << std::endl;
         hasError = true;
     }

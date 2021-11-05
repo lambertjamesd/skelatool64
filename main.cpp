@@ -1,15 +1,16 @@
-#include <assimp/Importer.hpp>
+
 #include <assimp/mesh.h>
-#include <assimp/postprocess.h>
 
 #include <iostream>
 #include <fstream>
 
 #include "src/SceneWriter.h"
-#include "src/SceneModification.h"
 #include "src/CommandLineParser.h"
 #include "src/MaterialParser.h"
 #include "src/LevelWriter.h"
+#include "src/ThemeDefinition.h"
+#include "src/ThemeWriter.h"
+#include "src/SceneLoader.h"
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
@@ -48,7 +49,7 @@ float angleBetween(const aiVector3D& a, const aiVector3D& b) {
     return acos(a * b / (a - b).SquareLength());
 }
 
-aiQuaternion getUpRotation(const aiScene* scene) {
+aiQuaternion getUpRotation() {
     // aiVector3D upVector(0.0f, 0.0f, 0.0f);
     // aiVector3D frontVector(0.0f, 0.0f, 0.0f);
     // aiVector3D originalUpVector(0.0f, 0.0f, 1.0f);
@@ -90,6 +91,31 @@ aiQuaternion getUpRotation(const aiScene* scene) {
     return aiQuaternion(aiVector3D(1.0f, 0.0f, 0.0f), -M_PI * 0.5f) * aiQuaternion(aiVector3D(0.0f, 0.0f, 1.0f), M_PI * 0.5f);
 }
 
+void generateLevelDef(const std::string& filename, DisplayListSettings& settings) {
+    ThemeDefinitionList themeDef;
+    parseThemeDefinition(filename, themeDef);
+
+    for (auto it = themeDef.mThemes.begin(); it != themeDef.mThemes.end(); ++it) {
+        generateThemeDefiniton(*it, settings);
+    }
+
+    std::ofstream levelList;
+    levelList.open(themeDef.mLevelList, std::ios_base::out | std::ios_base::trunc);
+
+    std::ofstream themeList;
+    themeList.open(themeDef.mThemeList, std::ios_base::out | std::ios_base::trunc);
+
+    for (auto theme = themeDef.mThemes.begin(); theme != themeDef.mThemes.end(); ++theme) {
+        themeList << "DEFINE_THEME(" << theme->mCName << ")" << std::endl;
+        for (auto level = theme->mLevels.begin(); level != theme->mLevels.end(); ++level) {
+            levelList << "DEFINE_LEVEL(" << level->mCName << ", " << theme->mCName << ")" << std::endl;
+        }
+    }
+
+    levelList.close();
+    themeList.close();
+}
+
 /**
  * F3DEX2 - 32 vertices in buffer
  * F3D - 16 vetcies in buffer
@@ -102,44 +128,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    Assimp::Importer importer;
-
-    importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 1);
-
-    unsigned int pFlags = aiProcess_JoinIdenticalVertices |
-        aiProcess_Triangulate |
-        aiProcess_LimitBoneWeights |
-        aiProcess_OptimizeMeshes;
-
-    if (!args.mIsLevel) {
-        importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
-        pFlags |= aiProcess_OptimizeGraph | aiProcess_SortByPType;
-    }
-
-    const aiScene* scene = importer.ReadFile(args.mInputFile, pFlags);
-
-    if (scene == nullptr) {
-        std::cerr << "Error loading input file: " << importer.GetErrorString() << std::endl;
-        return 1;
-    }
-
-    if (!args.mIsLevel) {
-        splitSceneByBones(const_cast<aiScene*>(scene));
-    }
-
     DisplayListSettings settings = DisplayListSettings();
 
     settings.mScale = args.mScale;
-    // settings.mScale = 1.0f;
+    settings.mRotateModel = getUpRotation();
     settings.mPrefix = args.mPrefix;
-    settings.mRotateModel = getUpRotation(scene);
-    // settings.mRotateModel = aiQuaternion();
     settings.mExportAnimation = args.mExportAnimation;
     settings.mExportGeometry = args.mExportGeometry;
-
-    // TOOO - change for other versions of f3d
-    importer.SetPropertyInteger(AI_CONFIG_PP_ICL_PTCACHE_SIZE, settings.mVertexCacheSize);
-    importer.ApplyPostProcessing(aiProcess_ImproveCacheLocality);
 
     bool hasError = false;
 
@@ -153,9 +148,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (args.mIsLevel) {
+    if (args.mIsLevelDef) {
+        generateLevelDef(args.mInputFile, settings);
+    } else if (args.mIsLevel) {
+        const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
+
+        if (!scene) {
+            return 1;
+        }
         generateLevelFromSceneToFile(scene, args.mOutputFile, settings);
     } else {
+        const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
+
+        if (!scene) {
+            return 1;
+        }
         generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
     }
     

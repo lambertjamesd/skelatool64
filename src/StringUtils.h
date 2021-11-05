@@ -9,4 +9,6 @@ std::string Indent(const std::string& input, const std::string& whitespace);
 
 std::string Trim(const std::string& input);
 
+void makeCCompatible(std::string& target);
+
 #endif
