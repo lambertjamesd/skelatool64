@@ -35,9 +35,9 @@ void collectMaterialResources(const aiScene* scene, std::vector<RenderChunk>& re
     resources.insert(resources.begin(), resourceAsSet.begin(), resourceAsSet.end());
 }
 
-std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, std::ostream& output) {
+
+void generateMeshIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList, std::ostream& output) {
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
-    DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
 
     std::vector<std::shared_ptr<MaterialResource>> resources;
     std::map<std::string, int> materialUsecount;
@@ -82,6 +82,11 @@ std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, 
     }
     rcpState.TraverseToBone(nullptr, displayList);
     fileDefinition.GenerateVertexBuffers(output, settings.mScale, settings.mRotateModel);
+}
+
+std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, std::ostream& output) {
+    DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
+    generateMeshIntoDL(scene, fileDefinition, renderChunks, settings, displayList, output);
     displayList.Generate(fileDefinition, output);
     return displayList.GetName();
 }

@@ -103,6 +103,15 @@ void flushVertices(RenderChunk& chunk, std::set<int>& currentVertices, std::vect
     }
 }
 
+void generateCulling(DisplayList& output, int vertexBuffer, bool renableLighting) {
+    output.AddCommand(std::unique_ptr<DisplayListCommand>(new ChangeGeometryMode(GeometryMode::G_LIGHTING, GeometryMode::None)));
+    output.AddCommand(std::unique_ptr<DisplayListCommand>(new VTXCommand(8, 0, vertexBuffer, 0)));
+    output.AddCommand(std::unique_ptr<DisplayListCommand>(new CullDisplayList(8)));
+    if (renableLighting) {
+        output.AddCommand(std::unique_ptr<DisplayListCommand>(new ChangeGeometryMode(GeometryMode::None, GeometryMode::G_LIGHTING)));
+    }
+}
+
 void generateGeometry(RenderChunk& chunk, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
     std::set<int> currentVertices;
     std::vector<aiFace*> currentFaces;

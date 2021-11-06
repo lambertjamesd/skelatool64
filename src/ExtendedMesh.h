@@ -22,6 +22,8 @@ public:
     std::map<Bone*, std::vector<aiFace*>> mFacesForBone;
     // first bone in pair is always the parent of the second
     std::map<std::pair<Bone*, Bone*>, std::vector<aiFace*>> mBoneSpanningFaces;
+    aiVector3D bbMin;
+    aiVector3D bbMax;
 
     bool isFaceOneBone(aiFace* face);
     std::pair<Bone*, Bone*> findTransitionPairForFace(aiFace* face);

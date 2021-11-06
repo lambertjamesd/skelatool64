@@ -3,6 +3,7 @@
 #include <math.h>
 #include <vector>
 #include <sstream>
+#include <iostream>
 
 bool isPathCharacter(char chr) {
     return chr == '\\' || chr == '/';
@@ -65,6 +66,10 @@ std::string Join(const std::string& a, const std::string& b) {
     while (secondPath.rfind("../", 0) == 0 || secondPath.rfind("..\\", 0) == 0) {
         firstPath = DirectoryName(firstPath);
         secondPath = secondPath.substr(3);
+    }
+
+    if (firstPath == "") {
+        return secondPath;
     }
 
     return firstPath + "/" + secondPath;

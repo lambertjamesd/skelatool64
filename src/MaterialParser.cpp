@@ -229,6 +229,14 @@ void parseMaterialResource(const YAML::Node& node, std::string& name, MaterialRe
     resource.mType = parseString(node["Type"], output);
     resource.mIsArray = node["IsArray"].as<bool>();
 }
+
+VertexType parseMaterialVertexType(const YAML::Node& node) {
+    if (node.IsDefined() && node.IsScalar() && node.Scalar() == "Normal") {
+        return VertexType::PosUVNormal;
+    }
+
+    return VertexType::PosUVColor;
+}
  
 void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output, std::map<std::string, std::shared_ptr<MaterialResource>>& resources) {
     parseRenderMode(node["RenderMode"], material.mRenderMode, output);
@@ -237,6 +245,7 @@ void parseMaterial(const YAML::Node& node, Material& material, ParseResult& outp
     parseMaterialColor(node["EnvColor"], material.mEnvColor, output);
     parseMaterialColor(node["FogColor"], material.mFogColor, output);
     parseMaterialColor(node["BlendColor"], material.mBlendColor, output);
+    material.mVertexType = parseMaterialVertexType(node["VertexType"]);
 
     const YAML::Node& content = node["Content"];
 

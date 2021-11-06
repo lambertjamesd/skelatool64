@@ -96,6 +96,7 @@ void generateLevelDef(const std::string& filename, DisplayListSettings& settings
     parseThemeDefinition(filename, themeDef);
 
     for (auto it = themeDef.mThemes.begin(); it != themeDef.mThemes.end(); ++it) {
+        std::cout << "Generating theme " << it->mName << std::endl;
         generateThemeDefiniton(*it, settings);
     }
 
@@ -149,20 +150,25 @@ int main(int argc, char *argv[]) {
     }
 
     if (args.mIsLevelDef) {
+        std::cout << "Generating from level def "  << args.mInputFile << std::endl;
         generateLevelDef(args.mInputFile, settings);
     } else if (args.mIsLevel) {
+        std::cout << "Generating from level "  << args.mInputFile << std::endl;
         const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
 
         if (!scene) {
             return 1;
         }
+        std::cout << "Saving to "  << args.mOutputFile << std::endl;
         generateLevelFromSceneToFile(scene, args.mOutputFile, nullptr, settings);
     } else {
+        std::cout << "Generating from mesh "  << args.mInputFile << std::endl;
         const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
 
         if (!scene) {
             return 1;
         }
+        std::cout << "Saving to "  << args.mOutputFile << std::endl;
         generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
     }
     

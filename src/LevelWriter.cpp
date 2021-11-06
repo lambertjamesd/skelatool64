@@ -102,6 +102,34 @@ bool generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ost
     return true;
 }
 
+void generateDecorDL(LevelDefinition& levelDef, ThemeWriter* theme, DisplayList& dl) {
+    std::vector<std::pair<unsigned, DecorDefinition>> decorCopy;
+
+    for (unsigned i = 0; i < levelDef.decor.size(); ++i) {
+        decorCopy.push_back(std::make_pair(i, levelDef.decor[i]));
+    }
+
+    std::sort(decorCopy.begin(), decorCopy.end(), [](const std::pair<unsigned, DecorDefinition>& a, const std::pair<unsigned, DecorDefinition>& b) -> bool {
+        return a.second.decorID < b.second.decorID;
+    });
+
+    std::string currentId = "";
+
+    for (auto it = decorCopy.begin(); it != decorCopy.end(); ++it) {
+        if (currentId != it->second.decorID) {
+            std::string material = theme->GetDecorMaterial(it->second.decorID);
+            if (material != "0") {
+                dl.AddCommand(std::unique_ptr<DisplayListCommand>(new CallDisplayListByNameCommand(material)));
+            }
+            currentId = it->second.decorID;
+        }
+
+        dl.AddCommand(std::unique_ptr<DisplayListCommand>(new PushMatrixCommand(it->first, false)));
+        dl.AddCommand(std::unique_ptr<DisplayListCommand>(new CallDisplayListByNameCommand(theme->GetDecorGeo(it->second.decorID))));
+        dl.AddCommand(std::unique_ptr<DisplayListCommand>(new PopMatrixCommand(1)));
+    }
+}
+
 void generateLevelFromScene(const aiScene* scene, std::string headerFilename, ThemeWriter* theme, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
     LevelDefinition levelDef;
     levelDef.maxPlayerCount = 0;
@@ -126,6 +154,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     
     if (theme) {
         fileContent << "#include \"" << Relative(headerFilename, theme->GetThemeHeader()) << "\"" << std::endl;
+        fileContent << "#include \"sk64/skelatool_defs.h\"" << std::endl;
     }
 
     fileContent << "#include <ultra64.h>" << std::endl;
@@ -139,7 +168,15 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
         chunks.push_back(RenderChunk(std::pair<Bone*, Bone*>(nullptr, nullptr), &*meshes.rbegin(), VertexType::PosUVColor));
     }
 
-    std::string geometryName = generateMesh(scene, fileDefinition, chunks, settings, fileContent);
+    DisplayList sceneDisplayList(fileDefinition.GetUniqueName("model_gfx"));
+    generateMeshIntoDL(scene, fileDefinition, chunks, settings, sceneDisplayList, fileContent);
+
+    if (theme) {
+        sceneDisplayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("Begin decor")));
+        generateDecorDL(levelDef, theme, sceneDisplayList);
+    }
+
+    sceneDisplayList.Generate(fileDefinition, fileContent);
 
     std::string basesName = fileDefinition.GetUniqueName("Bases");
 
@@ -182,9 +219,11 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
 
         fileContent << "struct DecorDefinition " << decorList << "[] = {" << std::endl;
         for (auto it = levelDef.decor.begin(); it != levelDef.decor.end(); ++it) {
+            aiQuaternion finalRotation = it->rotation * settings.mRotateModel.Conjugate();
+
             fileContent << "    {";
             fileContent << "{" << it->position.x << ", " << it->position.y << ", " << it->position.z << "}, ";
-            fileContent << "{" << it->rotation.x << ", " << it->rotation.y << ", " << it->rotation.z << ", " << it->rotation.w << "}, ";
+            fileContent << "{" << finalRotation.x << ", " << finalRotation.y << ", " << finalRotation.z << ", " << finalRotation.w << "}, ";
             fileContent << theme->GetDecorID(it->decorID);
             fileContent << "}," << std::endl;
         }
@@ -199,7 +238,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     fileContent << "    .bases = " << basesName << "," << std::endl;
     fileContent << "    .decor = " << decorList << "," << std::endl;
     fileContent << "    .levelBoundaries = {{" << levelDef.minBoundary.x << ", " << levelDef.minBoundary.z << "}, {" << levelDef.maxBoundary.x << ", " << levelDef.maxBoundary.z << "}}," << std::endl;
-    fileContent << "    .sceneRender = " << geometryName << "," << std::endl;
+    fileContent << "    .sceneRender = " << sceneDisplayList.GetName() << "," << std::endl;
     fileContent << "    .theme = ";
     if (theme) {
         fileContent << "&" << theme->GetThemeName() << "Theme";

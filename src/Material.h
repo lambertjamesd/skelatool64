@@ -70,7 +70,7 @@ public:
     MaterialColor mFogColor;
     MaterialColor mBlendColor;
 
-    VertexType mVetexType;
+    VertexType mVertexType;
 
     std::string mRawContent;
     std::vector<std::shared_ptr<MaterialResource>> mUsedResources;

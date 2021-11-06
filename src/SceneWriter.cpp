@@ -24,7 +24,8 @@ DisplayListSettings::DisplayListSettings():
     mCanPopMultipleMatrices(true),
     mTicksPerSecond(30),
     mExportAnimation(true),
-    mExportGeometry(true) {
+    mExportGeometry(true),
+    mIncludeCulling(true) {
 }
 
 std::vector<SKAnimationHeader> generateAnimationData(const aiScene* scene, BoneHierarchy& bones, CFileDefinition& fileDef, float modelScale, unsigned short targetTicksPerSecond, aiQuaternion rotate, std::ostream& output, std::ostream& animationDef) {

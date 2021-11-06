@@ -174,14 +174,14 @@ std::string writeGeometry(std::ostream& cfile, std::vector<ThemeMesh*>& meshList
         }
 
         auto material = settings.mMaterials.find(mesh->materialName);
-        VertexType vtxType = material == settings.mMaterials.end() ? VertexType::PosUVNormal : material->second.mVetexType;
+        VertexType vtxType = material == settings.mMaterials.end() ? VertexType::PosUVColor : material->second.mVertexType;
         int vertexBuffer = fileDef.GetVertexBuffer(mesh->mesh, vtxType);
         RenderChunk chunk(std::pair<Bone*, Bone*>(nullptr, nullptr), mesh->mesh, vtxType);
 
         std::string dlName = fileDef.GetUniqueName(mesh->objectName + "DisplayList");
         displayListNames.push_back(dlName);
         DisplayList dl(dlName);
-
+        generateCulling(dl, fileDef.GetCullingBuffer(mesh->objectName + "Culling", mesh->mesh->bbMin, mesh->mesh->bbMax), vtxType == VertexType::PosUVNormal);
         generateGeometry(chunk, rcpState, vertexBuffer, dl, settings.mHasTri2);
         dl.Generate(fileDef, displayLists);
 
@@ -402,6 +402,7 @@ void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& sett
 
     for (auto it = themeDef.mLevels.begin(); it != themeDef.mLevels.end(); ++it) {
         LevelTheme level;
+        std::cout << "Loading scene " << it->mFilename << std::endl;
         level.scene = loadScene(it->mFilename, true, settings.mVertexCacheSize);
 
         if (!level.scene) {
@@ -415,12 +416,14 @@ void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& sett
         levels.push_back(level);
     }
 
+    std::cout << "Saving theme to " << themeDef.mOutput << std::endl;
     themeWriter.WriteTheme(themeDef.mOutput, settings);
     themeWriter.WriteThemeHeader(themeDef.mOutput, settings);
 
     for (auto it = levels.begin(); it != levels.end(); ++it) {
         DisplayListSettings levelSettings = settings;
         levelSettings.mPrefix = it->definition.mCName;
+        std::cout << "Saving level to " << it->definition.mOutput << std::endl;
         generateLevelFromSceneToFile(it->scene, it->definition.mOutput, &themeWriter, levelSettings);
     }
 }

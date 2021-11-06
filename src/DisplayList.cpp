@@ -135,6 +135,57 @@ bool PopMatrixCommand::GenerateCommand(CFileDefinition& fileDefinition, std::ost
     return true;
 }
 
+const char* gGeometryModeNames[] = {
+    "G_LIGHTING",
+};
+
+std::string generateGeometryMode(GeometryMode mode) {
+    std::string result = "";
+    unsigned index = 0;
+    unsigned modeAsNumber = (unsigned)mode;
+
+    while (modeAsNumber) {
+        if (modeAsNumber & 1) {
+            if (result.length()) {
+                result += " | ";
+            }
+
+            result += gGeometryModeNames[index];
+        }
+        
+        modeAsNumber >>= 1;
+        index += 1;
+    }
+
+    if (result.length() == 0) {
+        return "0";
+    }
+
+    return result;
+}
+
+ChangeGeometryMode::ChangeGeometryMode(GeometryMode clear, GeometryMode set): 
+    DisplayListCommand(DisplayListCommandType::G_GEOMETRYMODE), 
+    mClear(clear),
+    mSet(set) {
+}
+
+bool ChangeGeometryMode::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
+    output << "gsSPGeometryMode(" << generateGeometryMode(mClear) << ", " << generateGeometryMode(mSet) << ")";
+    return true;
+}
+
+CullDisplayList::CullDisplayList(unsigned int vertexCount): 
+    DisplayListCommand(DisplayListCommandType::G_CULLDL), 
+    mVertexCount(vertexCount) {
+    
+}
+
+bool CullDisplayList::GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) {
+    output << "gsSPCullDisplayList(0, " << (mVertexCount - 1) << ")";
+    return true;
+}
+
 DisplayList::DisplayList(std::string name):
     mName(name) {
     

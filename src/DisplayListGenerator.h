@@ -7,6 +7,7 @@
 #include "./CFileDefinition.h"
 #include "./RenderChunk.h"
 
+void generateCulling(DisplayList& output, int vertexBuffer, bool renableLighting);
 void generateGeometry(RenderChunk& mesh, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2);
 
 #endif

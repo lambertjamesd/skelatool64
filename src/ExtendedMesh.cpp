@@ -2,6 +2,7 @@
 #include "ExtendedMesh.h"
 
 #include <algorithm>
+#include "MathUtl.h"
 
 ExtendedMesh::ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy) :
     mMesh(mesh) {
@@ -28,6 +29,14 @@ ExtendedMesh::ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy) :
     }
 
     PopulateFacesForBone();
+
+    bbMin = mesh->mVertices[0];
+    bbMax = mesh->mVertices[0];
+
+    for (unsigned i = 1; i < mesh->mNumVertices; ++i) {
+        bbMin = min(bbMin, mesh->mVertices[i]);
+        bbMax = max(bbMax, mesh->mVertices[i]);
+    }
 }
 
 ExtendedMesh::~ExtendedMesh() {

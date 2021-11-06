@@ -10,7 +10,7 @@ Material::Material() :
     mCycleType(CycleType::Unknown),
     mCullMode(CullMode::Unknown),
     mRenderMode(),
-    mVetexType(VertexType::PosUVColor)
+    mVertexType(VertexType::PosUVColor)
     {
 
 }

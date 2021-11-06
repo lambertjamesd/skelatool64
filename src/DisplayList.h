@@ -15,6 +15,8 @@ enum class DisplayListCommandType {
     G_MTX,
     G_POPMTX,
     G_DL,
+    G_GEOMETRYMODE,
+    G_CULLDL,
 };
 
 class DisplayList;
@@ -116,6 +118,25 @@ struct PopMatrixCommand : DisplayListCommand {
     bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
 
     unsigned int mPopCount;
+};
+
+enum class GeometryMode {
+    None = 0,
+    G_LIGHTING = (1 << 0),
+};
+
+struct ChangeGeometryMode : DisplayListCommand {
+    ChangeGeometryMode(GeometryMode clear, GeometryMode set);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+
+    GeometryMode mClear;
+    GeometryMode mSet;
+};
+
+struct CullDisplayList : DisplayListCommand {
+    CullDisplayList(unsigned int vertexCount);
+    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    unsigned int mVertexCount;
 };
 
 class DisplayList {

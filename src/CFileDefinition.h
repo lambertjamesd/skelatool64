@@ -26,6 +26,7 @@ class CFileDefinition {
 public:
     CFileDefinition(std::string prefix);
     int GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType);
+    int GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max);
 
     const std::string GetVertexBufferName(int vertexBufferID);
     std::string GetUniqueName(std::string requestedName);

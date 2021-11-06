@@ -75,7 +75,7 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, ai
         if (code != ErrorCode::None) return code;
         output << converted << "}, 0, {";
 
-        if (mTargetMesh->mMesh->mTextureCoords == nullptr) {
+        if (mTargetMesh->mMesh->mTextureCoords[0] == nullptr) {
             output << "0, 0}, {";
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
@@ -172,6 +172,35 @@ int CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) 
     )));
 
     return result;
+}
+
+
+	// {{{-226, 0, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{-226, 0, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{-226, 40, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{-226, 40, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{226, 0, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{226, 0, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{226, 40, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+	// {{{226, 40, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
+
+int CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max) {
+    aiMesh* mesh = new aiMesh();
+
+    mesh->mName = name;
+    mesh->mNumVertices = 8;
+    mesh->mVertices = new aiVector3D[8];
+    mesh->mVertices[0] = aiVector3D(min.x, min.y, min.z);
+    mesh->mVertices[1] = aiVector3D(min.x, min.y, max.z);
+    mesh->mVertices[2] = aiVector3D(min.x, max.y, min.z);
+    mesh->mVertices[3] = aiVector3D(min.x, max.y, max.z);
+    mesh->mVertices[4] = aiVector3D(max.x, min.y, min.z);
+    mesh->mVertices[5] = aiVector3D(max.x, min.y, max.z);
+    mesh->mVertices[6] = aiVector3D(max.x, max.y, min.z);
+    mesh->mVertices[7] = aiVector3D(max.x, max.y, max.z);
+
+    BoneHierarchy boneHierarchy;
+    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVColor);
 }
 
 const std::string CFileDefinition::GetVertexBufferName(int vertexBufferID) {

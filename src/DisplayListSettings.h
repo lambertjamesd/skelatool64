@@ -19,6 +19,7 @@ struct DisplayListSettings {
     aiQuaternion mRotateModel;
     bool mExportAnimation;
     bool mExportGeometry;
+    bool mIncludeCulling;
 };
 
 #endif
