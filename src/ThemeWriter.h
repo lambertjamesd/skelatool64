@@ -11,6 +11,7 @@
 
 class ThemeMesh {
 public:
+    std::string objectName;
     ExtendedMesh* mesh;
     std::string materialName;
     unsigned index;
@@ -25,19 +26,27 @@ public:
 
 class ThemeWriter {
 public:
-    ThemeWriter(const std::string& themeName);
+    ThemeWriter(const std::string& themeName, const std::string& themeHeader);
     bool GetDecorName(const std::string& nodeName, std::string& output);
     void AppendContentFromScene(const aiScene* scene, DisplayListSettings& settings);
     std::string GetDecorID(const std::string& name);
     unsigned GetMaterialIndex(const std::string& name);
     void WriteTheme(const std::string& output, DisplayListSettings& settings);
     void WriteThemeHeader(const std::string& output, DisplayListSettings& settings);
+    const std::string& GetThemeHeader() const;
+    const std::string& GetThemeName() const;
+    std::string GetDecorMaterial(const std::string& decorName);
+    std::string GetDecorGeo(const std::string& decorName); 
 private:
     void AppendContentFromNode(const aiNode* node, DisplayListSettings& settings);
 
     std::string mThemeName;
+    std::string mThemeHeader;
     std::map<std::string, ThemeMesh> mDecorMeshes;
     std::vector<std::string> mUsedMaterials;
+
+    std::vector<std::string> mDecorGeoNames;
+    std::vector<std::string> mDecorMaterialNames;
 };
 
 void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& settings);

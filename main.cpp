@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
         if (!scene) {
             return 1;
         }
-        generateLevelFromSceneToFile(scene, args.mOutputFile, settings);
+        generateLevelFromSceneToFile(scene, args.mOutputFile, nullptr, settings);
     } else {
         const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
 

@@ -3,15 +3,34 @@
 #include <string.h>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 #include "SceneLoader.h"
 #include "LevelWriter.h"
 #include "FileUtils.h"
 #include "CFileDefinition.h"
 #include "DisplayList.h"
 #include "DisplayListGenerator.h"
+#include "Collision.h"
 
-ThemeWriter::ThemeWriter(const std::string& themeName) : mThemeName(themeName) {
+ThemeWriter::ThemeWriter(const std::string& themeName, const std::string& themeHeader) : mThemeName(themeName), mThemeHeader(themeHeader) {
     
+}
+
+bool GetDecorGeometryName(const std::string& nodeName, std::string& output) {
+    if (nodeName.rfind("DecorBoundary ") != 0) {
+        return false;
+    }
+
+    unsigned nameStart = strlen("DecorBoundary ");
+    unsigned nameEnd = nameStart;
+
+    while (nameEnd < nodeName.length() && nodeName[nameEnd] != '.') {
+        ++nameEnd;
+    }
+
+    output = nodeName.substr(nameStart, nameEnd - nameStart);
+
+    return true;
 }
 
 bool ThemeWriter::GetDecorName(const std::string& nodeName, std::string& output) {
@@ -32,20 +51,50 @@ bool ThemeWriter::GetDecorName(const std::string& nodeName, std::string& output)
 }
 
 void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettings& settings) {
+    aiMatrix4x4 worldScale;
+    aiMatrix4x4::Scaling(aiVector3D(settings.mScale, settings.mScale, settings.mScale), worldScale);
+    aiMatrix4x4 worldTransform = aiMatrix4x4(settings.mRotateModel.GetMatrix()) * settings.mScale;
+
     BoneHierarchy noBones;
     for (unsigned meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
         aiMesh* mesh = scene->mMeshes[meshIndex];
         std::string decorName;
         if (GetDecorName(mesh->mName.C_Str(), decorName)) {
-            if (mDecorMeshes.find(decorName) == mDecorMeshes.end()) {
+            auto existing = mDecorMeshes.find(decorName);
+
+            if (existing == mDecorMeshes.end()) {
                 ThemeMesh themeMesh;
+                themeMesh.objectName = decorName;
                 themeMesh.mesh = new ExtendedMesh(mesh, noBones);
                 themeMesh.materialName = scene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str();
                 themeMesh.index = mDecorMeshes.size();
                 mDecorMeshes[decorName] = themeMesh;
+            } else if (existing->second.mesh == nullptr) {
+                existing->second.mesh = new ExtendedMesh(mesh, noBones);
+                existing->second.materialName = scene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str();
+            }
+        } else if (GetDecorGeometryName(mesh->mName.C_Str(), decorName)) {
+            auto existing = mDecorMeshes.find(decorName);
+
+            if (existing == mDecorMeshes.end()) {
+                ThemeMesh themeMesh;
+                themeMesh.objectName = decorName;
+                themeMesh.mesh = nullptr;
+                themeMesh.materialName = "";
+                themeMesh.index = mDecorMeshes.size();
+                extractMeshBoundary(mesh, worldTransform, themeMesh.boundary);
+                mDecorMeshes[decorName] = themeMesh;
+            } else {
+                extractMeshBoundary(mesh, worldTransform, existing->second.boundary);
             }
         }
     }
+}
+
+std::string ThemeWriter::GetDecorID(const std::string& name) {
+    std::string result = name + "_DECOR_ID";
+    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+    return result;
 }
 
 unsigned ThemeWriter::GetMaterialIndex(const std::string& name) {
@@ -59,7 +108,7 @@ unsigned ThemeWriter::GetMaterialIndex(const std::string& name) {
     return mUsedMaterials.size() - 1;
 }
 
-std::string writeMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, CFileDefinition& fileDef, DisplayListSettings& settings) {
+std::string writeMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, std::vector<std::string>& displayListNames, CFileDefinition& fileDef, DisplayListSettings& settings) {
     std::string decorMaterials = fileDef.GetUniqueName("DecorMaterials");
 
     std::set<std::shared_ptr<MaterialResource>> resourcesAsSet;
@@ -85,13 +134,11 @@ std::string writeMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshLis
 
     Material::WriteResources(resourcesAsVector, nameMapping, fileDef, cfile);
 
-    std::vector<std::string> displayListNames;
-
     for (auto mesh : meshList) {
         auto material = settings.mMaterials.find(mesh->materialName);
 
         if (material != settings.mMaterials.end()) {
-            std::string dlName = fileDef.GetUniqueName("DecorMaterials");
+            std::string dlName = fileDef.GetUniqueName(mesh->objectName + "Material");
             displayListNames.push_back(dlName);
             DisplayList dl(dlName);
             material->second.WriteToDL(nameMapping, dl);
@@ -114,21 +161,24 @@ std::string writeMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshLis
     return decorMaterials;
 }
 
-std::string writeGeometry(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, CFileDefinition& fileDef, DisplayListSettings& settings) {
+std::string writeGeometry(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, std::vector<std::string>& displayListNames, CFileDefinition& fileDef, DisplayListSettings& settings) {
     std::string decorDisplayLists = fileDef.GetUniqueName("DecorDisplayLists");
 
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     std::ostringstream displayLists;
 
-    std::vector<std::string> displayListNames;
-
     for (auto mesh : meshList) {
+        if (!mesh->mesh) {
+            displayListNames.push_back("0");
+            continue;
+        }
+
         auto material = settings.mMaterials.find(mesh->materialName);
         VertexType vtxType = material == settings.mMaterials.end() ? VertexType::PosUVNormal : material->second.mVetexType;
         int vertexBuffer = fileDef.GetVertexBuffer(mesh->mesh, vtxType);
         RenderChunk chunk(std::pair<Bone*, Bone*>(nullptr, nullptr), mesh->mesh, vtxType);
 
-        std::string dlName = fileDef.GetUniqueName("DecorDisplayLists");
+        std::string dlName = fileDef.GetUniqueName(mesh->objectName + "DisplayList");
         displayListNames.push_back(dlName);
         DisplayList dl(dlName);
 
@@ -163,26 +213,66 @@ std::string writeCollision(std::ostream& cfile, std::vector<ThemeMesh*>& meshLis
     std::vector<std::string> displayListNames;
     
     for (auto mesh : meshList) {
-        if (mesh->boundary.size()) {
-            std::string colliderName = fileDef.GetUniqueName("DecorShapes");
-            std::string colliderEdges = fileDef.GetUniqueName("DecorShapeEdges");
+        if (mesh->boundary.size() == 1) {
+            aiVector3D radius = mesh->boundary[0];
+            radius.y = 0.0f;
+            
+            std::string colliderName = fileDef.GetUniqueName(mesh->objectName + "Shape");
+            cfile << "struct CollisionCircle " << colliderName << " = {" << std::endl;
+            cfile << "    .shapeCommon = {CollisionShapeTypeCircle}," << std::endl;
+            cfile << "    .radius = " << radius.Length() << "," << std::endl;
+            cfile << "};" << std::endl;
+
+            displayListNames.push_back("(struct CollisionShape*)&" + colliderName);
+        } else if (mesh->boundary.size()) {
+            std::string colliderName = fileDef.GetUniqueName(mesh->objectName + "Shape");
+            std::string colliderEdges = fileDef.GetUniqueName(mesh->objectName + "ShapeEdges");
 
             cfile << "struct CollisionPolygonEdge " << colliderEdges << "[] = {" << std::endl;
 
-            // struct Vector2 corner;
-            // struct Vector2 normal;
-            // float edgeLen;
+            aiVector3D min = mesh->boundary[0];
+            aiVector3D max = mesh->boundary[0];
+
+            unsigned actualEdgeCount = 0;
+
+            for (unsigned i = 0; i < mesh->boundary.size(); ++i) {
+                aiVector3D curr = mesh->boundary[i];
+                aiVector3D edge = mesh->boundary[(i + 1) % mesh->boundary.size()] - curr;
+
+                if (edge.SquareLength() < 0.001f) {
+                    continue;
+                }
+
+                curr.y = 0.0f;
+                edge.y = 0.0f;
+
+                aiVector3D normal = edge;
+                normal.Normalize();
+
+                cfile << "    {";
+                cfile << "{" << curr.x << ", " << curr.z << "}, ";
+                cfile << "{" << normal.z << ", " << -normal.x << "}, ";
+                cfile << edge.Length();
+                cfile << "}," << std::endl;
+
+                min.x = std::min(min.x, curr.x);
+                min.z = std::min(min.z, curr.z);
+                max.x = std::max(max.x, curr.x);
+                max.z = std::max(max.z, curr.z);
+
+                ++actualEdgeCount;
+            }
 
             cfile << "};" << std::endl;
 
             cfile << "struct CollisionPolygon " << colliderName << " = {" << std::endl;
             cfile << "    .shapeCommon = {CollisionShapeTypePolygon}," << std::endl;
-            cfile << "    .boundingBox = {{0, 0}, {0, 0}}," << std::endl;
+            cfile << "    .boundingBox = {{" << min.x << ", " << min.z << "},{" << max.x << ", " << max.z << "}}," << std::endl;
             cfile << "    .edges = " << colliderEdges << "," << std::endl;
-            cfile << "    .edgeCount = " << mesh->boundary.size() << "," << std::endl;
+            cfile << "    .edgeCount = " << actualEdgeCount << "," << std::endl;
             cfile << "};" << std::endl;
 
-            displayListNames.push_back("(struct CollisionShape*)&colliderName");
+            displayListNames.push_back("(struct CollisionShape*)&" + colliderName);
         } else {
             displayListNames.push_back("0");
         }
@@ -212,21 +302,22 @@ void ThemeWriter::WriteTheme(const std::string& output, DisplayListSettings& set
     std::vector<ThemeMesh*> meshList;
 
     for (auto it : mDecorMeshes) {
-        meshList.push_back(&it.second);
+        meshList.push_back(new ThemeMesh(it.second));
     }
 
     std::sort(meshList.begin(), meshList.end(), [](const ThemeMesh* a, const ThemeMesh* b) -> bool {
         return a->index < b->index;
     });
 
-    std::string decorMaterials = writeMaterials(cfile, meshList, fileDef, settings);
-    std::string decorDisplayLists = writeGeometry(cfile, meshList, fileDef, settings);
+    std::string decorMaterials = writeMaterials(cfile, meshList, mDecorMaterialNames, fileDef, settings);
+    std::string decorDisplayLists = writeGeometry(cfile, meshList, mDecorGeoNames, fileDef, settings);
     std::string decorShapes = writeCollision(cfile, meshList, fileDef, settings);
 
     cfile << "struct ThemeDefinition " << mThemeName << "Theme = {" << std::endl;
     cfile << "    .decorMaterials = " << decorMaterials << "," << std::endl;
     cfile << "    .decorDisplayLists = " << decorDisplayLists << "," << std::endl;
     cfile << "    .decorShapes = " << decorShapes << "," << std::endl;
+    cfile << "    .decorCount = " << meshList.size() << "," << std::endl;
     cfile << "};" << std::endl;
 
     cfile.close();
@@ -248,6 +339,26 @@ void ThemeWriter::WriteThemeHeader(const std::string& output, DisplayListSetting
 
     headerFile << std::endl;
 
+    for (auto decorNames = mDecorMaterialNames.begin(); decorNames != mDecorMaterialNames.end(); ++decorNames) {
+        if (*decorNames != "0") {
+            headerFile << "extern Gfx " << *decorNames << "[];" << std::endl;
+        }
+    }
+
+    headerFile << std::endl;
+
+    for (auto decorNames = mDecorGeoNames.begin(); decorNames != mDecorGeoNames.end(); ++decorNames) {
+        if (*decorNames != "0") {
+            headerFile << "extern Gfx " << *decorNames << "[];" << std::endl;
+        }
+    }
+
+    for (auto decor = mDecorMeshes.begin(); decor != mDecorMeshes.end(); ++decor) {
+        headerFile << "#define " << GetDecorID(decor->first) << " " << decor->second.index;
+    }
+
+    headerFile << std::endl;
+
     headerFile << "extern struct ThemeDefinition " << mThemeName << "Theme;" << std::endl;
 
     headerFile << std::endl;
@@ -257,8 +368,36 @@ void ThemeWriter::WriteThemeHeader(const std::string& output, DisplayListSetting
     headerFile.close();
 }
 
+const std::string& ThemeWriter::GetThemeHeader() const {
+    return mThemeHeader;
+}
+
+const std::string& ThemeWriter::GetThemeName() const {
+    return mThemeName;
+}
+
+std::string ThemeWriter::GetDecorMaterial(const std::string& decorName) {
+    auto mesh = mDecorMeshes.find(decorName);
+
+    if (mesh == mDecorMeshes.end()) {
+        return "";
+    }
+
+    return mDecorMaterialNames[mesh->second.index];
+}
+
+std::string ThemeWriter::GetDecorGeo(const std::string& decorName) {
+    auto mesh = mDecorMeshes.find(decorName);
+
+    if (mesh == mDecorMeshes.end()) {
+        return "";
+    }
+
+    return mDecorGeoNames[mesh->second.index];
+}
+
 void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& settings) {
-    ThemeWriter themeWriter(themeDef.mCName);
+    ThemeWriter themeWriter(themeDef.mCName, replaceExtension(themeDef.mOutput, ".h"));
     std::vector<LevelTheme> levels;
 
     for (auto it = themeDef.mLevels.begin(); it != themeDef.mLevels.end(); ++it) {
@@ -276,12 +415,12 @@ void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& sett
         levels.push_back(level);
     }
 
-    themeWriter.WriteThemeHeader(themeDef.mOutput, settings);
     themeWriter.WriteTheme(themeDef.mOutput, settings);
+    themeWriter.WriteThemeHeader(themeDef.mOutput, settings);
 
     for (auto it = levels.begin(); it != levels.end(); ++it) {
         DisplayListSettings levelSettings = settings;
         levelSettings.mPrefix = it->definition.mCName;
-        generateLevelFromSceneToFile(it->scene, it->definition.mOutput, levelSettings);
+        generateLevelFromSceneToFile(it->scene, it->definition.mOutput, &themeWriter, levelSettings);
     }
 }

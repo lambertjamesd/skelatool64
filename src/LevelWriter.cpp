@@ -10,8 +10,9 @@
 #include "CFileDefinition.h"
 #include "MeshWriter.h"
 #include "Collision.h"
+#include "ThemeWriter.h"
 
-void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, aiNode* node, const aiMatrix4x4& transform) {
+void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, aiNode* node, const aiMatrix4x4& transform) {
     std::string nodeName = node->mName.C_Str();
 
     if (nodeName.rfind("Base", 0) == 0) {
@@ -48,13 +49,22 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
         }
     }
 
+    std::string decorName;
+    if (themeWriter && themeWriter->GetDecorName(nodeName, decorName)) {
+        DecorDefinition decorDef;
+        aiVector3D scaling;
+        transform.Decompose(scaling, decorDef.rotation, decorDef.position);
+        decorDef.decorID = decorName;
+        levelDef.decor.push_back(decorDef);
+    }
+
     for (unsigned i = 0; i < node->mNumChildren; ++i) {
-        populateLevelRecursive(scene, levelDef, node->mChildren[i], transform * node->mChildren[i]->mTransformation);
+        populateLevelRecursive(scene, levelDef, themeWriter, node->mChildren[i], transform * node->mChildren[i]->mTransformation);
     }
 }
 
-void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, DisplayListSettings& settings) {
-    populateLevelRecursive(scene, levelDef, scene->mRootNode, aiMatrix4x4());
+void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, DisplayListSettings& settings) {
+    populateLevelRecursive(scene, levelDef, themeWriter, scene->mRootNode, aiMatrix4x4());
 
     for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
         aiVector3D boundaryPoint = levelDef.boundary[i];
@@ -92,10 +102,10 @@ bool generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ost
     return true;
 }
 
-void generateLevelFromScene(const aiScene* scene, std::string headerFilename, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
+void generateLevelFromScene(const aiScene* scene, std::string headerFilename, ThemeWriter* theme, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
     LevelDefinition levelDef;
     levelDef.maxPlayerCount = 0;
-    populateLevel(scene, levelDef, settings);
+    populateLevel(scene, levelDef, theme, settings);
     CFileDefinition fileDefinition(settings.mPrefix);
     BoneHierarchy blankBones;
 
@@ -113,6 +123,11 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
     headerFile << "#endif";
 
     fileContent << "#include \"" << getBaseName(headerFilename) << "\"" << std::endl;
+    
+    if (theme) {
+        fileContent << "#include \"" << Relative(headerFilename, theme->GetThemeHeader()) << "\"" << std::endl;
+    }
+
     fileContent << "#include <ultra64.h>" << std::endl;
     fileContent << std::endl;
 
@@ -160,25 +175,50 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Di
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 
+    std::string decorList = "0";
+
+    if (theme) {
+        decorList = fileDefinition.GetUniqueName("Decor");
+
+        fileContent << "struct DecorDefinition " << decorList << "[] = {" << std::endl;
+        for (auto it = levelDef.decor.begin(); it != levelDef.decor.end(); ++it) {
+            fileContent << "    {";
+            fileContent << "{" << it->position.x << ", " << it->position.y << ", " << it->position.z << "}, ";
+            fileContent << "{" << it->rotation.x << ", " << it->rotation.y << ", " << it->rotation.z << ", " << it->rotation.w << "}, ";
+            fileContent << theme->GetDecorID(it->decorID);
+            fileContent << "}," << std::endl;
+        }
+        fileContent << "};" << std::endl;
+    }
+
     fileContent << "struct LevelDefinition " << definitionName << " = {" << std::endl;
     fileContent << "    .maxPlayerCount = " << levelDef.maxPlayerCount << "," << std::endl;
     fileContent << "    .playerStartLocations = " << startingPositions << "," << std::endl;
     fileContent << "    .baseCount = " << levelDef.bases.size() << "," << std::endl;
+    fileContent << "    .decorCount = " << levelDef.decor.size() << "," << std::endl;
     fileContent << "    .bases = " << basesName << "," << std::endl;
+    fileContent << "    .decor = " << decorList << "," << std::endl;
     fileContent << "    .levelBoundaries = {{" << levelDef.minBoundary.x << ", " << levelDef.minBoundary.z << "}, {" << levelDef.maxBoundary.x << ", " << levelDef.maxBoundary.z << "}}," << std::endl;
     fileContent << "    .sceneRender = " << geometryName << "," << std::endl;
+    fileContent << "    .theme = ";
+    if (theme) {
+        fileContent << "&" << theme->GetThemeName() << "Theme";
+    } else {
+        fileContent << "0";
+    }
+    fileContent << "," << std::endl;
     fileContent << "    .staticScene = {" << boundary << ", " << actualBoundaryCount << "}," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }
 
-void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings) {
+void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings) {
     std::ostringstream headerContent;
     std::ostringstream fileContent;
 
     std::string headerFilename = replaceExtension(filename, ".h");
 
-    generateLevelFromScene(scene, headerFilename, settings, headerContent, fileContent);
+    generateLevelFromScene(scene, headerFilename, theme, settings, headerContent, fileContent);
 
     std::ofstream outputHeader;
     outputHeader.open(headerFilename, std::ios_base::out | std::ios_base::trunc);
