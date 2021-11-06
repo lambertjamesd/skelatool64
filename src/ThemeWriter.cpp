@@ -54,6 +54,7 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
     aiMatrix4x4 worldScale;
     aiMatrix4x4::Scaling(aiVector3D(settings.mScale, settings.mScale, settings.mScale), worldScale);
     aiMatrix4x4 worldTransform = aiMatrix4x4(settings.mRotateModel.GetMatrix()) * settings.mScale;
+    std::vector<RenderChunk> chunks;
 
     BoneHierarchy noBones;
     for (unsigned meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
@@ -69,9 +70,12 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
                 themeMesh.materialName = scene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str();
                 themeMesh.index = mDecorMeshes.size();
                 mDecorMeshes[decorName] = themeMesh;
+
+                chunks.push_back(RenderChunk(std::pair<Bone*, Bone*>(nullptr, nullptr), themeMesh.mesh, VertexType::PosUVColor));
             } else if (existing->second.mesh == nullptr) {
                 existing->second.mesh = new ExtendedMesh(mesh, noBones);
                 existing->second.materialName = scene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str();
+                chunks.push_back(RenderChunk(std::pair<Bone*, Bone*>(nullptr, nullptr), existing->second.mesh, VertexType::PosUVColor));
             }
         } else if (GetDecorGeometryName(mesh->mName.C_Str(), decorName)) {
             auto existing = mDecorMeshes.find(decorName);
@@ -88,6 +92,26 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
                 extractMeshBoundary(mesh, worldTransform, existing->second.boundary);
             }
         }
+    }
+
+    AppendContentFromNode(scene, scene->mRootNode, settings);
+
+    mMaterialCollector.CollectMaterialResources(scene, chunks, settings);
+}
+
+void ThemeWriter::AppendContentFromNode(const aiScene* scene, const aiNode* node, DisplayListSettings& settings) {
+    std::string nodeName = node->mName.C_Str();
+
+    if (nodeName.rfind("Geometry", 0) == 0) {
+        for (unsigned i = 0; i < node->mNumMeshes; ++i) {
+            auto mesh = scene->mMeshes[node->mMeshes[i]];
+            std::string materialName = scene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str();
+            mMaterialCollector.UseMaterial(materialName, settings);
+        }
+    }
+
+    for (unsigned i = 0; i < node->mNumChildren; ++i) {
+        AppendContentFromNode(scene, node->mChildren[i], settings);
     }
 }
 
@@ -108,21 +132,14 @@ unsigned ThemeWriter::GetMaterialIndex(const std::string& name) {
     return mUsedMaterials.size() - 1;
 }
 
-std::string writeMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, std::vector<std::string>& displayListNames, CFileDefinition& fileDef, DisplayListSettings& settings) {
+std::string ThemeWriter::WriteMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, CFileDefinition& fileDef, DisplayListSettings& settings) {
     std::string decorMaterials = fileDef.GetUniqueName("DecorMaterials");
 
     std::set<std::shared_ptr<MaterialResource>> resourcesAsSet;
     std::map<std::string, std::string> nameMapping;
 
     for (auto mesh : meshList) {
-        auto material = settings.mMaterials.find(mesh->materialName);
-
-        if (material != settings.mMaterials.end()) {
-
-            for (auto resource : material->second.mUsedResources) {
-                resourcesAsSet.insert(resource);
-            }
-        }
+        mMaterialCollector.UseMaterial(mesh->materialName, settings);
     }
 
     std::vector<std::shared_ptr<MaterialResource>> resourcesAsVector;
@@ -132,25 +149,21 @@ std::string writeMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshLis
         nameMapping[resource->mName] = fileDef.GetUniqueName(resource->mName);
     }
 
-    Material::WriteResources(resourcesAsVector, nameMapping, fileDef, cfile);
+    mMaterialCollector.GenerateMaterials(fileDef, settings, cfile);
 
     for (auto mesh : meshList) {
-        auto material = settings.mMaterials.find(mesh->materialName);
+        auto material = mMaterialCollector.mMaterialNameMapping.find(mesh->materialName);
 
-        if (material != settings.mMaterials.end()) {
-            std::string dlName = fileDef.GetUniqueName(mesh->objectName + "Material");
-            displayListNames.push_back(dlName);
-            DisplayList dl(dlName);
-            material->second.WriteToDL(nameMapping, dl);
-            dl.Generate(fileDef, cfile);
+        if (material != mMaterialCollector.mMaterialNameMapping.end()) {
+            mDecorMaterialNames.push_back(material->second);
         } else {
-            displayListNames.push_back("0");
+            mDecorMaterialNames.push_back("0");
         }
     }
 
     cfile << "Gfx* " << decorMaterials << "[] = {" << std::endl;
 
-    for (auto materailName : displayListNames) {
+    for (auto materailName : mDecorMaterialNames) {
         cfile << "    " << materailName << "," << std::endl;
     }
 
@@ -181,7 +194,9 @@ std::string writeGeometry(std::ostream& cfile, std::vector<ThemeMesh*>& meshList
         std::string dlName = fileDef.GetUniqueName(mesh->objectName + "DisplayList");
         displayListNames.push_back(dlName);
         DisplayList dl(dlName);
-        generateCulling(dl, fileDef.GetCullingBuffer(mesh->objectName + "Culling", mesh->mesh->bbMin, mesh->mesh->bbMax), vtxType == VertexType::PosUVNormal);
+        if (settings.mIncludeCulling) {
+            generateCulling(dl, fileDef.GetCullingBuffer(mesh->objectName + "Culling", mesh->mesh->bbMin, mesh->mesh->bbMax), vtxType == VertexType::PosUVNormal);
+        }
         generateGeometry(chunk, rcpState, vertexBuffer, dl, settings.mHasTri2);
         dl.Generate(fileDef, displayLists);
 
@@ -309,7 +324,7 @@ void ThemeWriter::WriteTheme(const std::string& output, DisplayListSettings& set
         return a->index < b->index;
     });
 
-    std::string decorMaterials = writeMaterials(cfile, meshList, mDecorMaterialNames, fileDef, settings);
+    std::string decorMaterials = WriteMaterials(cfile, meshList, fileDef, settings);
     std::string decorDisplayLists = writeGeometry(cfile, meshList, mDecorGeoNames, fileDef, settings);
     std::string decorShapes = writeCollision(cfile, meshList, fileDef, settings);
 
@@ -339,10 +354,8 @@ void ThemeWriter::WriteThemeHeader(const std::string& output, DisplayListSetting
 
     headerFile << std::endl;
 
-    for (auto decorNames = mDecorMaterialNames.begin(); decorNames != mDecorMaterialNames.end(); ++decorNames) {
-        if (*decorNames != "0") {
-            headerFile << "extern Gfx " << *decorNames << "[];" << std::endl;
-        }
+    for (auto materialName = mMaterialCollector.mMaterialNameMapping.begin(); materialName != mMaterialCollector.mMaterialNameMapping.end(); ++materialName) {
+        headerFile << "extern Gfx " << materialName->second << "[];" << std::endl;
     }
 
     headerFile << std::endl;
@@ -399,6 +412,9 @@ std::string ThemeWriter::GetDecorGeo(const std::string& decorName) {
 void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& settings) {
     ThemeWriter themeWriter(themeDef.mCName, replaceExtension(themeDef.mOutput, ".h"));
     std::vector<LevelTheme> levels;
+
+    // force the materials to be written in the theme
+    themeWriter.mMaterialCollector.mSceneCount = 2;
 
     for (auto it = themeDef.mLevels.begin(); it != themeDef.mLevels.end(); ++it) {
         LevelTheme level;

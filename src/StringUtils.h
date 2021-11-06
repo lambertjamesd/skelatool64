@@ -3,7 +3,7 @@
 
 #include <string>
 
-std::string FindAndReplace(const std::string& source, const std::string& searchString, const std::string& replaceString);
+std::string FindAndReplace(const std::string& source, const std::string& searchString, const std::string& replaceString, bool wholeWord = false);
 
 std::string Indent(const std::string& input, const std::string& whitespace);
 

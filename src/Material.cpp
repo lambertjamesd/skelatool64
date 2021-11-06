@@ -36,7 +36,7 @@ void Material::WriteToDL(const std::map<std::string, std::string>& nameMapping, 
 
     for (auto it = mUsedResources.begin(); it != mUsedResources.end(); ++it) {
         auto replacement = nameMapping.find((*it)->mName);
-        result = FindAndReplace(result, (*it)->mName, replacement->second);
+        result = FindAndReplace(result, (*it)->mName, replacement->second, true);
     }
 
     output.AddCommand(std::unique_ptr<DisplayListCommand>(new RawContentCommand(Trim(Indent(result, "    ")))));

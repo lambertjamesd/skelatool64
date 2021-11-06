@@ -7,6 +7,7 @@
 #include <map>
 #include "DisplayListSettings.h"
 #include "ThemeDefinition.h"
+#include "MeshWriter.h"
 #include "ExtendedMesh.h"
 
 class ThemeMesh {
@@ -37,8 +38,10 @@ public:
     const std::string& GetThemeName() const;
     std::string GetDecorMaterial(const std::string& decorName);
     std::string GetDecorGeo(const std::string& decorName); 
+    MaterialCollector mMaterialCollector;
 private:
-    void AppendContentFromNode(const aiNode* node, DisplayListSettings& settings);
+    std::string WriteMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, CFileDefinition& fileDef, DisplayListSettings& settings);
+    void AppendContentFromNode(const aiScene* scene, const aiNode* node, DisplayListSettings& settings);
 
     std::string mThemeName;
     std::string mThemeHeader;

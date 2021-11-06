@@ -2,7 +2,11 @@
 
 #include <sstream>
 
-std::string FindAndReplace(const std::string& source, const std::string& searchString, const std::string& replaceString) {
+bool IsWordCharacter(char input) {
+    return isalnum(input) || input == '_';
+}
+
+std::string FindAndReplace(const std::string& source, const std::string& searchString, const std::string& replaceString, bool wholeWord) {
     std::ostringstream result;
 
     unsigned next = source.find(searchString);
@@ -10,8 +14,27 @@ std::string FindAndReplace(const std::string& source, const std::string& searchS
 
     while (next < source.length()) {
         result << source.substr(last, next - last);
-        result << replaceString;
-        last = next + searchString.length();
+        
+        bool shouldReplace = true;
+        unsigned afterNext = next + searchString.length();
+
+        if (wholeWord) {
+            if (next > 0 && IsWordCharacter(source[next - 1])) {
+                shouldReplace = false;
+            }
+
+            if (afterNext < source.length() && IsWordCharacter(source[afterNext])) {
+                shouldReplace = false;
+            }
+        }
+
+        if (shouldReplace) {
+            result << replaceString;
+        } else {
+            result << searchString;
+        }
+
+        last = afterNext;
         next = source.find(searchString, last);
     }
 

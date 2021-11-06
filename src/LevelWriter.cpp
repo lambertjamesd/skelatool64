@@ -169,11 +169,14 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     }
 
     DisplayList sceneDisplayList(fileDefinition.GetUniqueName("model_gfx"));
-    generateMeshIntoDL(scene, fileDefinition, chunks, settings, sceneDisplayList, fileContent);
 
     if (theme) {
+        generateMeshIntoDLWithMaterials(scene, fileDefinition, theme->mMaterialCollector, chunks, settings, sceneDisplayList);
         sceneDisplayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("Begin decor")));
         generateDecorDL(levelDef, theme, sceneDisplayList);
+        fileDefinition.GenerateVertexBuffers(fileContent, settings.mScale, settings.mRotateModel);
+    } else {
+        generateMeshIntoDL(scene, fileDefinition, chunks, settings, sceneDisplayList, fileContent);
     }
 
     sceneDisplayList.Generate(fileDefinition, fileContent);
