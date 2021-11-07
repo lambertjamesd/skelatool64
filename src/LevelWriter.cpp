@@ -109,19 +109,24 @@ void generateDecorDL(LevelDefinition& levelDef, ThemeWriter* theme, DisplayList&
         decorCopy.push_back(std::make_pair(i, levelDef.decor[i]));
     }
 
-    std::sort(decorCopy.begin(), decorCopy.end(), [](const std::pair<unsigned, DecorDefinition>& a, const std::pair<unsigned, DecorDefinition>& b) -> bool {
-        return a.second.decorID < b.second.decorID;
+    std::sort(decorCopy.begin(), decorCopy.end(), [=](const std::pair<unsigned, DecorDefinition>& a, const std::pair<unsigned, DecorDefinition>& b) -> bool {
+        std::string aMaterial = theme->GetDecorMaterial(a.second.decorID);
+        std::string bMaterial = theme->GetDecorMaterial(b.second.decorID);
+
+        if (aMaterial == bMaterial) {
+            return a.second.decorID < b.second.decorID;
+        }
+
+        return aMaterial < bMaterial;
     });
 
-    std::string currentId = "";
+    std::string currentMaterial = "";
 
     for (auto it = decorCopy.begin(); it != decorCopy.end(); ++it) {
-        if (currentId != it->second.decorID) {
-            std::string material = theme->GetDecorMaterial(it->second.decorID);
-            if (material != "0") {
-                dl.AddCommand(std::unique_ptr<DisplayListCommand>(new CallDisplayListByNameCommand(material)));
-            }
-            currentId = it->second.decorID;
+        std::string material = theme->GetDecorMaterial(it->second.decorID);
+        if (material != currentMaterial && material != "0") {
+            dl.AddCommand(std::unique_ptr<DisplayListCommand>(new CallDisplayListByNameCommand(material)));
+            currentMaterial = material;
         }
 
         dl.AddCommand(std::unique_ptr<DisplayListCommand>(new PushMatrixCommand(it->first, false)));
@@ -160,12 +165,15 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     fileContent << "#include <ultra64.h>" << std::endl;
     fileContent << std::endl;
 
-    std::vector<RenderChunk> chunks;
     std::vector<ExtendedMesh> meshes;
 
     for (auto it = levelDef.geometryMeshes.begin(); it != levelDef.geometryMeshes.end(); ++it) {
         meshes.push_back(ExtendedMesh(*it, blankBones));
-        chunks.push_back(RenderChunk(std::pair<Bone*, Bone*>(nullptr, nullptr), &*meshes.rbegin(), VertexType::PosUVColor));
+    }
+
+    std::vector<RenderChunk> chunks;
+    for (auto it = meshes.begin(); it != meshes.end(); ++it) {
+        chunks.push_back(RenderChunk(std::pair<Bone*, Bone*>(nullptr, nullptr), &*it, VertexType::PosUVColor));
     }
 
     DisplayList sceneDisplayList(fileDefinition.GetUniqueName("model_gfx"));
@@ -216,13 +224,15 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     fileContent << std::endl;
 
     std::string decorList = "0";
+    aiQuaternion inverseRotation = settings.mRotateModel;
+    inverseRotation.Conjugate();
 
     if (theme) {
         decorList = fileDefinition.GetUniqueName("Decor");
 
         fileContent << "struct DecorDefinition " << decorList << "[] = {" << std::endl;
         for (auto it = levelDef.decor.begin(); it != levelDef.decor.end(); ++it) {
-            aiQuaternion finalRotation = it->rotation * settings.mRotateModel.Conjugate();
+            aiQuaternion finalRotation = it->rotation * inverseRotation;
 
             fileContent << "    {";
             fileContent << "{" << it->position.x << ", " << it->position.y << ", " << it->position.z << "}, ";

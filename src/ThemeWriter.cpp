@@ -11,6 +11,7 @@
 #include "DisplayList.h"
 #include "DisplayListGenerator.h"
 #include "Collision.h"
+#include "StringUtils.h"
 
 ThemeWriter::ThemeWriter(const std::string& themeName, const std::string& themeHeader) : mThemeName(themeName), mThemeHeader(themeHeader) {
     
@@ -117,6 +118,7 @@ void ThemeWriter::AppendContentFromNode(const aiScene* scene, const aiNode* node
 
 std::string ThemeWriter::GetDecorID(const std::string& name) {
     std::string result = name + "_DECOR_ID";
+    makeCCompatible(result);
     std::transform(result.begin(), result.end(), result.begin(), ::toupper);
     return result;
 }
@@ -150,6 +152,8 @@ std::string ThemeWriter::WriteMaterials(std::ostream& cfile, std::vector<ThemeMe
     }
 
     mMaterialCollector.GenerateMaterials(fileDef, settings, cfile);
+
+    std::string currentMaterial = "";
 
     for (auto mesh : meshList) {
         auto material = mMaterialCollector.mMaterialNameMapping.find(mesh->materialName);
@@ -282,7 +286,6 @@ std::string writeCollision(std::ostream& cfile, std::vector<ThemeMesh*>& meshLis
 
             cfile << "struct CollisionPolygon " << colliderName << " = {" << std::endl;
             cfile << "    .shapeCommon = {CollisionShapeTypePolygon}," << std::endl;
-            cfile << "    .boundingBox = {{" << min.x << ", " << min.z << "},{" << max.x << ", " << max.z << "}}," << std::endl;
             cfile << "    .edges = " << colliderEdges << "," << std::endl;
             cfile << "    .edgeCount = " << actualEdgeCount << "," << std::endl;
             cfile << "};" << std::endl;
@@ -320,7 +323,7 @@ void ThemeWriter::WriteTheme(const std::string& output, DisplayListSettings& set
         meshList.push_back(new ThemeMesh(it.second));
     }
 
-    std::sort(meshList.begin(), meshList.end(), [](const ThemeMesh* a, const ThemeMesh* b) -> bool {
+    std::sort(meshList.begin(), meshList.end(), [](ThemeMesh* a, ThemeMesh* b) -> bool {
         return a->index < b->index;
     });
 
@@ -367,7 +370,7 @@ void ThemeWriter::WriteThemeHeader(const std::string& output, DisplayListSetting
     }
 
     for (auto decor = mDecorMeshes.begin(); decor != mDecorMeshes.end(); ++decor) {
-        headerFile << "#define " << GetDecorID(decor->first) << " " << decor->second.index;
+        headerFile << "#define " << GetDecorID(decor->first) << " " << decor->second.index << std::endl;
     }
 
     headerFile << std::endl;

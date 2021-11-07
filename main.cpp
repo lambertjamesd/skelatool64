@@ -88,7 +88,7 @@ aiQuaternion getUpRotation() {
 
     // return result;
 
-    return aiQuaternion(aiVector3D(1.0f, 0.0f, 0.0f), -M_PI * 0.5f) * aiQuaternion(aiVector3D(0.0f, 0.0f, 1.0f), M_PI * 0.5f);
+    return aiQuaternion(aiVector3D(1.0f, 0.0f, 0.0f), -M_PI * 0.5f) * aiQuaternion(aiVector3D(0.0f, 0.0f, 1.0f), M_PI);
 }
 
 void generateLevelDef(const std::string& filename, DisplayListSettings& settings) {
