@@ -23,11 +23,10 @@ void Material::WriteResources(const std::vector<std::shared_ptr<MaterialResource
 
         if ((*it)->mIsArray) {
             output << "[] = {" << std::endl;
-            output << Indent((*it)->mContent, "    ") << std::endl;
+            output << Indent((*it)->mContent, "    ");
             output << "};" << std::endl;
         } else {
             output << " = " << Indent((*it)->mContent + ";", "    ") << std::endl;
-
         }
     }
 }
