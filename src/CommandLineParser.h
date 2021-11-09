@@ -1,6 +1,7 @@
 #ifndef _COMMAND_LINE_PARSER_H
 #define _COMMAND_LINE_PARSER_H
 
+#include <assimp/mesh.h>
 #include <string>
 #include <vector>
 #include <string.h>
@@ -16,6 +17,7 @@ struct CommandLineArguments {
     bool mExportGeometry;
     bool mIsLevel;
     bool mIsLevelDef;
+    aiVector3D mEulerAngles;
 };
 
 bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArguments& output);

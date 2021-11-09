@@ -49,7 +49,7 @@ float angleBetween(const aiVector3D& a, const aiVector3D& b) {
     return acos(a * b / (a - b).SquareLength());
 }
 
-aiQuaternion getUpRotation() {
+aiQuaternion getUpRotation(const aiVector3D& euler) {
     // aiVector3D upVector(0.0f, 0.0f, 0.0f);
     // aiVector3D frontVector(0.0f, 0.0f, 0.0f);
     // aiVector3D originalUpVector(0.0f, 0.0f, 1.0f);
@@ -88,7 +88,9 @@ aiQuaternion getUpRotation() {
 
     // return result;
 
-    return aiQuaternion(aiVector3D(1.0f, 0.0f, 0.0f), -M_PI * 0.5f) * aiQuaternion(aiVector3D(0.0f, 0.0f, 1.0f), M_PI);
+    // return aiQuaternion(aiVector3D(1.0f, 0.0f, 0.0f), -M_PI * 0.5f) * aiQuaternion(aiVector3D(0.0f, 0.0f, 1.0f), M_PI);
+
+    return aiQuaternion(euler.y * M_PI / 180.0f, euler.z * M_PI / 180.0f, euler.x * M_PI / 180.0f);
 }
 
 void generateLevelDef(const std::string& filename, DisplayListSettings& settings) {
@@ -132,7 +134,7 @@ int main(int argc, char *argv[]) {
     DisplayListSettings settings = DisplayListSettings();
 
     settings.mScale = args.mScale;
-    settings.mRotateModel = getUpRotation();
+    settings.mRotateModel = getUpRotation(args.mEulerAngles);
     settings.mPrefix = args.mPrefix;
     settings.mExportAnimation = args.mExportAnimation;
     settings.mExportGeometry = args.mExportGeometry;
