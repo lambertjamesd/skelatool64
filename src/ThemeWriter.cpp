@@ -13,8 +13,29 @@
 #include "Collision.h"
 #include "StringUtils.h"
 
+ThemeMesh::ThemeMesh(): mesh(nullptr), wireMesh(nullptr), index(0) {
+
+}
+
 ThemeWriter::ThemeWriter(const std::string& themeName, const std::string& themeHeader) : mThemeName(themeName), mThemeHeader(themeHeader) {
     
+}
+
+bool GetDecorWireName(const std::string& nodeName, std::string& output) {
+    if (nodeName.rfind("DecorWire ") != 0) {
+        return false;
+    }
+
+    unsigned nameStart = strlen("DecorWire ");
+    unsigned nameEnd = nameStart;
+
+    while (nameEnd < nodeName.length() && nodeName[nameEnd] != '.') {
+        ++nameEnd;
+    }
+
+    output = nodeName.substr(nameStart, nameEnd - nameStart);
+
+    return true;
 }
 
 bool GetDecorGeometryName(const std::string& nodeName, std::string& output) {
@@ -91,6 +112,19 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
                 mDecorMeshes[decorName] = themeMesh;
             } else {
                 extractMeshBoundary(mesh, worldTransform, existing->second.boundary);
+            }
+        } else if (GetDecorWireName(mesh->mName.C_Str(), decorName)) {
+            auto existing = mDecorMeshes.find(decorName);
+
+            if (existing == mDecorMeshes.end()) {
+                ThemeMesh themeMesh;
+                themeMesh.objectName = decorName;
+                themeMesh.wireMesh = new ExtendedMesh(mesh, noBones);
+                themeMesh.materialName = "";
+                themeMesh.index = mDecorMeshes.size();
+                mDecorMeshes[decorName] = themeMesh;
+            } else {
+                existing->second.wireMesh = new ExtendedMesh(mesh, noBones);
             }
         }
     }

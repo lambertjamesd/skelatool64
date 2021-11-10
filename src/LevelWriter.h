@@ -4,6 +4,7 @@
 #include <vector>
 #include <assimp/scene.h>
 #include "./DisplayListSettings.h"
+#include "Pathfinding.h"
 
 class ThemeWriter;
 
@@ -32,6 +33,7 @@ public:
     aiVector3D maxBoundary;
     std::vector<aiVector3D> boundary;
     std::vector<DecorDefinition> decor;
+    PathfindingDefinition pathfinding;
 };
 
 void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings);

@@ -95,3 +95,8 @@ std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, 
     displayList.Generate(fileDefinition, output);
     return displayList.GetName();
 }
+
+
+void generateWireframeIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList) {
+    
+}

@@ -49,6 +49,16 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
         }
     }
 
+    if (nodeName.rfind("Pathfinding", 0) == 0) {
+        if (node->mNumMeshes > 0) {
+            aiMesh* mesh = scene->mMeshes[node->mMeshes[0]];
+
+            class Pathfinding pathfinding;
+            buildPathingFromMesh(mesh, pathfinding, transform);
+            buildPathfindingDefinition(pathfinding, levelDef.pathfinding);
+        }
+    }
+
     std::string decorName;
     if (themeWriter && themeWriter->GetDecorName(nodeName, decorName)) {
         DecorDefinition decorDef;
@@ -243,6 +253,28 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
         fileContent << "};" << std::endl;
     }
 
+    std::string pathingNodePositions = fileDefinition.GetUniqueName("PathingNodes");
+
+    fileContent << "struct Vector3 " << pathingNodePositions << "[] = {" << std::endl;
+    for (auto it = levelDef.pathfinding.mNodePositions.begin(); it != levelDef.pathfinding.mNodePositions.begin(); ++it) {
+        fileContent << "    {" << it->x << ", 0.0f, " << it->z << "}," << std::endl;
+    }
+    fileContent << "};" << std::endl;
+
+    std::string nextNode = fileDefinition.GetUniqueName("NextNode");
+
+    fileContent << "char " << nextNode << "[] = {" << std::endl;
+    unsigned currIndex = 0;
+    for (unsigned y = 0; y < levelDef.pathfinding.mNodePositions.size(); ++y) {
+        fileContent << "    ";
+        for (unsigned x = 0; x < levelDef.pathfinding.mNodePositions.size(); ++x) {
+            fileContent << levelDef.pathfinding.mNextNode[currIndex] << ", ";
+            ++currIndex;
+        }
+        fileContent << std::endl;
+    }
+    fileContent << "};" << std::endl;
+
     fileContent << "struct LevelDefinition " << definitionName << " = {" << std::endl;
     fileContent << "    .maxPlayerCount = " << levelDef.maxPlayerCount << "," << std::endl;
     fileContent << "    .playerStartLocations = " << startingPositions << "," << std::endl;
@@ -260,6 +292,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     }
     fileContent << "," << std::endl;
     fileContent << "    .staticScene = {" << boundary << ", " << actualBoundaryCount << "}," << std::endl;
+    fileContent << "    .pathfinding = {.nodeCount = " << levelDef.pathfinding.mNodePositions.size() << ", .nodePositions = " << pathingNodePositions << ", .nextNode = " << nextNode << "}," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }

@@ -12,8 +12,10 @@
 
 class ThemeMesh {
 public:
+    ThemeMesh();
     std::string objectName;
     ExtendedMesh* mesh;
+    ExtendedMesh* wireMesh;
     std::string materialName;
     unsigned index;
     std::vector<aiVector3D> boundary;
