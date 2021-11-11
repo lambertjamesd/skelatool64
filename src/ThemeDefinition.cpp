@@ -12,6 +12,20 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
     makeCCompatible(output.mCName);
     output.mFilename = Join(relativeDir, node["Filename"].Scalar());
     output.mOutput = Join(relativeDir, node["Output"].Scalar());
+    
+    output.mMaxPlayers = atoi(node["MaxPlayers"].Scalar().c_str());
+
+    if (node["Campaign"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsCampaign");
+    }
+
+    if (node["Multiplayer"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsMultiplayer");
+    }
+
+    if (node["Unlocked"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsUnlocked");
+    }
 }
 
 void parseSingleThemeDefinitionFromYaml(const YAML::Node& node, const std::string& relativeDir, ThemeDefinition& output) {

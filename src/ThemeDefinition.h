@@ -10,6 +10,9 @@ public:
     std::string mCName;
     std::string mFilename;
     std::string mOutput;
+    unsigned mMaxPlayers;
+    
+    std::vector<std::string> mFlags;
 };
 
 class ThemeDefinition {

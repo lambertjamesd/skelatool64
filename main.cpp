@@ -111,7 +111,18 @@ void generateLevelDef(const std::string& filename, DisplayListSettings& settings
     for (auto theme = themeDef.mThemes.begin(); theme != themeDef.mThemes.end(); ++theme) {
         themeList << "DEFINE_THEME(" << theme->mCName << ")" << std::endl;
         for (auto level = theme->mLevels.begin(); level != theme->mLevels.end(); ++level) {
-            levelList << "DEFINE_LEVEL(" << level->mCName << ", " << theme->mCName << ")" << std::endl;
+            levelList << "DEFINE_LEVEL(\"";
+            levelList << level->mName << "\", ";
+            levelList << level->mCName << ", ";
+            levelList << theme->mCName << ", ";
+            levelList << level->mMaxPlayers << ", ";
+            levelList << 0;
+            if (level->mFlags.size()) {
+                for (auto it = level->mFlags.begin(); it != level->mFlags.end(); ++it) {
+                    levelList << " | " << *it;
+                }
+            }
+            levelList << ")" << std::endl;
         }
     }
 
