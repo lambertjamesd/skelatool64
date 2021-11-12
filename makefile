@@ -17,7 +17,7 @@ default: skeletool64
 build/%.o: %.cpp
 	@mkdir -p $(@D)
 	g++ $(GCC_FLAGS) -c $< -o $@
-	$(CC) $(GCINCS) $(LCINCS) -MF"$(@:.o=.d)" -MG -MM -MP -MT"$@" "$<"
+	$(CC) $(GCC_FLAGS) -MM $^ -MF "$(@:.o=.d)" -MT"$@"
 
 skeletool64: $(OBJ_FILES)
 	g++ -g -o skeletool64 $(OBJ_FILES) $(LINKER_FLAGS)
