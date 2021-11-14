@@ -23,9 +23,21 @@ public:
     // the destination node. Each time an AI agent reaches an intermediate node it should update the from node
     // and lookup in mNextNode to get to the next node 
     std::vector<int> mNextNode;
+    std::vector<float> mDistToNode;
 };
+
+class NavPath {
+    public:
+    std::vector<int> points;
+    float len = 0.f;
+    bool reachesEndPoint = false;
+};
+
+//will return integers that appear to be in the given pairs set as the 'second' value
+//std::vector<int> getAdjacentIndices(const std::set<std::pair<unsigned, unsigned>>& nodeConnections, const unsigned& adjTo); 
 
 void buildPathingFromMesh(aiMesh* mesh, Pathfinding& result, const aiMatrix4x4& transform);
 void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& result);
+unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiVector3D>& nodePositions, const std::set<std::pair<unsigned, unsigned>>& nodeConnections, std::set<int>& nodesToIgnore, float& distance);
 
 #endif

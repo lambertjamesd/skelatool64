@@ -274,7 +274,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     std::string pathingNodePositions = fileDefinition.GetUniqueName("PathingNodes");
 
     fileContent << "struct Vector3 " << pathingNodePositions << "[] = {" << std::endl;
-    for (auto it = levelDef.pathfinding.mNodePositions.begin(); it != levelDef.pathfinding.mNodePositions.begin(); ++it) {
+    for (auto it = levelDef.pathfinding.mNodePositions.begin(); it != levelDef.pathfinding.mNodePositions.end(); ++it) {
         fileContent << "    {" << it->x << ", 0.0f, " << it->z << "}," << std::endl;
     }
     fileContent << "};" << std::endl;

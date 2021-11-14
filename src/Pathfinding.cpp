@@ -5,6 +5,116 @@ bool shouldUsePathingPoint(float minY, const aiVector3D& point) {
     return std::abs(minY - point.y) < 0.5f;
 }
 
+std::vector<int> getAdjacentIndices(const std::set<std::pair<unsigned, unsigned>>& nodeConnections, const unsigned& adjTo){
+    std::vector<int> out;
+    for(auto node : nodeConnections){
+        if(node.first == adjTo) out.push_back(node.second);
+    }
+    return out;
+}
+
+int getShortestPath(const std::vector<NavPath*>& allPaths, float& outDist){
+    if(allPaths.size() == 0) return -1;
+    else{
+        float minDist = 0.f;
+        int minInd = -1;
+        for(unsigned i = 0; i < allPaths.size(); ++i){
+            if(allPaths[i]->reachesEndPoint){
+                if(minInd == -1){
+                    minDist = allPaths[i]->len;
+                    minInd = i;
+                }
+                else{
+                    if(minDist > allPaths[i]->len){
+                        minDist = allPaths[i]->len;
+                        minInd = i;
+                    }
+                }
+            }
+        }
+        outDist = minDist;
+        return minInd;
+    }
+}
+
+void getPossiblePaths(unsigned from, unsigned to, const std::vector<aiVector3D>& nodePositions, const std::set<std::pair<unsigned, unsigned>>& nodeConnections, std::vector<NavPath*>& outPaths, const int& initialPath = -1){
+
+    if(from == to){
+        if(initialPath != -1){
+            outPaths[initialPath]->reachesEndPoint = true;
+        }
+        return;
+    }
+
+    std::vector<int> branches = getAdjacentIndices(nodeConnections, from);
+    for(unsigned i = 0; i < branches.size(); ++i){
+        int adjInd = branches[i];
+
+        float distance = (nodePositions[adjInd] - nodePositions[from]).Length();
+
+        //when the initialPath value is equal to 1, it means that we have just started to observe paths, and thus don't have any branches in the outPaths array yet.
+        if(initialPath == -1){
+            NavPath* newPath = new NavPath();
+            newPath->points.push_back(from);
+            newPath->points.push_back(adjInd);
+            newPath->len = distance;
+            outPaths.push_back(newPath);
+            getPossiblePaths(adjInd, to, nodePositions, nodeConnections, outPaths, (outPaths.size()-1));
+        } 
+        else{
+            //the first branch will be just a continuation of the given path
+            if(i == 0){
+                if(!std::count(outPaths[initialPath]->points.begin(), outPaths[initialPath]->points.end(), adjInd)){
+
+                    outPaths[initialPath]->points.push_back(adjInd);
+                    outPaths[initialPath]->len += distance;
+                    
+                    getPossiblePaths(adjInd, to, nodePositions, nodeConnections, outPaths, initialPath);
+                }
+            }
+            //while all further branches will be observed as completely separate paths
+            else{
+                if(!std::count(outPaths[initialPath]->points.begin(), outPaths[initialPath]->points.end(), adjInd)){ //making sure that we're not moving in a circle
+                    //first, we duplicate the existing branch
+                    NavPath* newPath = new NavPath();
+                    newPath->points = outPaths[initialPath]->points;
+                    newPath->len = outPaths[initialPath]->len;
+
+                    //and then append the data that we've just collected about this new branch
+                    newPath->points.push_back(adjInd);
+                    newPath->len += distance;
+                    outPaths.push_back(newPath);
+
+                    getPossiblePaths(adjInd, to, nodePositions, nodeConnections, outPaths, (outPaths.size()-1));
+                }
+            }
+        }
+        
+    }
+    
+}
+
+unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiVector3D>& nodePositions, const std::set<std::pair<unsigned, unsigned>>& nodeConnections, std::set<int>& nodesToIgnore, float& distance){
+    nodesToIgnore.insert(from);
+
+    if(from == to){
+        distance = 0.f;
+        return from;
+    }
+    else{
+        std::vector<NavPath*> allPaths;
+        getPossiblePaths(from , to, nodePositions, nodeConnections, allPaths);
+
+        float shortestPathDist = 0.f;
+        int shortestPath = getShortestPath(allPaths, shortestPathDist);
+        distance = shortestPathDist;
+        unsigned result = allPaths[shortestPath]->points[1];
+        allPaths.clear();
+        return result;
+    }
+    
+}
+
 void buildPathingFromMesh(aiMesh* mesh, Pathfinding& result, const aiMatrix4x4& transform) {
     std::vector<aiVector3D> transformed;
 
@@ -62,5 +172,28 @@ void buildPathingFromMesh(aiMesh* mesh, Pathfinding& result, const aiMatrix4x4& 
 }
 
 void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& result) {
-    // TODO
+
+    unsigned int numPoints = from.mPathingNodes.size();
+
+    for(unsigned i = 0; i < numPoints; ++i){
+        result.mNodePositions.push_back(from.mPathingNodes[i]);
+    }
+    
+    result.mNextNode.reserve(numPoints * numPoints);
+    result.mDistToNode.reserve(numPoints * numPoints);
+
+    for(unsigned x = 0; x < result.mNodePositions.size(); ++x){
+        for(unsigned y = 0; y < result.mNodePositions.size(); ++y){
+            if(x == y){
+                result.mNextNode[x * numPoints + y] = x;
+                result.mDistToNode[x * numPoints + y] = 0.f;
+            } 
+            else{
+                std::set<int> processedNodes;
+                float distanceToNode = 0.f;
+                result.mNextNode[x * numPoints + y] = getNextPathPointIndex(x, y, result.mNodePositions, from.mNodeConnections, processedNodes, distanceToNode);
+                result.mDistToNode[x * numPoints + y] = distanceToNode;
+            }
+        }
+    }
 }
