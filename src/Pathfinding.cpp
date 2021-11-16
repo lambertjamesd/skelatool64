@@ -16,20 +16,14 @@ std::vector<int> getAdjacentIndices(const std::set<std::pair<unsigned, unsigned>
 int getShortestPath(const std::vector<NavPath*>& allPaths, float& outDist){
     if(allPaths.size() == 0) return -1;
     else{
-        float minDist = 0.f;
-        int minInd = -1;
-        for(unsigned i = 0; i < allPaths.size(); ++i){
+        float minDist = allPaths[0]->len;
+        int minInd = 0;
+        for(unsigned i = 1; i < allPaths.size(); ++i){
             if(allPaths[i]->reachesEndPoint){
-                if(minInd == -1){
-                    minDist = allPaths[i]->len;
-                    minInd = i;
-                }
-                else{
-                    if(minDist > allPaths[i]->len){
-                        minDist = allPaths[i]->len;
-                        minInd = i;
-                    }
-                }
+               if(allPaths[i]->len < minDist){
+                   minInd = i;
+                   minDist = allPaths[i]->len;
+               }
             }
         }
         outDist = minDist;
@@ -94,8 +88,7 @@ void getPossiblePaths(unsigned from, unsigned to, const std::vector<aiVector3D>&
     
 }
 
-unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiVector3D>& nodePositions, const std::set<std::pair<unsigned, unsigned>>& nodeConnections, std::set<int>& nodesToIgnore, float& distance){
-    nodesToIgnore.insert(from);
+unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiVector3D>& nodePositions, const std::set<std::pair<unsigned, unsigned>>& nodeConnections, float& distance, const std::vector<int>& basesIndeces, std::vector<basesDistance>& baseDistances){
 
     if(from == to){
         distance = 0.f;
@@ -108,6 +101,16 @@ unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiV
         float shortestPathDist = 0.f;
         int shortestPath = getShortestPath(allPaths, shortestPathDist);
         distance = shortestPathDist;
+
+        if(std::count(basesIndeces.begin(), basesIndeces.end(), from) &&
+         std::count(basesIndeces.begin(), basesIndeces.end(), to)){
+             basesDistance newDist;
+             newDist.fromBase = from;
+             newDist.toBase = to;
+             newDist.distance = distance;
+             baseDistances.push_back(newDist);
+         }
+
         unsigned result = allPaths[shortestPath]->points[1];
         allPaths.clear();
         return result;
@@ -171,13 +174,33 @@ void buildPathingFromMesh(aiMesh* mesh, Pathfinding& result, const aiMatrix4x4& 
     }
 }
 
-void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& result) {
+unsigned getClosestLocationInd(const aiVector3D& closestTo, const std::vector<aiVector3D>& allPos){
+    if(allPos.size() == 0) return -1;
+    else if(allPos.size() == 1) return 0;
+    else{
+        unsigned result = 0;
+        float minDist = (closestTo - allPos[0]).Length();
+        for(unsigned i = 1; i  < allPos.size(); ++i){
+            float thisDist = (closestTo - allPos[i]).Length();
+            if(thisDist < minDist){
+                minDist = thisDist;
+                result = i;
+            }
+        }
+        return result;
+    }
+}
+
+void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& result, const std::vector<aiVector3D>& basePositions) {
 
     unsigned int numPoints = from.mPathingNodes.size();
 
     for(unsigned i = 0; i < numPoints; ++i){
         result.mNodePositions.push_back(from.mPathingNodes[i]);
     }
+
+    for(unsigned baseI = 0; baseI < basePositions.size(); ++baseI)
+        result.baseNodes.push_back(getClosestLocationInd(basePositions[baseI], result.mNodePositions));
     
     result.mNextNode.reserve(numPoints * numPoints);
     result.mDistToNode.reserve(numPoints * numPoints);
@@ -191,7 +214,7 @@ void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& 
             else{
                 std::set<int> processedNodes;
                 float distanceToNode = 0.f;
-                result.mNextNode[x * numPoints + y] = getNextPathPointIndex(x, y, result.mNodePositions, from.mNodeConnections, processedNodes, distanceToNode);
+                result.mNextNode[x * numPoints + y] = getNextPathPointIndex(x, y, result.mNodePositions, from.mNodeConnections, distanceToNode, result.baseNodes, result.baseDistances);
                 result.mDistToNode[x * numPoints + y] = distanceToNode;
             }
         }

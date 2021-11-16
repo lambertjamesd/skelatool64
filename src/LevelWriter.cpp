@@ -62,9 +62,12 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
         if (node->mNumMeshes > 0) {
             aiMesh* mesh = scene->mMeshes[node->mMeshes[0]];
 
+            std::vector<aiVector3D> basePositions;
+            for(unsigned i = 0; i < levelDef.bases.size(); ++i) basePositions.push_back(levelDef.bases[i].position);
+
             class Pathfinding pathfinding;
             buildPathingFromMesh(mesh, pathfinding, transform);
-            buildPathfindingDefinition(pathfinding, levelDef.pathfinding);
+            buildPathfindingDefinition(pathfinding, levelDef.pathfinding, basePositions);
         }
     }
 
@@ -279,6 +282,20 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     }
     fileContent << "};" << std::endl;
 
+    std::string basePathNodePositions = fileDefinition.GetUniqueName("BasesPathNodes");
+    fileContent << "char " << basePathNodePositions << "[] = {" << std::endl;
+    for(unsigned i = 0; i < levelDef.pathfinding.baseNodes.size(); ++i){
+        fileContent << "    " << levelDef.pathfinding.baseNodes[i] << "," << std::endl;
+    }
+    fileContent << "};" << std::endl;
+
+    std::string baseDist = fileDefinition.GetUniqueName("basePathNodeDistnaces");
+    fileContent << "struct basesDistance " << baseDist << "[] = {" << std::endl;
+    for(auto it = levelDef.pathfinding.baseDistances.begin(); it != levelDef.pathfinding.baseDistances.end(); ++it){
+        fileContent << "    {" << it->fromBase << ", " << it->toBase << ", " << it->distance << "}, " << std::endl;
+    }
+    fileContent << "};" << std::endl;
+
     std::string nextNode = fileDefinition.GetUniqueName("NextNode");
 
     fileContent << "char " << nextNode << "[] = {" << std::endl;
@@ -310,7 +327,8 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     }
     fileContent << "," << std::endl;
     fileContent << "    .staticScene = {" << boundary << ", " << actualBoundaryCount << "}," << std::endl;
-    fileContent << "    .pathfinding = {.nodeCount = " << levelDef.pathfinding.mNodePositions.size() << ", .nodePositions = " << pathingNodePositions << ", .nextNode = " << nextNode << "}," << std::endl;
+    fileContent << "    .pathfinding = {.nodeCount = " << levelDef.pathfinding.mNodePositions.size() << ", .baseNodes = " << basePathNodePositions <<
+        ", .baseDistances = " << baseDist << ", .nodePositions = " << pathingNodePositions << ", .nextNode = " << nextNode << "}," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }

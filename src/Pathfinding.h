@@ -13,9 +13,17 @@ public:
     std::set<std::pair<unsigned, unsigned>> mNodeConnections;
 };
 
+struct basesDistance{
+    int fromBase;
+    int toBase;
+    float distance;
+};
+
 class PathfindingDefinition {
 public:
     std::vector<aiVector3D> mNodePositions;
+    std::vector<int> baseNodes;
+    std::vector<basesDistance> baseDistances;
     // to be interpreted as a 2D array with mNodePositions.size() * mNodePositions.size() entries
     // If an AI agent wanted to go from node an index n to node at index m it would do so by looking up
     // the entry in mNextNode[from * mNodePositions.size() + to] and the result would be another index
@@ -37,7 +45,7 @@ class NavPath {
 //std::vector<int> getAdjacentIndices(const std::set<std::pair<unsigned, unsigned>>& nodeConnections, const unsigned& adjTo); 
 
 void buildPathingFromMesh(aiMesh* mesh, Pathfinding& result, const aiMatrix4x4& transform);
-void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& result);
+void buildPathfindingDefinition(const Pathfinding& from, PathfindingDefinition& result, const std::vector<aiVector3D>& basePositions);
 unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiVector3D>& nodePositions, const std::set<std::pair<unsigned, unsigned>>& nodeConnections, std::set<int>& nodesToIgnore, float& distance);
 
 #endif
