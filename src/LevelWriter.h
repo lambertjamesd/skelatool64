@@ -25,9 +25,11 @@ public:
 
 class LevelDefinition {
 public:
+    LevelDefinition();
     std::vector<BaseDefinition> bases;
     std::vector<aiMesh*> geometryMeshes;
     aiVector3D startPosition[MAX_PLAYERS];
+    bool hasStartPosition[MAX_PLAYERS];
     unsigned maxPlayerCount;
     aiVector3D minBoundary;
     aiVector3D maxBoundary;

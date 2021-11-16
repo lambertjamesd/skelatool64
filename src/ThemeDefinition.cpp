@@ -26,6 +26,10 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
     if (node["Unlocked"].IsDefined()) {
         output.mFlags.push_back("LevelMetadataFlagsUnlocked");
     }
+
+    if (node["Tutorial"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsTutorial");
+    }
 }
 
 void parseSingleThemeDefinitionFromYaml(const YAML::Node& node, const std::string& relativeDir, ThemeDefinition& output) {

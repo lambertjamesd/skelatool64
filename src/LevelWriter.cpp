@@ -12,6 +12,13 @@
 #include "Collision.h"
 #include "ThemeWriter.h"
 
+LevelDefinition::LevelDefinition() {
+    hasStartPosition[0] = false;
+    hasStartPosition[1] = false;
+    hasStartPosition[2] = false;
+    hasStartPosition[3] = false;
+}
+
 void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, aiNode* node, const aiMatrix4x4& transform) {
     std::string nodeName = node->mName.C_Str();
 
@@ -25,7 +32,9 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
         levelDef.bases.push_back(base);
 
         if (base.team >= 0 && base.team < MAX_PLAYERS) {
-            levelDef.startPosition[base.team] = base.position;
+            if (!levelDef.hasStartPosition[base.team]) {
+                levelDef.startPosition[base.team] = base.position;
+            }
             levelDef.maxPlayerCount = std::max(levelDef.maxPlayerCount, base.team + 1);
         }
 
@@ -56,6 +65,15 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
             class Pathfinding pathfinding;
             buildPathingFromMesh(mesh, pathfinding, transform);
             buildPathfindingDefinition(pathfinding, levelDef.pathfinding);
+        }
+    }
+
+    if (nodeName.rfind("PlayerStart ", 0) == 0) {
+        int playerIndex = atoi(nodeName.c_str() + strlen("PlayerStart "));
+        if (playerIndex >= 0 && playerIndex < MAX_PLAYERS) {
+            aiQuaternion rotation;
+            transform.DecomposeNoScaling(rotation, levelDef.startPosition[playerIndex]);
+            levelDef.hasStartPosition[playerIndex] = true;
         }
     }
 
