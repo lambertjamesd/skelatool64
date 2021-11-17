@@ -100,6 +100,11 @@ unsigned getNextPathPointIndex(unsigned from, unsigned to, const std::vector<aiV
 
         float shortestPathDist = 0.f;
         int shortestPath = getShortestPath(allPaths, shortestPathDist);
+
+        if (shortestPath == -1) {
+            return 0;
+        }
+
         distance = shortestPathDist;
 
         if(std::count(basesIndeces.begin(), basesIndeces.end(), from) &&
