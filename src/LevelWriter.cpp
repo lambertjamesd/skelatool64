@@ -11,6 +11,7 @@
 #include "MeshWriter.h"
 #include "Collision.h"
 #include "ThemeWriter.h"
+#include "Wireframe.h"
 
 LevelDefinition::LevelDefinition() {
     hasStartPosition[0] = false;
@@ -166,10 +167,7 @@ void generateDecorDL(LevelDefinition& levelDef, ThemeWriter* theme, DisplayList&
     }
 }
 
-void generateLevelFromScene(const aiScene* scene, std::string headerFilename, ThemeWriter* theme, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
-    LevelDefinition levelDef;
-    levelDef.maxPlayerCount = 0;
-    populateLevel(scene, levelDef, theme, settings);
+void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std::string headerFilename, ThemeWriter* theme, DisplayListSettings& settings, std::ostream& headerFile, std::ostream& fileContent) {
     CFileDefinition fileDefinition(settings.mPrefix);
     BoneHierarchy blankBones;
 
@@ -181,7 +179,10 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
 
     std::string definitionName = fileDefinition.GetUniqueName("Definition");
 
+    std::string wireframeName = fileDefinition.GetUniqueName("wireframe_model_gfx");
+
     headerFile << "extern struct LevelDefinition " << definitionName << ";" << std::endl;
+    headerFile << "extern Gfx " << wireframeName << "[];" << std::endl;
 
     headerFile << std::endl;
     headerFile << "#endif";
@@ -210,7 +211,7 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
     DisplayList sceneDisplayList(fileDefinition.GetUniqueName("model_gfx"));
 
     if (theme) {
-        generateMeshIntoDLWithMaterials(scene, fileDefinition, theme->mMaterialCollector, chunks, settings, sceneDisplayList);
+        generateMeshIntoDLWithMaterials(scene, fileDefinition, &theme->mMaterialCollector, chunks, settings, sceneDisplayList);
         sceneDisplayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("Begin decor")));
         generateDecorDL(levelDef, theme, sceneDisplayList);
         fileDefinition.GenerateVertexBuffers(fileContent, settings.mScale, settings.mRotateModel);
@@ -334,12 +335,18 @@ void generateLevelFromScene(const aiScene* scene, std::string headerFilename, Th
 }
 
 void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings) {
+    LevelDefinition levelDef;
+    levelDef.maxPlayerCount = 0;
+    populateLevel(scene, levelDef, theme, settings);
+    
     std::ostringstream headerContent;
     std::ostringstream fileContent;
+    std::ostringstream wireframe;
 
     std::string headerFilename = replaceExtension(filename, ".h");
 
-    generateLevelFromScene(scene, headerFilename, theme, settings, headerContent, fileContent);
+    generateLevelFromScene(levelDef, scene, headerFilename, theme, settings, headerContent, fileContent);
+    generateLevelWireframe(levelDef, scene, theme, settings, wireframe);
 
     std::ofstream outputHeader;
     outputHeader.open(headerFilename, std::ios_base::out | std::ios_base::trunc);
@@ -350,5 +357,9 @@ void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, Th
     outputContent.open(replaceExtension(filename, ".c"), std::ios_base::out | std::ios_base::trunc);
     outputContent << fileContent.str();
     outputContent.close();
-
+    
+    std::ofstream outputWireframe;
+    outputWireframe.open(replaceExtension(filename, ".wire.c"), std::ios_base::out | std::ios_base::trunc);
+    outputWireframe << wireframe.str();
+    outputWireframe.close();
 }

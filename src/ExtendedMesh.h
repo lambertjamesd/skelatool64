@@ -25,10 +25,16 @@ public:
     aiVector3D bbMin;
     aiVector3D bbMax;
 
+    void RecalcBB();
+
+    void Transform(const aiMatrix4x4& transform);
+
     bool isFaceOneBone(aiFace* face);
     std::pair<Bone*, Bone*> findTransitionPairForFace(aiFace* face);
 private:
     void PopulateFacesForBone();
 };
+
+aiMesh* copyMesh(aiMesh* mesh);
 
 #endif

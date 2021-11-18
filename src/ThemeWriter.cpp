@@ -110,7 +110,7 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
                 themeMesh.index = mDecorMeshes.size();
                 extractMeshBoundary(mesh, worldTransform, themeMesh.boundary);
                 mDecorMeshes[decorName] = themeMesh;
-            } else {
+            } else if (existing->second.boundary.size() == 0) {
                 extractMeshBoundary(mesh, worldTransform, existing->second.boundary);
             }
         } else if (GetDecorWireName(mesh->mName.C_Str(), decorName)) {
@@ -123,7 +123,7 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
                 themeMesh.materialName = "";
                 themeMesh.index = mDecorMeshes.size();
                 mDecorMeshes[decorName] = themeMesh;
-            } else {
+            } else if (!existing->second.wireMesh) {
                 existing->second.wireMesh = new ExtendedMesh(mesh, noBones);
             }
         }
@@ -444,6 +444,16 @@ std::string ThemeWriter::GetDecorGeo(const std::string& decorName) {
     }
 
     return mDecorGeoNames[mesh->second.index];
+}
+
+const ThemeMesh* ThemeWriter::GetThemeMesh(const std::string& id) {
+    auto result = mDecorMeshes.find(id);
+
+    if (result == mDecorMeshes.end()) {
+        return nullptr;
+    }
+
+    return &result->second;
 }
 
 void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& settings) {

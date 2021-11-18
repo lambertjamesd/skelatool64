@@ -4,6 +4,27 @@
 #include <algorithm>
 #include "MathUtl.h"
 
+aiMesh* copyMesh(aiMesh* mesh) {
+    aiMesh* result = new aiMesh();
+    result->mNumVertices = mesh->mNumVertices;
+
+    result->mVertices = new aiVector3D[result->mNumVertices];
+    std::copy(mesh->mVertices, mesh->mVertices + result->mNumVertices, result->mVertices);
+
+    if (mesh->mNormals) {
+        result->mNormals = new aiVector3D[result->mNumVertices];
+        std::copy(mesh->mNormals, mesh->mNormals + result->mNumVertices, result->mNormals);
+    }
+
+    result->mMaterialIndex = mesh->mMaterialIndex;
+
+    result->mNumFaces = mesh->mNumFaces;
+    result->mFaces = new aiFace[mesh->mNumFaces];
+    std::copy(mesh->mFaces, mesh->mFaces + result->mNumFaces, result->mFaces);
+
+    return result;
+}
+
 ExtendedMesh::ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy) :
     mMesh(mesh) {
     mVertexBones.resize(mMesh->mNumVertices);
@@ -29,14 +50,7 @@ ExtendedMesh::ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy) :
     }
 
     PopulateFacesForBone();
-
-    bbMin = mesh->mVertices[0];
-    bbMax = mesh->mVertices[0];
-
-    for (unsigned i = 1; i < mesh->mNumVertices; ++i) {
-        bbMin = min(bbMin, mesh->mVertices[i]);
-        bbMax = max(bbMax, mesh->mVertices[i]);
-    }
+    RecalcBB();
 }
 
 ExtendedMesh::~ExtendedMesh() {
@@ -44,6 +58,16 @@ ExtendedMesh::~ExtendedMesh() {
         if (mNormalInverseTransform[i]) {
             delete mNormalInverseTransform[i];
         }
+    }
+}
+
+void ExtendedMesh::RecalcBB() {
+    bbMin = mMesh->mVertices[0];
+    bbMax = mMesh->mVertices[0];
+
+    for (unsigned i = 1; i < mMesh->mNumVertices; ++i) {
+        bbMin = min(bbMin, mMesh->mVertices[i]);
+        bbMax = max(bbMax, mMesh->mVertices[i]);
     }
 }
 
@@ -87,4 +111,16 @@ void ExtendedMesh::PopulateFacesForBone() {
             mBoneSpanningFaces[findTransitionPairForFace(face)].push_back(face);
         }
     }
+}
+
+void ExtendedMesh::Transform(const aiMatrix4x4& transform) {
+    for (unsigned i = 0; i < mMesh->mNumVertices; ++i) {
+        mMesh->mVertices[i] = transform * mMesh->mVertices[i];
+
+        if (mMesh->mNormals) {
+            mMesh->mNormals[i] = transform * mMesh->mNormals[i];
+            mMesh->mNormals[i].NormalizeSafe();
+        }
+    }
+    RecalcBB();
 }

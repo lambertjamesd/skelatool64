@@ -41,6 +41,8 @@ public:
     std::string GetDecorMaterial(const std::string& decorName);
     std::string GetDecorGeo(const std::string& decorName); 
     MaterialCollector mMaterialCollector;
+
+    const ThemeMesh* GetThemeMesh(const std::string& id);
 private:
     std::string WriteMaterials(std::ostream& cfile, std::vector<ThemeMesh*>& meshList, CFileDefinition& fileDef, DisplayListSettings& settings);
     void AppendContentFromNode(const aiScene* scene, const aiNode* node, DisplayListSettings& settings);

@@ -52,24 +52,27 @@ void MaterialCollector::GenerateMaterials(CFileDefinition& fileDefinition, Displ
     }
 }
 
-void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& fileDefinition, MaterialCollector& materials, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList) {
+void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& fileDefinition, MaterialCollector* materials, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList) {
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
-        std::string materialName = scene->mMaterials[chunk->mMesh->mMesh->mMaterialIndex]->GetName().C_Str();
-        displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("Material " + materialName)));
-        auto mappedMaterialName = materials.mMaterialNameMapping.find(materialName);
+        if (materials) {
+            std::string materialName = scene->mMaterials[chunk->mMesh->mMesh->mMaterialIndex]->GetName().C_Str();
+            displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("Material " + materialName)));
+            auto mappedMaterialName = materials->mMaterialNameMapping.find(materialName);
 
-        if (mappedMaterialName != materials.mMaterialNameMapping.end()) {
-            displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CallDisplayListByNameCommand(mappedMaterialName->second)));
-        } else {
-            auto material = settings.mMaterials.find(materialName);
+            if (mappedMaterialName != materials->mMaterialNameMapping.end()) {
+                displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CallDisplayListByNameCommand(mappedMaterialName->second)));
+            } else {
+                auto material = settings.mMaterials.find(materialName);
 
-            if (material != settings.mMaterials.end()) {
-                material->second.WriteToDL(materials.mResourceNameMapping, displayList);
+                if (material != settings.mMaterials.end()) {
+                    material->second.WriteToDL(materials->mResourceNameMapping, displayList);
+                }
             }
+            
+            displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("End Material " + materialName)));
         }
 
-        displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("End Material " + materialName)));
         
         int vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mVertexType);
         generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
@@ -84,7 +87,7 @@ void generateMeshIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, s
     materials.CollectMaterialResources(scene, renderChunks, settings);
     materials.GenerateMaterials(fileDefinition, settings, output);
 
-    generateMeshIntoDLWithMaterials(scene, fileDefinition, materials, renderChunks, settings, displayList);
+    generateMeshIntoDLWithMaterials(scene, fileDefinition, &materials, renderChunks, settings, displayList);
 
     fileDefinition.GenerateVertexBuffers(output, settings.mScale, settings.mRotateModel);
 }
@@ -94,9 +97,4 @@ std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, 
     generateMeshIntoDL(scene, fileDefinition, renderChunks, settings, displayList, output);
     displayList.Generate(fileDefinition, output);
     return displayList.GetName();
-}
-
-
-void generateWireframeIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList) {
-    
 }
