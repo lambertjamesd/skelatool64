@@ -20,6 +20,7 @@ class DecorDefinition {
 public:
     aiVector3D position;
     aiQuaternion rotation;
+    float scale;
     std::string decorID;
 };
 

@@ -20,7 +20,7 @@ LevelDefinition::LevelDefinition() {
     hasStartPosition[3] = false;
 }
 
-void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, aiNode* node, const aiMatrix4x4& transform) {
+void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, aiNode* node, const aiMatrix4x4& transform, DisplayListSettings& settings) {
     std::string nodeName = node->mName.C_Str();
 
     if (nodeName.rfind("Base", 0) == 0) {
@@ -86,17 +86,18 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
         DecorDefinition decorDef;
         aiVector3D scaling;
         transform.Decompose(scaling, decorDef.rotation, decorDef.position);
+        decorDef.scale = scaling.x / settings.mScale;
         decorDef.decorID = decorName;
         levelDef.decor.push_back(decorDef);
     }
 
     for (unsigned i = 0; i < node->mNumChildren; ++i) {
-        populateLevelRecursive(scene, levelDef, themeWriter, node->mChildren[i], transform * node->mChildren[i]->mTransformation);
+        populateLevelRecursive(scene, levelDef, themeWriter, node->mChildren[i], transform * node->mChildren[i]->mTransformation, settings);
     }
 }
 
 void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, DisplayListSettings& settings) {
-    populateLevelRecursive(scene, levelDef, themeWriter, scene->mRootNode, aiMatrix4x4());
+    populateLevelRecursive(scene, levelDef, themeWriter, scene->mRootNode, aiMatrix4x4(), settings);
 
     for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
         aiVector3D boundaryPoint = levelDef.boundary[i];
@@ -269,6 +270,7 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
             fileContent << "    {";
             fileContent << "{" << it->position.x << ", " << it->position.y << ", " << it->position.z << "}, ";
             fileContent << "{" << finalRotation.x << ", " << finalRotation.y << ", " << finalRotation.z << ", " << finalRotation.w << "}, ";
+            fileContent << it->scale << ", ";
             fileContent << theme->GetDecorID(it->decorID);
             fileContent << "}," << std::endl;
         }
