@@ -111,7 +111,7 @@ void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, ThemeW
 }
 
 bool generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ostream& fileContent) {
-    aiVector3D at = (from + to) * 0.5f;
+    aiVector3D at = from;
     aiVector3D offset = to - from;
 
     if (offset.SquareLength() < 0.1f) {
@@ -121,17 +121,15 @@ bool generateBoundaryEdge(const aiVector3D& from, const aiVector3D& to, std::ost
     at.y = 0.0f;
     offset.y = 0.0f;
 
-    float tmp = offset.x;
-    offset.x = offset.z;
-    offset.z = -tmp;
+    float length = offset.Length();
 
-    if (at * offset > 0) {
-        offset = -offset;
-    }
+    float tmp = offset.x;
+    offset.x = -offset.z;
+    offset.z = tmp;
 
     offset.Normalize();
 
-    fileContent << "    {{" << at.x << ", " << at.z << "}, {" << offset.x << ", " << offset.z << "}}," << std::endl;
+    fileContent << "    {{" << at.x << ", " << at.z << "}, {" << offset.x << ", " << offset.z << "}, " << length << "}," << std::endl;
     return true;
 }
 

@@ -19,7 +19,11 @@ bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     parseMaterialFile(file, parseResult);
     output.mMaterials.insert(parseResult.mMaterialFile.mMaterials.begin(), parseResult.mMaterialFile.mMaterials.end());
 
-    return true;
+    for (auto err : parseResult.mErrors) {
+        std::cerr << err.mMessage << std::endl;
+    }
+
+    return parseResult.mErrors.size() == 0;
 }
 
 bool getVectorByName(const aiScene* scene, const std::string name, aiVector3D& result) {
