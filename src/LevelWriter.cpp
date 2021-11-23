@@ -290,17 +290,25 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
     }
     fileContent << "};" << std::endl;
 
-    std::string baseDist = fileDefinition.GetUniqueName("basePathNodeDistnaces");
-    fileContent << "struct basesDistance " << baseDist << "[] = {" << std::endl;
-    for(auto it = levelDef.pathfinding.baseDistances.begin(); it != levelDef.pathfinding.baseDistances.end(); ++it){
-        fileContent << "    {" << it->fromBase << ", " << it->toBase << ", " << it->distance << "}, " << std::endl;
+    std::string nodeDist = fileDefinition.GetUniqueName("NodeDistances");
+    fileContent << "unsigned short " << nodeDist << "[] = {" << std::endl;
+
+    unsigned currIndex = 0;
+    for (unsigned y = 0; y < levelDef.pathfinding.mNodePositions.size(); ++y) {
+        fileContent << "    ";
+        for (unsigned x = 0; x < levelDef.pathfinding.mNodePositions.size(); ++x) {
+            fileContent << (unsigned short)levelDef.pathfinding.mDistToNode[currIndex] << ", ";
+            ++currIndex;
+        }
+        fileContent << std::endl;
     }
+
     fileContent << "};" << std::endl;
 
     std::string nextNode = fileDefinition.GetUniqueName("NextNode");
 
     fileContent << "char " << nextNode << "[] = {" << std::endl;
-    unsigned currIndex = 0;
+    currIndex = 0;
     for (unsigned y = 0; y < levelDef.pathfinding.mNodePositions.size(); ++y) {
         fileContent << "    ";
         for (unsigned x = 0; x < levelDef.pathfinding.mNodePositions.size(); ++x) {
@@ -329,7 +337,7 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
     fileContent << "," << std::endl;
     fileContent << "    .staticScene = {" << boundary << ", " << actualBoundaryCount << "}," << std::endl;
     fileContent << "    .pathfinding = {.nodeCount = " << levelDef.pathfinding.mNodePositions.size() << ", .baseNodes = " << basePathNodePositions <<
-        ", .baseDistances = " << baseDist << ", .nodePositions = " << pathingNodePositions << ", .nextNode = " << nextNode << "}," << std::endl;
+        ", .nodeDistances = " << nodeDist << ", .nodePositions = " << pathingNodePositions << ", .nextNode = " << nextNode << "}," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }

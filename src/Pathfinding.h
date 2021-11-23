@@ -23,7 +23,6 @@ class PathfindingDefinition {
 public:
     std::vector<aiVector3D> mNodePositions;
     std::vector<int> baseNodes;
-    std::vector<basesDistance> baseDistances;
     // to be interpreted as a 2D array with mNodePositions.size() * mNodePositions.size() entries
     // If an AI agent wanted to go from node an index n to node at index m it would do so by looking up
     // the entry in mNextNode[from * mNodePositions.size() + to] and the result would be another index
