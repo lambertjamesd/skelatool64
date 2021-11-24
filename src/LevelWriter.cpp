@@ -20,7 +20,7 @@ LevelDefinition::LevelDefinition() {
     hasStartPosition[3] = false;
 }
 
-void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, aiNode* node, const aiMatrix4x4& transform, DisplayListSettings& settings) {
+void populateLevelRecursive(const aiScene* scene, Pathfinding& pathfinding, class LevelDefinition& levelDef, ThemeWriter* themeWriter, aiNode* node, const aiMatrix4x4& transform, DisplayListSettings& settings) {
     std::string nodeName = node->mName.C_Str();
 
     if (nodeName.rfind("Base", 0) == 0) {
@@ -62,13 +62,7 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
     if (nodeName.rfind("Pathfinding", 0) == 0) {
         if (node->mNumMeshes > 0) {
             aiMesh* mesh = scene->mMeshes[node->mMeshes[0]];
-
-            std::vector<aiVector3D> basePositions;
-            for(unsigned i = 0; i < levelDef.bases.size(); ++i) basePositions.push_back(levelDef.bases[i].position);
-
-            class Pathfinding pathfinding;
             buildPathingFromMesh(mesh, pathfinding, transform);
-            buildPathfindingDefinition(pathfinding, levelDef.pathfinding, basePositions);
         }
     }
 
@@ -92,12 +86,17 @@ void populateLevelRecursive(const aiScene* scene, class LevelDefinition& levelDe
     }
 
     for (unsigned i = 0; i < node->mNumChildren; ++i) {
-        populateLevelRecursive(scene, levelDef, themeWriter, node->mChildren[i], transform * node->mChildren[i]->mTransformation, settings);
+        populateLevelRecursive(scene, pathfinding, levelDef, themeWriter, node->mChildren[i], transform * node->mChildren[i]->mTransformation, settings);
     }
 }
 
 void populateLevel(const aiScene* scene, class LevelDefinition& levelDef, ThemeWriter* themeWriter, DisplayListSettings& settings) {
-    populateLevelRecursive(scene, levelDef, themeWriter, scene->mRootNode, aiMatrix4x4(), settings);
+    class Pathfinding pathfinding;
+    populateLevelRecursive(scene, pathfinding, levelDef, themeWriter, scene->mRootNode, aiMatrix4x4(), settings);
+
+    std::vector<aiVector3D> basePositions;
+    for(unsigned i = 0; i < levelDef.bases.size(); ++i) basePositions.push_back(levelDef.bases[i].position);
+    buildPathfindingDefinition(pathfinding, levelDef.pathfinding, basePositions);
 
     for (unsigned i = 0; i < levelDef.boundary.size(); ++i) {
         aiVector3D boundaryPoint = levelDef.boundary[i];
