@@ -80,11 +80,11 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, ai
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
-            code = convertToShort(uv.x * (1 << 10), converted);
+            code = convertToShort(uv.x * (1 << 11), converted);
             if (code != ErrorCode::None) return code;
             output << converted << ", ";
 
-            code = convertToShort((1.0f - uv.y) * (1 << 10), converted);
+            code = convertToShort((1.0f - uv.y) * (1 << 11), converted);
             if (code != ErrorCode::None) return code;
             output << converted << "}, {";
         }

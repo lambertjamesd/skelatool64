@@ -13,7 +13,7 @@
 #include "ThemeWriter.h"
 #include "Wireframe.h"
 
-LevelDefinition::LevelDefinition() {
+LevelDefinition::LevelDefinition(): baseMesh(nullptr) {
     hasStartPosition[0] = false;
     hasStartPosition[1] = false;
     hasStartPosition[2] = false;
@@ -44,6 +44,10 @@ void populateLevelRecursive(const aiScene* scene, Pathfinding& pathfinding, clas
 
         levelDef.maxBoundary.x = std::max(levelDef.maxBoundary.x, base.position.x);
         levelDef.maxBoundary.z = std::max(levelDef.maxBoundary.z, base.position.z);
+
+        if (!levelDef.baseMesh && node->mNumMeshes > 0) {
+            levelDef.baseMesh = scene->mMeshes[node->mMeshes[0]];
+        }
     }
 
     if (nodeName.rfind("Geometry", 0) == 0) {

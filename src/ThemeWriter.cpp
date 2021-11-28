@@ -17,7 +17,7 @@ ThemeMesh::ThemeMesh(): mesh(nullptr), wireMesh(nullptr), index(0) {
 
 }
 
-ThemeWriter::ThemeWriter(const std::string& themeName, const std::string& themeHeader) : mThemeName(themeName), mThemeHeader(themeHeader) {
+ThemeWriter::ThemeWriter(const std::string& themeName, const std::string& themeHeader) : mThemeName(themeName), mThemeHeader(themeHeader), mSkybox(nullptr) {
     
 }
 
@@ -126,6 +126,9 @@ void ThemeWriter::AppendContentFromScene(const aiScene* scene, DisplayListSettin
             } else if (!existing->second.wireMesh) {
                 existing->second.wireMesh = new ExtendedMesh(mesh, noBones);
             }
+        } else if (std::string(mesh->mName.C_Str()) == "Skybox") {
+            mSkyboxMaterial = scene->mMaterials[mesh->mMaterialIndex]->GetName().C_Str();
+            mSkybox = new ExtendedMesh(mesh, noBones);
         }
     }
 
@@ -361,11 +364,30 @@ void ThemeWriter::WriteTheme(const std::string& output, DisplayListSettings& set
         return a->index < b->index;
     });
 
+    if (mSkybox) {
+        ThemeMesh* newMesh = new ThemeMesh();
+        newMesh->materialName = mSkyboxMaterial;
+        newMesh->mesh = mSkybox;
+        newMesh->index = meshList.size();
+        newMesh->objectName = "Skybox";
+        meshList.push_back(newMesh);
+    }
+
     std::string decorMaterials = WriteMaterials(cfile, meshList, fileDef, settings);
     std::string decorDisplayLists = writeGeometry(cfile, meshList, mDecorGeoNames, fileDef, settings);
     std::string decorShapes = writeCollision(cfile, meshList, fileDef, settings);
 
+    std::string skyboxName = "0";
+    std::string skyboxMaterialName = "0";
+
+    if (mSkybox) {
+        skyboxName = mDecorGeoNames[mDecorGeoNames.size() - 1];
+        skyboxMaterialName = mDecorMaterialNames[mDecorMaterialNames.size() - 1];
+    }
+
     cfile << "struct ThemeDefinition " << mThemeName << "Theme = {" << std::endl;
+    cfile << "    .skybox = " << skyboxName << "," << std::endl;
+    cfile << "    .skyboxMaterial = " << skyboxMaterialName << "," << std::endl;
     cfile << "    .decorMaterials = " << decorMaterials << "," << std::endl;
     cfile << "    .decorDisplayLists = " << decorDisplayLists << "," << std::endl;
     cfile << "    .decorShapes = " << decorShapes << "," << std::endl;

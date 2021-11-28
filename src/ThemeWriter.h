@@ -51,6 +51,8 @@ private:
     std::string mThemeHeader;
     std::map<std::string, ThemeMesh> mDecorMeshes;
     std::vector<std::string> mUsedMaterials;
+    ExtendedMesh* mSkybox;
+    std::string mSkyboxMaterial;
 
     std::vector<std::string> mDecorGeoNames;
     std::vector<std::string> mDecorMaterialNames;

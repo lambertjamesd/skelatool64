@@ -29,6 +29,7 @@ public:
     LevelDefinition();
     std::vector<BaseDefinition> bases;
     std::vector<aiMesh*> geometryMeshes;
+    aiMesh* baseMesh;
     aiVector3D startPosition[MAX_PLAYERS];
     bool hasStartPosition[MAX_PLAYERS];
     unsigned maxPlayerCount;

@@ -30,6 +30,10 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
     if (node["Tutorial"].IsDefined()) {
         output.mFlags.push_back("LevelMetadataFlagsTutorial");
     }
+
+    if (node["DisallowUpgrade"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsDisallowUpgrade");
+    }
 }
 
 void parseSingleThemeDefinitionFromYaml(const YAML::Node& node, const std::string& relativeDir, ThemeDefinition& output) {

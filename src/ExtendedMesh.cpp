@@ -124,3 +124,15 @@ void ExtendedMesh::Transform(const aiMatrix4x4& transform) {
     }
     RecalcBB();
 }
+
+void ExtendedMesh::ReplaceColor(const aiColor4D& color) {
+    if (mMesh->mColors[0]) {
+        delete [] mMesh->mColors[0];
+    }
+
+    mMesh->mColors[0] = new aiColor4D[mMesh->mNumVertices];
+
+    for (unsigned i = 0; i < mMesh->mNumVertices; ++i) {
+        mMesh->mColors[0][i] = color;
+    }
+}
