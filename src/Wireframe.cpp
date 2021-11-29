@@ -52,7 +52,7 @@ void generateLevelWireframe(LevelDefinition& levelDef, const aiScene* scene, The
     for (auto decor : levelDef.decor) {
         const ThemeMesh* themeMesh = theme->GetThemeMesh(decor.decorID);
 
-        if (!themeMesh) {
+        if (!themeMesh || (!themeMesh->mesh && !themeMesh->wireMesh)) {
             continue;
         }
 

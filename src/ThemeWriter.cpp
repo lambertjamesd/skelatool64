@@ -506,6 +506,11 @@ void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& sett
     themeWriter.WriteThemeHeader(themeDef.mOutput, settings);
 
     for (auto it = levels.begin(); it != levels.end(); ++it) {
+        if (it->definition.mFlags.size() == 0) {
+            std::cout << "Skipping level " << it->definition.mOutput << std::endl;
+            continue;
+        }
+
         DisplayListSettings levelSettings = settings;
         levelSettings.mPrefix = it->definition.mCName;
         std::cout << "Saving level to " << it->definition.mOutput << std::endl;

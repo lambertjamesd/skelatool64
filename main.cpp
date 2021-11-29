@@ -115,6 +115,10 @@ void generateLevelDef(const std::string& filename, DisplayListSettings& settings
     for (auto theme = themeDef.mThemes.begin(); theme != themeDef.mThemes.end(); ++theme) {
         themeList << "DEFINE_THEME(" << theme->mCName << ")" << std::endl;
         for (auto level = theme->mLevels.begin(); level != theme->mLevels.end(); ++level) {
+            if (level->mFlags.size() == 0) {
+                continue;
+            }
+
             levelList << "DEFINE_LEVEL(\"";
             levelList << level->mName << "\", ";
             levelList << level->mCName << ", ";
