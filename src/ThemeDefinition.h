@@ -11,6 +11,7 @@ public:
     std::string mFilename;
     std::string mOutput;
     unsigned mMaxPlayers;
+    float mAIDifficulty;
     
     std::vector<std::string> mFlags;
 };

@@ -13,7 +13,7 @@
 #include "ThemeWriter.h"
 #include "Wireframe.h"
 
-LevelDefinition::LevelDefinition(): baseMesh(nullptr) {
+LevelDefinition::LevelDefinition(): baseMesh(nullptr), aiDifficulty(1.0f) {
     hasStartPosition[0] = false;
     hasStartPosition[1] = false;
     hasStartPosition[2] = false;
@@ -341,14 +341,16 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
     fileContent << "    .staticScene = {" << boundary << ", " << actualBoundaryCount << "}," << std::endl;
     fileContent << "    .pathfinding = {.nodeCount = " << levelDef.pathfinding.mNodePositions.size() << ", .baseNodes = " << basePathNodePositions <<
         ", .nodeDistances = " << nodeDist << ", .nodePositions = " << pathingNodePositions << ", .nextNode = " << nextNode << "}," << std::endl;
+    fileContent << "    .aiDifficulty = " << levelDef.aiDifficulty << "," << std::endl;
     fileContent << "};" << std::endl;
     fileContent << std::endl;
 }
 
-void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings) {
+void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings, float aiDifficulty) {
     LevelDefinition levelDef;
     levelDef.maxPlayerCount = 0;
     populateLevel(scene, levelDef, theme, settings);
+    levelDef.aiDifficulty = aiDifficulty;
     
     std::ostringstream headerContent;
     std::ostringstream fileContent;

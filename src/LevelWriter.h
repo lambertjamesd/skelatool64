@@ -38,8 +38,9 @@ public:
     std::vector<aiVector3D> boundary;
     std::vector<DecorDefinition> decor;
     PathfindingDefinition pathfinding;
+    float aiDifficulty;
 };
 
-void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings);
+void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings, float aiDifficulty);
 
 #endif

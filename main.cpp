@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         std::cout << "Saving to "  << args.mOutputFile << std::endl;
-        generateLevelFromSceneToFile(scene, args.mOutputFile, nullptr, settings);
+        generateLevelFromSceneToFile(scene, args.mOutputFile, nullptr, settings, 1.0f);
     } else {
         std::cout << "Generating from mesh "  << args.mInputFile << std::endl;
         const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);

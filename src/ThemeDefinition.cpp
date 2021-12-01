@@ -34,6 +34,12 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
     if (node["DisallowUpgrade"].IsDefined()) {
         output.mFlags.push_back("LevelMetadataFlagsDisallowUpgrade");
     }
+
+    if (node["AIDifficulty"].IsDefined()) {
+        output.mAIDifficulty = atof(node["AIDifficulty"].Scalar().c_str());
+    } else {
+        output.mAIDifficulty = 1.0f;
+    }
 }
 
 void parseSingleThemeDefinitionFromYaml(const YAML::Node& node, const std::string& relativeDir, ThemeDefinition& output) {
