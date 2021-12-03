@@ -31,6 +31,14 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
         output.mFlags.push_back("LevelMetadataFlagsTutorial");
     }
 
+    if (node["Tutorial2"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsTutorial2");
+    }
+
+    if (node["DisableItems"].IsDefined()) {
+        output.mFlags.push_back("LevelMetadataFlagsDisableItems");
+    }
+
     if (node["DisallowUpgrade"].IsDefined()) {
         output.mFlags.push_back("LevelMetadataFlagsDisallowUpgrade");
     }
