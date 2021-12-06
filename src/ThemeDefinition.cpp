@@ -12,6 +12,7 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
     makeCCompatible(output.mCName);
     output.mFilename = Join(relativeDir, node["Filename"].Scalar());
     output.mOutput = Join(relativeDir, node["Output"].Scalar());
+    output.mSong = "0";
     
     output.mMaxPlayers = atoi(node["MaxPlayers"].Scalar().c_str());
 
