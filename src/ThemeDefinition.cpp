@@ -43,6 +43,10 @@ void parseLevelThemeDefintionFromYaml(const YAML::Node& node, const std::string&
         output.mFlags.push_back("LevelMetadataFlagsDisallowUpgrade");
     }
 
+    if (node["Song"].IsDefined()) {
+        output.mSong = node["Song"].Scalar().c_str();
+    }
+
     if (node["AIDifficulty"].IsDefined()) {
         output.mAIDifficulty = atof(node["AIDifficulty"].Scalar().c_str());
     } else {

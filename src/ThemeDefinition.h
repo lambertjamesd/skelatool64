@@ -10,6 +10,7 @@ public:
     std::string mCName;
     std::string mFilename;
     std::string mOutput;
+    std::string mSong;
     unsigned mMaxPlayers;
     float mAIDifficulty;
     

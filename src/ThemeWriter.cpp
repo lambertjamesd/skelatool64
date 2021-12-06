@@ -514,6 +514,6 @@ void generateThemeDefiniton(ThemeDefinition& themeDef, DisplayListSettings& sett
         DisplayListSettings levelSettings = settings;
         levelSettings.mPrefix = it->definition.mCName;
         std::cout << "Saving level to " << it->definition.mOutput << std::endl;
-        generateLevelFromSceneToFile(it->scene, it->definition.mOutput, &themeWriter, levelSettings, it->definition.mAIDifficulty);
+        generateLevelFromSceneToFile(it->scene, it->definition.mOutput, &themeWriter, levelSettings, it->definition.mAIDifficulty, it->definition.mSong);
     }
 }

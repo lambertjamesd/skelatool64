@@ -115,7 +115,7 @@ int keyframeRemovalError(struct SKBoneKeyframeChain* prev, struct SKBoneKeyframe
 }
 
 unsigned short keyForKeyframe(const SKBoneKeyframe& keyframe) {
-    return ((unsigned short)keyframe.boneIndex << 8) | (unsigned short)keyframe.usedAttributes;
+    return ((unsigned short)keyframe.boneIndex << 8) | (unsigned short)(keyframe.usedAttributes & 0x7);
 }
 
 bool keyframeSortFn(const SKBoneKeyframeChain& a, const SKBoneKeyframeChain& b) {
@@ -272,7 +272,7 @@ void markConstantKeyframes(std::map<unsigned short, SKBoneKeyframeChain*>& first
 
         while (curr && curr->next) {
             if (curr->keyframe.attributeData == curr->next->keyframe.attributeData) {
-                curr->keyframe.usedAttributes |= curr->keyframe.usedAttributes << 4;
+                curr->keyframe.usedAttributes |= (curr->keyframe.usedAttributes & 0x7) << 4;
             }
             curr = curr->next;
         }

@@ -39,8 +39,9 @@ public:
     std::vector<DecorDefinition> decor;
     PathfindingDefinition pathfinding;
     float aiDifficulty;
+    std::string song;
 };
 
-void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings, float aiDifficulty);
+void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings, float aiDifficulty, const std::string& song);
 
 #endif

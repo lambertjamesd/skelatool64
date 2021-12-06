@@ -13,7 +13,7 @@
 #include "ThemeWriter.h"
 #include "Wireframe.h"
 
-LevelDefinition::LevelDefinition(): baseMesh(nullptr), aiDifficulty(1.0f) {
+LevelDefinition::LevelDefinition(): baseMesh(nullptr), aiDifficulty(1.0f), song("0") {
     hasStartPosition[0] = false;
     hasStartPosition[1] = false;
     hasStartPosition[2] = false;
@@ -177,6 +177,7 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
     headerFile << "#define _" << settings.mPrefix << "_H" << std::endl;
     headerFile << std::endl;
     headerFile << "#include \"scene/leveldefinition.h\"" << std::endl;
+    headerFile << "#include \"audio/clips.h\"" << std::endl;
     headerFile << std::endl;
 
     std::string definitionName = fileDefinition.GetUniqueName("Definition");
@@ -327,6 +328,7 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
     fileContent << "    .playerStartLocations = " << startingPositions << "," << std::endl;
     fileContent << "    .baseCount = " << levelDef.bases.size() << "," << std::endl;
     fileContent << "    .decorCount = " << levelDef.decor.size() << "," << std::endl;
+    fileContent << "    .song = " << levelDef.song << "," << std::endl;
     fileContent << "    .bases = " << basesName << "," << std::endl;
     fileContent << "    .decor = " << decorList << "," << std::endl;
     fileContent << "    .levelBoundaries = {{" << levelDef.minBoundary.x << ", " << levelDef.minBoundary.z << "}, {" << levelDef.maxBoundary.x << ", " << levelDef.maxBoundary.z << "}}," << std::endl;
@@ -346,11 +348,12 @@ void generateLevelFromScene(LevelDefinition& levelDef, const aiScene* scene, std
     fileContent << std::endl;
 }
 
-void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings, float aiDifficulty) {
+void generateLevelFromSceneToFile(const aiScene* scene, std::string filename, ThemeWriter* theme, DisplayListSettings& settings, float aiDifficulty, const std::string& song) {
     LevelDefinition levelDef;
     levelDef.maxPlayerCount = 0;
     populateLevel(scene, levelDef, theme, settings);
     levelDef.aiDifficulty = aiDifficulty;
+    levelDef.song = song;
     
     std::ostringstream headerContent;
     std::ostringstream fileContent;
