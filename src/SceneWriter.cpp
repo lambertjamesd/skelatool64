@@ -75,6 +75,14 @@ void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostr
     extractChunks(extendedMeshes, renderChunks);
     orderChunks(renderChunks);
 
+    for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
+        auto material = settings.mMaterials.find(scene->mMaterials[chunk->mMesh->mMesh->mMaterialIndex]->GetName().C_Str());
+
+        if (material != settings.mMaterials.end()) {
+            chunk->mVertexType = material->second.mVertexType;
+        }
+    }
+
     std::string renderDLName;
 
     if (settings.mExportGeometry) {

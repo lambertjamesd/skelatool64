@@ -5,6 +5,7 @@
 #include <vector>
 #include <climits>
 #include <algorithm>
+#include <iostream>
 
 #define KEYFRAME_REMOVE_TOLERNACE   8
 
@@ -266,17 +267,51 @@ void removeRedundantKeyframes(std::vector<SKBoneKeyframeChain>& keyframes, std::
     connectKeyframeChain(keyframes, firstKeyframe);
 }
 
+#define CONSTANT_INTERPOLATION_THESHOLD (7888 / 2)
+
 void markConstantKeyframes(std::map<unsigned short, SKBoneKeyframeChain*>& firstKeyframe) {
+    std::set<int> jumpCutFrames;
+
+    double thresholdCheck = 0.0f;
+
     for (auto it = firstKeyframe.begin(); it != firstKeyframe.end(); ++it) {
         SKBoneKeyframeChain* curr = it->second;
 
         while (curr && curr->next) {
             if (curr->keyframe.attributeData == curr->next->keyframe.attributeData) {
                 curr->keyframe.usedAttributes |= (curr->keyframe.usedAttributes & 0x7) << 4;
+            } else if (curr->keyframe.usedAttributes & SKBoneAttrMaskPosition) {
+                int maxJump = 0;
+
+                for (size_t i = 0; i < curr->keyframe.attributeData.size() && i < curr->next->keyframe.attributeData.size(); ++i) {
+                    maxJump = std::max(maxJump, curr->next->keyframe.attributeData[i] - curr->keyframe.attributeData[i]);
+                }
+
+                double maxJumpDouble = (double)maxJump / (double)(curr->next->tick - curr->tick);
+
+                if (maxJumpDouble > CONSTANT_INTERPOLATION_THESHOLD) {
+                    jumpCutFrames.insert((curr->tick << 8) | curr->keyframe.boneIndex);
+                } else {
+                    maxJump = std::max(thresholdCheck, maxJumpDouble);
+                }
             }
             curr = curr->next;
         }
     }
+
+    for (auto it = firstKeyframe.begin(); it != firstKeyframe.end(); ++it) {
+        SKBoneKeyframeChain* curr = it->second;
+
+        while (curr && curr->next) {
+            if (jumpCutFrames.find((curr->tick << 8) | curr->keyframe.boneIndex) != jumpCutFrames.end()) {
+                curr->keyframe.usedAttributes |= (curr->keyframe.usedAttributes & 0x7) << 4;
+            }
+
+            curr = curr->next;
+        }
+    }
+
+    std::cout << "maxJump " << thresholdCheck << std::endl;
 }
 
 void combineChunk(std::vector<SKBoneKeyframeChain>& chunkKeyframes, struct SKAnimationChunk& output) {

@@ -84,6 +84,11 @@ void populateLevelRecursive(const aiScene* scene, Pathfinding& pathfinding, clas
         DecorDefinition decorDef;
         aiVector3D scaling;
         transform.Decompose(scaling, decorDef.rotation, decorDef.position);
+
+        if (scaling.x < 0 || scaling.y < 0 || scaling.z < 0) {
+            std::cout << "!!! Bad scale " << decorName << std::endl;
+        }
+
         decorDef.scale = scaling.x / settings.mScale;
         decorDef.decorID = decorName;
         levelDef.decor.push_back(decorDef);
