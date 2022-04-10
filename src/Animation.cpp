@@ -68,24 +68,18 @@ unsigned short generateAnimationData(std::vector<SKAnimationChunk>& chunks, std:
     return prevChunkSize;
 }
 
-#define MAX_COLS    16
-
-unsigned short formatAnimationChunks(const std::string& name, std::vector<SKAnimationChunk>& chunks, std::ostream& output) {
+unsigned short formatAnimationChunks(const std::string& name, std::vector<SKAnimationChunk>& chunks, CFileDefinition& fileDef) {
     std::vector<unsigned short> data;
 
     unsigned short firstChunkSize = generateAnimationData(chunks, data);
 
-    output << "u16 " << name << "[] = {";
+    std::unique_ptr<StructureDataChunk> animationDataChunk(new StructureDataChunk());
 
     for (unsigned i = 0; i < data.size(); ++i) {
-        if (i % MAX_COLS == 0) {
-            output << std::endl << "    ";
-        }
-
-        output << "0x" << std::setw(4) << std::setfill('0') << std::hex << data[i] << ", ";
+        animationDataChunk->AddPrimitive(data[i]);
     }
 
-    output << std::endl << "};" << std::endl;
+    fileDef.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("u16", name, true, "_anim", std::move(animationDataChunk))));
 
     return firstChunkSize;
 }

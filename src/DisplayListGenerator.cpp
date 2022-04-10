@@ -17,7 +17,7 @@ bool doesFaceFit(std::set<int>& indices, aiFace* face, unsigned int maxVertices)
     return indices.size() + misses <= maxVertices;
 }
 
-void flushVertices(RenderChunk& chunk, std::set<int>& currentVertices, std::vector<aiFace*>& currentFaces, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
+void flushVertices(RenderChunk& chunk, std::set<int>& currentVertices, std::vector<aiFace*>& currentFaces, RCPState& state, std::string vertexBuffer, DisplayList& output, bool hasTri2) {
     std::vector<int> verticesAsVector(currentVertices.begin(), currentVertices.end());
 
     std::sort(verticesAsVector.begin(), verticesAsVector.end(), 
@@ -103,7 +103,7 @@ void flushVertices(RenderChunk& chunk, std::set<int>& currentVertices, std::vect
     }
 }
 
-void generateCulling(DisplayList& output, int vertexBuffer, bool renableLighting) {
+void generateCulling(DisplayList& output, std::string vertexBuffer, bool renableLighting) {
     output.AddCommand(std::unique_ptr<DisplayListCommand>(new ChangeGeometryMode(GeometryMode::G_LIGHTING, GeometryMode::None)));
     output.AddCommand(std::unique_ptr<DisplayListCommand>(new VTXCommand(8, 0, vertexBuffer, 0)));
     output.AddCommand(std::unique_ptr<DisplayListCommand>(new CullDisplayList(8)));
@@ -112,7 +112,7 @@ void generateCulling(DisplayList& output, int vertexBuffer, bool renableLighting
     }
 }
 
-void generateGeometry(RenderChunk& chunk, RCPState& state, int vertexBuffer, DisplayList& output, bool hasTri2) {
+void generateGeometry(RenderChunk& chunk, RCPState& state, std::string vertexBuffer, DisplayList& output, bool hasTri2) {
     std::set<int> currentVertices;
     std::vector<aiFace*> currentFaces;
 

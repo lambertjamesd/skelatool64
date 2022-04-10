@@ -37,17 +37,19 @@ void MaterialCollector::CollectMaterialResources(const aiScene* scene, std::vect
     ++mSceneCount;
 }
 
-void MaterialCollector::GenerateMaterials(CFileDefinition& fileDefinition, DisplayListSettings& settings, std::ostream& output) {
+void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDefinition& fileDefinition, const std::string& fileSuffix) {
     std::vector<std::shared_ptr<MaterialResource>> resources(mUsedResources.begin(), mUsedResources.end());
     
-    Material::WriteResources(resources, mResourceNameMapping, fileDefinition, output);
+    Material::WriteResources(resources, mResourceNameMapping, fileDefinition, fileSuffix);
     for (auto useCount = mMaterialUseCount.begin(); useCount != mMaterialUseCount.end(); ++useCount) {
         if (useCount->second > 1 || mSceneCount > 1) {
             DisplayList materialDL(fileDefinition.GetUniqueName(useCount->first));
             settings.mMaterials.find(useCount->first)->second.WriteToDL(mResourceNameMapping, materialDL);
             mMaterialNameMapping[useCount->first] = materialDL.GetName();
             
-            materialDL.Generate(fileDefinition, output);
+            auto dl = materialDL.Generate(fileSuffix);
+
+            fileDefinition.AddDefinition(std::move(dl));
         }
     }
 }
@@ -74,27 +76,27 @@ void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& file
         }
 
         
-        int vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mVertexType);
+        std::string vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mVertexType);
         generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
     }
     rcpState.TraverseToBone(nullptr, displayList);
 }
 
 
-void generateMeshIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList, std::ostream& output) {
+void generateMeshIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList, const std::string& fileSuffix) {
     MaterialCollector materials;
 
     materials.CollectMaterialResources(scene, renderChunks, settings);
-    materials.GenerateMaterials(fileDefinition, settings, output);
+    materials.GenerateMaterials(settings, fileDefinition, fileSuffix);
 
     generateMeshIntoDLWithMaterials(scene, fileDefinition, &materials, renderChunks, settings, displayList);
-
-    fileDefinition.GenerateVertexBuffers(output, settings.mScale, settings.mRotateModel);
 }
 
-std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, std::ostream& output) {
+std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, const std::string& fileSuffix) {
     DisplayList displayList(fileDefinition.GetUniqueName("model_gfx"));
-    generateMeshIntoDL(scene, fileDefinition, renderChunks, settings, displayList, output);
-    displayList.Generate(fileDefinition, output);
+    generateMeshIntoDL(scene, fileDefinition, renderChunks, settings, displayList, fileSuffix);
+    std::unique_ptr<FileDefinition> dlResult = displayList.Generate(fileSuffix);
+    fileDefinition.AddDefinition(std::move(dlResult));
+
     return displayList.GetName();
 }

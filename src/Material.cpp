@@ -15,19 +15,18 @@ Material::Material() :
 
 }
 
-void Material::WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDef, std::ostream& output) {
+void Material::WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDefinition, const std::string& fileSuffix) {
     for (auto it = resources.begin(); it != resources.end(); ++it) {
-        std::string finalName = fileDef.GetUniqueName((*it)->mName);
+        std::string finalName = fileDefinition.GetUniqueName((*it)->mName);
         nameMapping[(*it)->mName] = finalName;
-        output << (*it)->mType << " " << finalName;
 
-        if ((*it)->mIsArray) {
-            output << "[] = {" << std::endl;
-            output << Indent((*it)->mContent, "    ");
-            output << "};" << std::endl;
-        } else {
-            output << " = " << Indent((*it)->mContent + ";", "    ") << std::endl;
-        }
+        fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new RawFileDefinition(
+            (*it)->mType,
+            finalName,
+            (*it)->mIsArray,
+            fileSuffix,
+            (*it)->mContent
+        )));
     }
 }
 

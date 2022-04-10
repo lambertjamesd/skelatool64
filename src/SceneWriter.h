@@ -8,8 +8,9 @@
 #include <map>
 #include "./Material.h"
 #include "./DisplayListSettings.h"
+#include "CFileDefinition.h"
 
-void generateMeshFromScene(const aiScene* scene, std::ostream& output, std::ostream& headerFile, std::ostream& animationFile, DisplayListSettings& settings);
+void generateMeshFromScene(const aiScene* scene, CFileDefinition& fileDefinition, DisplayListSettings& settings);
 void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings);
 
 #endif

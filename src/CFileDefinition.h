@@ -6,9 +6,11 @@
 #include <string>
 #include <set>
 #include <ostream>
+#include <memory>
 
 #include "./ErrorCode.h"
 #include "./ExtendedMesh.h"
+#include "./definitions/FileDefinition.h"
 
 class VertexBufferDefinition {
 public:
@@ -18,27 +20,35 @@ public:
     std::string mName;
     VertexType mVertexType;
 
-    ErrorCode Generate(std::ostream& output, float scale, aiQuaternion rotate);
+    ErrorCode Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
 private:
 };
 
 class CFileDefinition {
 public:
-    CFileDefinition(std::string prefix);
-    int GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType);
-    int GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max);
+    CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate, const std::string& modelFileSuffix);
 
-    const std::string GetVertexBufferName(int vertexBufferID);
+    void AddDefinition(std::unique_ptr<FileDefinition> definition);
+    void AddMacro(const std::string& name, const std::string& value);
+
+    std::string GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType);
+    std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max);
+
     std::string GetUniqueName(std::string requestedName);
 
-    ErrorCode GenerateVertexBuffers(std::ostream& output, float scale, aiQuaternion rotate);
-private:
-    int GetNextID();
+    std::set<std::string> GetDefinitionTypes();
 
+    void Generate(std::ostream& output, const std::string& location, const std::string& headerFileName);
+    void GenerateHeader(std::ostream& output, const std::string& headerFileName);
+private:
     std::string mPrefix;
+    float mModelScale;
+    aiQuaternion mModelRotate;
+    std::string mModelFileSuffix;
     std::set<std::string> mUsedNames;
-    std::map<int, VertexBufferDefinition> mVertexBuffers;
-    int mNextID;
+    std::map<std::string, VertexBufferDefinition> mVertexBuffers;
+    std::vector<std::unique_ptr<FileDefinition>> mDefinitions;
+    std::vector<std::string> mMacros;
 };
 
 #endif

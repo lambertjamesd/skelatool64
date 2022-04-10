@@ -3,7 +3,7 @@ GCC_FLAGS = -Wall -Werror -g -I./assimp/include -I./yaml-cpp/include
 
 LINKER_FLAGS = -L./assimp/bin -L./yaml-cpp -lassimp -lyaml-cpp
 
-SRC_FILES = main.cpp $(wildcard src/*.cpp)
+SRC_FILES = main.cpp $(shell find src/ -type f -name '*.cpp')
 
 OBJ_FILES =	$(patsubst %.cpp, build/%.o, $(SRC_FILES))
 

@@ -9,6 +9,7 @@
 
 #include "DisplayList.h"
 #include "ExtendedMesh.h"
+#include "CFileDefinition.h"
 
 enum class CullMode {
     Unknown,
@@ -75,7 +76,7 @@ public:
     std::string mRawContent;
     std::vector<std::shared_ptr<MaterialResource>> mUsedResources;
 
-    static void WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDef, std::ostream& output);
+    static void WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDefinition, const std::string& fileSuffix);
     void WriteToDL(const std::map<std::string, std::string>& nameMapping, DisplayList& output);
 };
 

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <ostream>
+#include "./CFileDefinition.h"
 
 enum SKBoneAttrMask {
     SKBoneAttrMaskPosition = (1 << 0),
@@ -44,6 +45,6 @@ struct SKAnimation {
     std::vector<SKAnimationChunk> chunks;
 };
 
-unsigned short formatAnimationChunks(const std::string& name, std::vector<SKAnimationChunk>& chunks, std::ostream& output);
+unsigned short formatAnimationChunks(const std::string& name, std::vector<SKAnimationChunk>& chunks, CFileDefinition& fileDef);
 
 #endif

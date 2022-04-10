@@ -9,9 +9,9 @@
 
 struct VertexData {
     VertexData();
-    VertexData(int vertexBuffer, int vertexIndex, int matrixIndex);
+    VertexData(std::string vertexBuffer, int vertexIndex, int matrixIndex);
 
-    int mVertexBuffer;
+    std::string mVertexBuffer;
     int mVertexIndex;
     int mMatrixIndex;
     

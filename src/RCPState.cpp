@@ -4,13 +4,13 @@
 #include <set>
 
 VertexData::VertexData() :
-    mVertexBuffer(-1),
+    mVertexBuffer("-1"),
     mVertexIndex(-1),
     mMatrixIndex(-1) {
 
 }
 
-VertexData::VertexData(int vertexBuffer, int vertexIndex, int matrixIndex) :
+VertexData::VertexData(std::string vertexBuffer, int vertexIndex, int matrixIndex) :
     mVertexBuffer(vertexBuffer),
     mVertexIndex(vertexIndex),
     mMatrixIndex(matrixIndex) {

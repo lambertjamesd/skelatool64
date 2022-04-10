@@ -45,11 +45,11 @@ unsigned convertByteRange(float value) {
     }
 }
 
-ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, aiQuaternion rotate) {
-    output << "Vtx " << mName << "[] = {" << std::endl;
+ ErrorCode VertexBufferDefinition::Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix) {
+    std::unique_ptr<StructureDataChunk> dataChunk(new StructureDataChunk());
     
     for (unsigned int i = 0; i < mTargetMesh->mMesh->mNumVertices; ++i) {
-        output << "    {{{";
+        std::unique_ptr<StructureDataChunk> vertex(new StructureDataChunk());
 
         aiVector3D pos = mTargetMesh->mMesh->mVertices[i];
 
@@ -63,31 +63,44 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, ai
 
         short converted;
 
+        std::unique_ptr<StructureDataChunk> posVertex(new StructureDataChunk());
+
         ErrorCode code = convertToShort(pos.x, converted);
         if (code != ErrorCode::None) return code;
-        output << converted << ", ";
+        posVertex->AddPrimitive(converted);
         
         code = convertToShort(pos.y, converted);
         if (code != ErrorCode::None) return code;
-        output << converted << ", ";
+        posVertex->AddPrimitive(converted);
 
         code = convertToShort(pos.z, converted);
         if (code != ErrorCode::None) return code;
-        output << converted << "}, 0, {";
+        posVertex->AddPrimitive(converted);
+
+        vertex->Add(std::move(posVertex));
+        vertex->AddPrimitive(0);
+
+
+        std::unique_ptr<StructureDataChunk> texCoords(new StructureDataChunk());
 
         if (mTargetMesh->mMesh->mTextureCoords[0] == nullptr) {
-            output << "0, 0}, {";
+            texCoords->AddPrimitive(0);
+            texCoords->AddPrimitive(0);
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
             code = convertToShort(uv.x * (1 << 11), converted);
             if (code != ErrorCode::None) return code;
-            output << converted << ", ";
+            texCoords->AddPrimitive(converted);
 
             code = convertToShort((1.0f - uv.y) * (1 << 11), converted);
             if (code != ErrorCode::None) return code;
-            output << converted << "}, {";
+            texCoords->AddPrimitive(converted);
         }
+
+        vertex->Add(std::move(texCoords));
+
+        std::unique_ptr<StructureDataChunk> vertexNormal(new StructureDataChunk());
 
         switch (mVertexType) {
         case VertexType::PosUVNormal:
@@ -100,53 +113,66 @@ ErrorCode VertexBufferDefinition::Generate(std::ostream& output, float scale, ai
                 } else {
                     normal = rotate.Rotate(normal);
                 }
-                
-                output 
-                    << convertNormalizedRange(normal.x) << ", " 
-                    << convertNormalizedRange(normal.y) << ", " 
-                    << convertNormalizedRange(normal.z) << ", 255}}}";
+
+                vertexNormal->AddPrimitive(convertNormalizedRange(normal.x));
+                vertexNormal->AddPrimitive(convertNormalizedRange(normal.y));
+                vertexNormal->AddPrimitive(convertNormalizedRange(normal.z));
+                vertexNormal->AddPrimitive(255);
             } else {
-                output << "0, 0, 0, 255}}}";
+                vertexNormal->AddPrimitive(0);
+                vertexNormal->AddPrimitive(0);
+                vertexNormal->AddPrimitive(0);
+                vertexNormal->AddPrimitive(255);
             }
             break;
         case VertexType::PosUVColor:
             if (mTargetMesh->mMesh->mColors[0] != nullptr) {
                 aiColor4D color = mTargetMesh->mMesh->mColors[0][i];
-                output 
-                    << convertByteRange(color.r) << ", " 
-                    << convertByteRange(color.g) << ", " 
-                    << convertByteRange(color.b) << ", " 
-                    << convertByteRange(color.a) << "}}}";
+                vertexNormal->AddPrimitive(color.r);
+                vertexNormal->AddPrimitive(color.g);
+                vertexNormal->AddPrimitive(color.b);
+                vertexNormal->AddPrimitive(color.a);
             } else {
-                output << "0, 0, 0, 255}}}";
+                vertexNormal->AddPrimitive(0);
+                vertexNormal->AddPrimitive(0);
+                vertexNormal->AddPrimitive(0);
+                vertexNormal->AddPrimitive(255);
             }
             break;
         }
 
-        output << "," << std::endl;
+        vertex->Add(std::move(vertexNormal));
+
+        dataChunk->Add(std::move(vertex));
     }
 
-    output << "};" << std::endl;
+    output = std::unique_ptr<FileDefinition>(new DataFileDefinition("Vtx", mName, true, fileSuffix, std::move(dataChunk)));
 
     return ErrorCode::None;
 }
 
-CFileDefinition::CFileDefinition(std::string prefix): 
+CFileDefinition::CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate, const std::string& modelFileSuffix): 
     mPrefix(prefix),
-    mNextID(1) {
+    mModelScale(modelScale),
+    mModelRotate(modelRotate),
+    mModelFileSuffix(modelFileSuffix) {
 
 }
 
-int CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) {
-    int result = 0;
+void CFileDefinition::AddDefinition(std::unique_ptr<FileDefinition> definition) {
+    mDefinitions.push_back(std::move(definition));
+}
 
+void CFileDefinition::AddMacro(const std::string& name, const std::string& value) {
+    mMacros.push_back(name + " " + value);
+}
+
+std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) {
     for (auto existing = mVertexBuffers.begin(); existing != mVertexBuffers.end(); ++existing) {
         if (existing->second.mTargetMesh == mesh && existing->second.mVertexType == vertexType) {
             return existing->first;
         }
     }
-
-    result = GetNextID();
 
     std::string requestedName;
 
@@ -165,13 +191,23 @@ int CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) 
             break;
     }
 
-    mVertexBuffers.insert(std::pair<int, VertexBufferDefinition>(result, VertexBufferDefinition(
+
+
+    std::string name = GetUniqueName(requestedName);
+
+
+    mVertexBuffers.insert(std::pair<std::string, VertexBufferDefinition>(name, VertexBufferDefinition(
         mesh, 
-        GetUniqueName(requestedName), 
+        name, 
         vertexType
     )));
 
-    return result;
+    std::unique_ptr<FileDefinition> vtxDef;
+    // TODO scale/rotate
+    mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, mModelFileSuffix);
+    AddDefinition(std::move(vtxDef));
+
+    return name;
 }
 
 
@@ -184,7 +220,7 @@ int CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) 
 	// {{{226, 40, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
 	// {{{226, 40, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
 
-int CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max) {
+std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max) {
     aiMesh* mesh = new aiMesh();
 
     mesh->mName = name;
@@ -203,31 +239,6 @@ int CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D&
     return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVColor);
 }
 
-const std::string CFileDefinition::GetVertexBufferName(int vertexBufferID) {
-    auto result = mVertexBuffers.find(vertexBufferID);
-    
-    if (result != mVertexBuffers.end()) {
-        return result->second.mName;
-    }
-
-    return "";
-}
-
-
-ErrorCode CFileDefinition::GenerateVertexBuffers(std::ostream& output, float scale, aiQuaternion rotate) {
-    for (auto buffer = mVertexBuffers.begin(); buffer != mVertexBuffers.end(); ++buffer) {
-        buffer->second.Generate(output, scale, rotate);
-
-        output << std::endl;
-        output << std::endl;
-    }
-
-    return ErrorCode::None;
-}
-
-int CFileDefinition::GetNextID() {
-    return mNextID++;
-}
 
 std::string CFileDefinition::GetUniqueName(std::string requestedName) {
     std::string result = mPrefix + "_" + requestedName;
@@ -246,4 +257,64 @@ std::string CFileDefinition::GetUniqueName(std::string requestedName) {
     mUsedNames.insert(result);
 
     return result;
+}
+
+void CFileDefinition::Generate(std::ostream& output, const std::string& location, const std::string& headerFileName) {
+    output << "#include \"" << headerFileName << "\"" << std::endl;
+
+    for (auto it = mDefinitions.begin(); it != mDefinitions.end(); ++it) {
+
+        if ((*it)->GetLocation() == location) {
+            (*it)->Generate(output);
+
+            output << ";\n\n";
+        }
+    }
+}
+
+void CFileDefinition::GenerateHeader(std::ostream& output, const std::string& headerFileName) {
+    std::string infdef = std::string("__") + headerFileName + "_H__";
+
+    makeCCompatible(infdef);
+    std::transform(infdef.begin(), infdef.end(), infdef.begin(), ::toupper);
+
+    output << "#ifndef " << infdef << std::endl;
+    output << "#define " << infdef << std::endl;
+    output << std::endl;
+
+    std::set<std::string> includes;
+
+    for (auto it = mDefinitions.begin(); it != mDefinitions.end(); ++it) {
+        auto headers = (*it)->GetTypeHeaders();
+
+        for (auto header : headers) {
+            includes.insert(header);
+        }
+    }
+
+    std::vector<std::string> includesSorted(includes.size());
+    std::copy(includes.begin(), includes.end(), includesSorted.begin());
+
+    // std::sort(includes.begin(), includes.end());
+
+    for (auto include : includesSorted) {
+        output << "#include " << include << std::endl;
+    }
+
+    output << std::endl;
+
+    if (mMacros.size()) {
+        for (auto macro : mMacros) {
+            output << "#define " << macro << std::endl;
+        }
+        output << std::endl;
+    }
+
+    for (auto it = mDefinitions.begin(); it != mDefinitions.end(); ++it) {
+            (*it)->GenerateDeclaration(output);
+            output << ";\n";
+    };
+
+    output << std::endl;
+    output << "#endif" << std::endl;
 }

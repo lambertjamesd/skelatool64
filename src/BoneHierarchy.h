@@ -13,6 +13,7 @@
 #include <ostream>
 
 #include "ErrorCode.h"
+#include "./definitions/DataChunk.h"
 
 class CFileDefinition;
 
@@ -24,7 +25,7 @@ public:
     const std::string& GetName();
     Bone* GetParent();
 
-    void GenerateRestPosiitonData(std::ostream& output, float scale, const aiQuaternion& rotation);
+    std::unique_ptr<DataChunk> GenerateRestPosiitonData(float scale, const aiQuaternion& rotation);
 
     static Bone* FindCommonAncestor(Bone* a, Bone* b);
     /**
@@ -57,7 +58,7 @@ public:
     bool HasData() const;
     unsigned int GetBoneCount() const;
 
-    void GenerateRestPosiitonData(CFileDefinition& fileDef, const std::string& variableName, std::ostream& output, std::ostream& headerFile, float scale, aiQuaternion rotation);
+    void GenerateRestPosiitonData(CFileDefinition& fileDef, const std::string& variableName, float scale, aiQuaternion rotation);
 private:
     std::vector<std::unique_ptr<Bone>> mBones;
     std::map<std::string, Bone*> mBoneByName;

@@ -6,6 +6,8 @@
 #include <string>
 #include <iostream>
 
+#include "./definitions/FileDefinition.h"
+
 enum class DisplayListCommandType {
     COMMENT,
     RAW,
@@ -28,7 +30,7 @@ struct DisplayListCommand {
 
     DisplayListCommandType mType;
 
-    virtual bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output) = 0;
+    virtual std::unique_ptr<DataChunk> GenerateCommand() = 0;
 };
 
 
@@ -37,7 +39,7 @@ struct CommentCommand : DisplayListCommand {
 
     std::string mComment;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct RawContentCommand : DisplayListCommand {
@@ -45,23 +47,23 @@ struct RawContentCommand : DisplayListCommand {
 
     std::string mContent;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct VTXCommand : DisplayListCommand {
     VTXCommand(
         int numVerts, 
         int indexBufferStart, 
-        int vertexBufferID,
+        std::string vertexBuffer,
         int vertexBufferOffset
     );
 
     int mNumVerts;
     int mIndexBufferStart;
-    int mVertexBufferID;
+    std::string mVertexBuffer;
     int mVertexBufferOffset;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct TRI1Command : DisplayListCommand {
@@ -71,7 +73,7 @@ struct TRI1Command : DisplayListCommand {
     int mB;
     int mC;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct TRI2Command : DisplayListCommand {
@@ -85,7 +87,7 @@ struct TRI2Command : DisplayListCommand {
     int mB1;
     int mC1;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct CallDisplayListCommand {
@@ -94,7 +96,7 @@ struct CallDisplayListCommand {
     int mTargetDL;
     int mOffset;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct CallDisplayListByNameCommand : DisplayListCommand {
@@ -102,12 +104,12 @@ struct CallDisplayListByNameCommand : DisplayListCommand {
 
     std::string mDLName;
 
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 };
 
 struct PushMatrixCommand : DisplayListCommand {
     PushMatrixCommand(unsigned int matrixOffset, bool replace);
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 
     unsigned int mMatrixOffset;
     bool mReplace;
@@ -115,7 +117,7 @@ struct PushMatrixCommand : DisplayListCommand {
 
 struct PopMatrixCommand : DisplayListCommand {
     PopMatrixCommand(unsigned int popCount);
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 
     unsigned int mPopCount;
 };
@@ -127,7 +129,7 @@ enum class GeometryMode {
 
 struct ChangeGeometryMode : DisplayListCommand {
     ChangeGeometryMode(GeometryMode clear, GeometryMode set);
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
 
     GeometryMode mClear;
     GeometryMode mSet;
@@ -135,7 +137,7 @@ struct ChangeGeometryMode : DisplayListCommand {
 
 struct CullDisplayList : DisplayListCommand {
     CullDisplayList(unsigned int vertexCount);
-    bool GenerateCommand(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<DataChunk> GenerateCommand();
     unsigned int mVertexCount;
 };
 
@@ -145,7 +147,7 @@ public:
     void AddCommand(std::unique_ptr<DisplayListCommand> command);
 
     const std::string& GetName();
-    void Generate(CFileDefinition& fileDefinition, std::ostream& output);
+    std::unique_ptr<FileDefinition> Generate(const std::string& fileSuffix);
 private:
     std::string mName;
     std::vector<std::unique_ptr<DisplayListCommand>> mDisplayList;

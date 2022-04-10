@@ -27,14 +27,19 @@ Bone* Bone::GetParent() {
     return mParent;
 }
 
-void Bone::GenerateRestPosiitonData(std::ostream& output, float scale, const aiQuaternion& rotation) {
+std::unique_ptr<DataChunk> Bone::GenerateRestPosiitonData(float scale, const aiQuaternion& rotation) {
     aiVector3D restPosition = rotation.Rotate(mRestPosition);
     aiQuaternion restRotation = rotation * mRestRotation;
 
-    output <<
-        "{{" << (restPosition.x * scale) << ", " << (restPosition.y * scale) << ", " << (restPosition.z * scale) << "}, {" <<
-        restRotation.x << ", " << restRotation.y << ", " << restRotation.z << ", " << restRotation.w << "}, {" <<
-        mRestScale.x << ", " << mRestScale.y << ", " << mRestScale.z << "}}";
+    std::unique_ptr<StructureDataChunk> result(new StructureDataChunk());
+
+    restPosition = restPosition * scale;
+
+    result->Add(std::unique_ptr<DataChunk>(new StructureDataChunk(restPosition)));
+    result->Add(std::unique_ptr<DataChunk>(new StructureDataChunk(restRotation)));
+    result->Add(std::unique_ptr<DataChunk>(new StructureDataChunk(mRestScale)));
+
+    return std::move(result);
 }
 
 Bone* Bone::FindCommonAncestor(Bone* a, Bone* b) {
@@ -148,27 +153,25 @@ Bone* BoneHierarchy::BoneForName(std::string name) {
     }
 }
 
-void BoneHierarchy::GenerateRestPosiitonData(CFileDefinition& fileDef, const std::string& variableName, std::ostream& output, std::ostream& headerFile, float scale, aiQuaternion rotation) {
+void BoneHierarchy::GenerateRestPosiitonData(CFileDefinition& fileDef, const std::string& variableName, float scale, aiQuaternion rotation) {
     if (mBones.size() == 0) return;
 
-    output << "struct Transform " << variableName << "[] = {" << std::endl;
+    std::unique_ptr<StructureDataChunk> transformData(new StructureDataChunk());
 
     for (unsigned int boneIndex = 0; boneIndex < mBones.size(); ++boneIndex) {
-        output << "    ";
         if (mBones[boneIndex]->GetParent()) {
-            mBones[boneIndex]->GenerateRestPosiitonData(output, scale, aiQuaternion());
+            transformData->Add(std::move(mBones[boneIndex]->GenerateRestPosiitonData(scale, aiQuaternion())));
         } else {
-            mBones[boneIndex]->GenerateRestPosiitonData(output, scale, rotation);
+            transformData->Add(std::move(mBones[boneIndex]->GenerateRestPosiitonData(scale, rotation)));
         }
-        output << "," << std::endl;
 
         std::string boneName = fileDef.GetUniqueName(mBones[boneIndex]->GetName() + "_BONE");
         std::transform(boneName.begin(), boneName.end(), boneName.begin(), ::toupper);
 
-        headerFile << "#define " << boneName << " " << boneIndex << std::endl;
+        fileDef.AddMacro(boneName, std::to_string(boneIndex));
     }
 
-    output << "};" << std::endl;
+    fileDef.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("struct Transform", variableName, true, "_anim", std::move(transformData))));
 }
 
 bool BoneHierarchy::HasData() const {
