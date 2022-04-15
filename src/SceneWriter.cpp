@@ -137,7 +137,7 @@ void generateMeshFromScene(const aiScene* scene, CFileDefinition& fileDefinition
 }
 
 void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings) {
-    CFileDefinition fileDefinition(settings.mPrefix, settings.mScale, settings.mRotateModel, "");
+    CFileDefinition fileDefinition(settings.mPrefix, settings.mScale, settings.mRotateModel);
 
     generateMeshFromScene(scene, fileDefinition, settings);
 

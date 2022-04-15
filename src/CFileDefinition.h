@@ -26,13 +26,13 @@ private:
 
 class CFileDefinition {
 public:
-    CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate, const std::string& modelFileSuffix);
+    CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate);
 
     void AddDefinition(std::unique_ptr<FileDefinition> definition);
     void AddMacro(const std::string& name, const std::string& value);
 
-    std::string GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType);
-    std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max);
+    std::string GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, const std::string& modelSuffix);
+    std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max, const std::string& modelSuffix);
 
     std::string GetUniqueName(std::string requestedName);
 
@@ -46,7 +46,6 @@ private:
     std::string mPrefix;
     float mModelScale;
     aiQuaternion mModelRotate;
-    std::string mModelFileSuffix;
     std::set<std::string> mUsedNames;
     std::map<std::string, VertexBufferDefinition> mVertexBuffers;
     std::vector<std::unique_ptr<FileDefinition>> mDefinitions;

@@ -54,7 +54,7 @@ void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDe
     }
 }
 
-void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& fileDefinition, MaterialCollector* materials, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList) {
+void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& fileDefinition, MaterialCollector* materials, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList, const std::string& modelSuffix) {
     RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
         if (materials) {
@@ -76,7 +76,7 @@ void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& file
         }
 
         
-        std::string vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mVertexType);
+        std::string vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mVertexType, modelSuffix);
         generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
     }
     rcpState.TraverseToBone(nullptr, displayList);
@@ -89,7 +89,7 @@ void generateMeshIntoDL(const aiScene* scene, CFileDefinition& fileDefinition, s
     materials.CollectMaterialResources(scene, renderChunks, settings);
     materials.GenerateMaterials(settings, fileDefinition, fileSuffix);
 
-    generateMeshIntoDLWithMaterials(scene, fileDefinition, &materials, renderChunks, settings, displayList);
+    generateMeshIntoDLWithMaterials(scene, fileDefinition, &materials, renderChunks, settings, displayList, fileSuffix);
 }
 
 std::string generateMesh(const aiScene* scene, CFileDefinition& fileDefinition, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, const std::string& fileSuffix) {

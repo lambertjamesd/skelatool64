@@ -155,11 +155,10 @@ unsigned convertByteRange(float value) {
     return ErrorCode::None;
 }
 
-CFileDefinition::CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate, const std::string& modelFileSuffix): 
+CFileDefinition::CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate): 
     mPrefix(prefix),
     mModelScale(modelScale),
-    mModelRotate(modelRotate),
-    mModelFileSuffix(modelFileSuffix) {
+    mModelRotate(modelRotate) {
 
 }
 
@@ -171,7 +170,7 @@ void CFileDefinition::AddMacro(const std::string& name, const std::string& value
     mMacros.push_back(name + " " + value);
 }
 
-std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType) {
+std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, const std::string& modelSuffix) {
     for (auto existing = mVertexBuffers.begin(); existing != mVertexBuffers.end(); ++existing) {
         if (existing->second.mTargetMesh == mesh && existing->second.mVertexType == vertexType) {
             return existing->first;
@@ -207,8 +206,8 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vert
     )));
 
     std::unique_ptr<FileDefinition> vtxDef;
-    // TODO scale/rotate
-    ErrorCode result = mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, mModelFileSuffix);
+
+    ErrorCode result = mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, modelSuffix);
 
     if (result == ErrorCode::None) {
         AddDefinition(std::move(vtxDef));
@@ -219,7 +218,7 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vert
     return name;
 }
 
-std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max) {
+std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max, const std::string& modelSuffix) {
     aiMesh* mesh = new aiMesh();
 
     mesh->mName = name;
@@ -235,7 +234,7 @@ std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiV
     mesh->mVertices[7] = aiVector3D(max.x, max.y, max.z);
 
     BoneHierarchy boneHierarchy;
-    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVColor);
+    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVColor, modelSuffix);
 }
 
 
