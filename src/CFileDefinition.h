@@ -40,6 +40,8 @@ public:
 
     void Generate(std::ostream& output, const std::string& location, const std::string& headerFileName);
     void GenerateHeader(std::ostream& output, const std::string& headerFileName);
+
+    bool HasDefinitions(const std::string& location);
 private:
     std::string mPrefix;
     float mModelScale;

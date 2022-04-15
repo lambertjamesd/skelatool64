@@ -256,5 +256,7 @@ std::unique_ptr<FileDefinition> DisplayList::Generate(const std::string& fileSuf
         std::move(data)
     ));
 
+    result->AddTypeHeader("<ultra64.h>");
+
     return result;
 }

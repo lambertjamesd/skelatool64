@@ -1,5 +1,6 @@
 #include "CFileDefinition.h"
 #include <stdio.h>
+#include <iostream>
 #include "StringUtils.h"
 
 VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType):
@@ -49,6 +50,8 @@ unsigned convertByteRange(float value) {
     std::unique_ptr<StructureDataChunk> dataChunk(new StructureDataChunk());
     
     for (unsigned int i = 0; i < mTargetMesh->mMesh->mNumVertices; ++i) {
+        std::unique_ptr<StructureDataChunk> vertexWrapper(new StructureDataChunk());
+
         std::unique_ptr<StructureDataChunk> vertex(new StructureDataChunk());
 
         aiVector3D pos = mTargetMesh->mMesh->mVertices[i];
@@ -89,11 +92,11 @@ unsigned convertByteRange(float value) {
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
-            code = convertToShort(uv.x * (1 << 11), converted);
+            code = convertToShort(uv.x * (1 << 10), converted);
             if (code != ErrorCode::None) return code;
             texCoords->AddPrimitive(converted);
 
-            code = convertToShort((1.0f - uv.y) * (1 << 11), converted);
+            code = convertToShort((1.0f - uv.y) * (1 << 10), converted);
             if (code != ErrorCode::None) return code;
             texCoords->AddPrimitive(converted);
         }
@@ -143,7 +146,8 @@ unsigned convertByteRange(float value) {
 
         vertex->Add(std::move(vertexNormal));
 
-        dataChunk->Add(std::move(vertex));
+        vertexWrapper->Add(std::move(vertex));
+        dataChunk->Add(std::move(vertexWrapper));
     }
 
     output = std::unique_ptr<FileDefinition>(new DataFileDefinition("Vtx", mName, true, fileSuffix, std::move(dataChunk)));
@@ -204,21 +208,16 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vert
 
     std::unique_ptr<FileDefinition> vtxDef;
     // TODO scale/rotate
-    mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, mModelFileSuffix);
-    AddDefinition(std::move(vtxDef));
+    ErrorCode result = mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, mModelFileSuffix);
+
+    if (result == ErrorCode::None) {
+        AddDefinition(std::move(vtxDef));
+    } else {
+        std::cerr << "Error generating vertex buffer " << name << std::endl;
+    }
 
     return name;
 }
-
-
-	// {{{-226, 0, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{-226, 0, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{-226, 40, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{-226, 40, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{226, 0, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{226, 0, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{226, 40, 226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
-	// {{{226, 40, -226},0, {-16, -16},{0x0, 0x0, 0x0, 0x0}}},
 
 std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max) {
     aiMesh* mesh = new aiMesh();
@@ -317,4 +316,14 @@ void CFileDefinition::GenerateHeader(std::ostream& output, const std::string& he
 
     output << std::endl;
     output << "#endif" << std::endl;
+}
+
+bool CFileDefinition::HasDefinitions(const std::string& location) {
+    for (auto it = mDefinitions.begin(); it != mDefinitions.end(); ++it) {
+        if ((*it)->GetLocation() == location) {
+            return true;
+        }
+    }
+
+    return false;
 }

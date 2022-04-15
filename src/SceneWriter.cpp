@@ -14,6 +14,7 @@
 #include "./RenderChunk.h"
 #include "AnimationTranslator.h"
 #include "MeshWriter.h"
+#include "FileUtils.h"
 
 DisplayListSettings::DisplayListSettings():
     mPrefix(""),
@@ -140,20 +141,24 @@ void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, Dis
 
     generateMeshFromScene(scene, fileDefinition, settings);
 
+    std::string filenameBase = replaceExtension(getBaseName(filename), "");
+
     if (settings.mExportGeometry) {
         std::ofstream outputFile;
         outputFile.open(filename + "_geo.inc.h", std::ios_base::out | std::ios_base::trunc);
-        fileDefinition.Generate(outputFile, "", filename + ".h");
+        fileDefinition.Generate(outputFile, "", filenameBase + ".h");
         outputFile.close();
     }
 
     std::ofstream outputHeader;
     outputHeader.open(filename + ".h", std::ios_base::out | std::ios_base::trunc);
-    fileDefinition.GenerateHeader(outputHeader, filename);
+    fileDefinition.GenerateHeader(outputHeader, filenameBase);
     outputHeader.close();
 
-    std::ofstream animOutput;
-    animOutput.open(filename + "_anim.inc.h", std::ios_base::out | std::ios_base::trunc);
-    fileDefinition.Generate(animOutput, "_anim", filename + ".h");
-    animOutput.close();
+    if (fileDefinition.HasDefinitions("_anim")) {
+        std::ofstream animOutput;
+        animOutput.open(filename + "_anim.inc.h", std::ios_base::out | std::ios_base::trunc);
+        fileDefinition.Generate(animOutput, "_anim", filenameBase + ".h");
+        animOutput.close();
+    }
 }
