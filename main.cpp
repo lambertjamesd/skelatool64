@@ -9,6 +9,8 @@
 #include "src/MaterialParser.h"
 #include "src/SceneLoader.h"
 
+#include "src/definition_generator/MeshDefinitionGenerator.h"
+
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
 
@@ -93,7 +95,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     std::cout << "Saving to "  << args.mOutputFile << std::endl;
-    generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
+    // generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
+
+    MeshDefinitionGenerator meshGenerator(settings);
+
+    meshGenerator.TraverseScene(scene);
+    CFileDefinition fileDef(settings.mPrefix, settings.mScale, settings.mRotateModel);
+    meshGenerator.GenerateDefinitions(scene, fileDef);
+
+    fileDef.GenerateAll(args.mOutputFile);
     
     return 0;
 }

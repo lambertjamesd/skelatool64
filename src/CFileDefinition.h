@@ -8,7 +8,7 @@
 #include <ostream>
 #include <memory>
 
-#include "./ErrorCode.h"
+#include "./ErrorResult.h"
 #include "./ExtendedMesh.h"
 #include "./definitions/FileDefinition.h"
 
@@ -20,7 +20,7 @@ public:
     std::string mName;
     VertexType mVertexType;
 
-    ErrorCode Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
+    ErrorResult Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
 private:
 };
 
@@ -37,6 +37,8 @@ public:
     std::string GetUniqueName(std::string requestedName);
 
     std::set<std::string> GetDefinitionTypes();
+
+    void GenerateAll(const std::string& headerFileLocation);
 
     void Generate(std::ostream& output, const std::string& location, const std::string& headerFileName);
     void GenerateHeader(std::ostream& output, const std::string& headerFileName);

@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <iostream>
 #include "StringUtils.h"
+#include "FileUtils.h"
+
+#include <fstream>
 
 VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType):
     mTargetMesh(targetMesh),
@@ -10,16 +13,16 @@ VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::st
 
 }
 
-ErrorCode convertToShort(float value, short& output) {
+ErrorResult convertToShort(float value, short& output) {
     int result = (int)(value);
 
     if (result < (int)std::numeric_limits<short>::min() || result > (int)std::numeric_limits<short>::max()) {
-        return ErrorCode::ModelTooLarge;
+        return ErrorResult("The value " + std::to_string(result) + " is too big to fit into a short");
     }
 
     output = (short)result;
 
-    return ErrorCode::None;
+    return ErrorResult();
 }
 
 int convertNormalizedRange(float value) {
@@ -46,7 +49,7 @@ unsigned convertByteRange(float value) {
     }
 }
 
- ErrorCode VertexBufferDefinition::Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix) {
+ ErrorResult VertexBufferDefinition::Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix) {
     std::unique_ptr<StructureDataChunk> dataChunk(new StructureDataChunk());
     
     for (unsigned int i = 0; i < mTargetMesh->mMesh->mNumVertices; ++i) {
@@ -68,16 +71,16 @@ unsigned convertByteRange(float value) {
 
         std::unique_ptr<StructureDataChunk> posVertex(new StructureDataChunk());
 
-        ErrorCode code = convertToShort(pos.x, converted);
-        if (code != ErrorCode::None) return code;
+        ErrorResult code = convertToShort(pos.x, converted);
+        if (code.HasError()) return ErrorResult(code.GetMessage() + " for x coordinate");
         posVertex->AddPrimitive(converted);
         
         code = convertToShort(pos.y, converted);
-        if (code != ErrorCode::None) return code;
+        if (code.HasError()) return ErrorResult(code.GetMessage() + " for y coordinate");
         posVertex->AddPrimitive(converted);
 
         code = convertToShort(pos.z, converted);
-        if (code != ErrorCode::None) return code;
+        if (code.HasError()) return ErrorResult(code.GetMessage() + " for z coordinate");
         posVertex->AddPrimitive(converted);
 
         vertex->Add(std::move(posVertex));
@@ -93,11 +96,11 @@ unsigned convertByteRange(float value) {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
             code = convertToShort(uv.x * (1 << 10), converted);
-            if (code != ErrorCode::None) return code;
+            if (code.HasError()) return ErrorResult(code.GetMessage() + " for texture u coordinate");
             texCoords->AddPrimitive(converted);
 
             code = convertToShort((1.0f - uv.y) * (1 << 10), converted);
-            if (code != ErrorCode::None) return code;
+            if (code.HasError()) return ErrorResult(code.GetMessage() + " for texture y coordinate");
             texCoords->AddPrimitive(converted);
         }
 
@@ -152,7 +155,7 @@ unsigned convertByteRange(float value) {
 
     output = std::unique_ptr<FileDefinition>(new DataFileDefinition("Vtx", mName, true, fileSuffix, std::move(dataChunk)));
 
-    return ErrorCode::None;
+    return ErrorResult();
 }
 
 CFileDefinition::CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate): 
@@ -207,12 +210,12 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vert
 
     std::unique_ptr<FileDefinition> vtxDef;
 
-    ErrorCode result = mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, modelSuffix);
+    ErrorResult result = mVertexBuffers.find(name)->second.Generate(mModelScale, mModelRotate, vtxDef, modelSuffix);
 
-    if (result == ErrorCode::None) {
-        AddDefinition(std::move(vtxDef));
+    if (result.HasError()) {
+        std::cerr << "Error generating vertex buffer " << name << " error: " << result.GetMessage() << std::endl;
     } else {
-        std::cerr << "Error generating vertex buffer " << name << std::endl;
+        AddDefinition(std::move(vtxDef));
     }
 
     return name;
@@ -255,6 +258,30 @@ std::string CFileDefinition::GetUniqueName(std::string requestedName) {
     mUsedNames.insert(result);
 
     return result;
+}
+
+
+void CFileDefinition::GenerateAll(const std::string& headerFileLocation) {
+    std::set<std::string> keys;
+
+    for (auto fileDef = mDefinitions.begin(); fileDef != mDefinitions.end(); ++fileDef) {
+        keys.insert((*fileDef)->GetLocation());
+    }
+
+    std::string fileNoExtension = replaceExtension(headerFileLocation, "");
+    std::string fileNoPath = getBaseName(fileNoExtension);
+
+    for (auto key : keys) {
+        std::ofstream outputFile;
+        outputFile.open(fileNoExtension + key + ".c", std::ios_base::out | std::ios_base::trunc);
+        Generate(outputFile, key, fileNoPath + ".h");
+        outputFile.close();
+    }
+
+    std::ofstream outputHeader;
+    outputHeader.open(fileNoExtension + ".h", std::ios_base::out | std::ios_base::trunc);
+    GenerateHeader(outputHeader, fileNoPath);
+    outputHeader.close();
 }
 
 void CFileDefinition::Generate(std::ostream& output, const std::string& location, const std::string& headerFileName) {

@@ -114,11 +114,12 @@ void ExtendedMesh::PopulateFacesForBone() {
 }
 
 void ExtendedMesh::Transform(const aiMatrix4x4& transform) {
+    aiMatrix3x3 rotationOnly(transform);
     for (unsigned i = 0; i < mMesh->mNumVertices; ++i) {
         mMesh->mVertices[i] = transform * mMesh->mVertices[i];
 
         if (mMesh->mNormals) {
-            mMesh->mNormals[i] = transform * mMesh->mNormals[i];
+            mMesh->mNormals[i] = rotationOnly * mMesh->mNormals[i];
             mMesh->mNormals[i].NormalizeSafe();
         }
     }
