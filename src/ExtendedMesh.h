@@ -5,6 +5,7 @@
 #include "BoneHierarchy.h"
 #include <vector>
 #include <map>
+#include <set>
 
 enum class VertexType {
     PosUVNormal,
@@ -37,5 +38,7 @@ private:
 };
 
 aiMesh* copyMesh(aiMesh* mesh);
+
+void findAdjacentVertices(aiMesh* mesh, int fromIndex, std::set<int>& result);
 
 #endif

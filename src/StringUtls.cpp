@@ -104,3 +104,17 @@ void makeCCompatible(std::string& target) {
         target = '_' + target;
     }
 }
+
+bool StartsWith(const std::string& input, const std::string& prefix) {
+    if (prefix.length() > input.length()) {
+        return false;
+    }
+
+    for (unsigned i = 0; i < prefix.length(); ++i) {
+        if (input[i] != prefix[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}

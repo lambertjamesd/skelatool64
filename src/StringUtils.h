@@ -11,4 +11,6 @@ std::string Trim(const std::string& input);
 
 void makeCCompatible(std::string& target);
 
+bool StartsWith(const std::string& input, const std::string& prefix);
+
 #endif

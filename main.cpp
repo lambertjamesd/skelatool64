@@ -10,6 +10,7 @@
 #include "src/SceneLoader.h"
 
 #include "src/definition_generator/MeshDefinitionGenerator.h"
+#include "src/definition_generator/CollisionGenerator.h"
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
@@ -102,6 +103,10 @@ int main(int argc, char *argv[]) {
     meshGenerator.TraverseScene(scene);
     CFileDefinition fileDef(settings.mPrefix, settings.mScale, settings.mRotateModel);
     meshGenerator.GenerateDefinitions(scene, fileDef);
+
+    CollisionGenerator colliderGenerator(settings);
+    colliderGenerator.TraverseScene(scene);
+    colliderGenerator.GenerateDefinitions(scene, fileDef);
 
     fileDef.GenerateAll(args.mOutputFile);
     
