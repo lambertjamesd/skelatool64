@@ -39,6 +39,6 @@ private:
 
 aiMesh* copyMesh(aiMesh* mesh);
 
-void findAdjacentVertices(aiMesh* mesh, int fromIndex, std::set<int>& result);
+void findAdjacentVertices(aiMesh* mesh, unsigned fromIndex, std::set<int>& result);
 
 #endif

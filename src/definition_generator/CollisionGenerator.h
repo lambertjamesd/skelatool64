@@ -5,7 +5,7 @@
 #include "../DisplayListSettings.h"
 
 struct CollisionQuad {
-    CollisionQuad(aiMesh* mesh, aiMatrix4x4& transform);
+    CollisionQuad(aiMesh* mesh, const aiMatrix4x4& transform);
 
     aiVector3D corner;
     aiVector3D edgeA;

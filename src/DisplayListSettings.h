@@ -11,7 +11,8 @@ struct DisplayListSettings {
     std::string mPrefix;
     int mVertexCacheSize;
     bool mHasTri2;
-    float mScale;
+    float mGraphicsScale;
+    float mCollisionScale;
     int mMaxMatrixDepth;
     bool mCanPopMultipleMatrices;
     unsigned short mTicksPerSecond;
@@ -20,6 +21,8 @@ struct DisplayListSettings {
     bool mExportAnimation;
     bool mExportGeometry;
     bool mIncludeCulling;
+
+    aiMatrix4x4 CreateGlobalTransform();
 };
 
 #endif

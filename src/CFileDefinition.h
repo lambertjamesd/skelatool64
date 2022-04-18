@@ -36,6 +36,8 @@ public:
 
     std::string GetUniqueName(std::string requestedName);
 
+    std::string GetMacroName(std::string requestedName);
+
     std::set<std::string> GetDefinitionTypes();
 
     void GenerateAll(const std::string& headerFileLocation);

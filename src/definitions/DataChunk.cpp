@@ -106,7 +106,7 @@ void StructureDataChunk::Add(const std::string& name, std::unique_ptr<DataChunk>
 bool StructureDataChunk::Output(std::ostream& output, int indentLevel, int linePrefix) {
     output << '{';
 
-    OutputChildren(mChildren, output, indentLevel, linePrefix + GetEstimatedLength());
+    OutputChildren(mChildren, output, indentLevel, linePrefix + GetEstimatedLength(), true);
 
     output << '}';
     return true;
@@ -132,7 +132,7 @@ void StructureDataChunk::OutputIndent(std::ostream& output, int indentLevel) {
     }
 }
 
-void StructureDataChunk::OutputChildren(std::vector<std::unique_ptr<DataChunk>>& children, std::ostream& output, int indentLevel, int totalLength) {
+void StructureDataChunk::OutputChildren(std::vector<std::unique_ptr<DataChunk>>& children, std::ostream& output, int indentLevel, int totalLength, bool trailingComma) {
     bool needsComma = false;
     
     if (totalLength < MAX_CHARS_PER_LINE) {
@@ -148,7 +148,7 @@ void StructureDataChunk::OutputChildren(std::vector<std::unique_ptr<DataChunk>>&
         ++indentLevel;
         for (size_t i = 0; i < children.size(); ++i) {
             OutputIndent(output, indentLevel);
-            if (children[i]->Output(output, indentLevel, indentLevel * SPACES_PER_INDENT)) {
+            if (children[i]->Output(output, indentLevel, indentLevel * SPACES_PER_INDENT) && (i < children.size() - 1 || trailingComma)) {
                 output << ",\n";
             } else {
                 output << "\n";
@@ -168,7 +168,7 @@ void MacroDataChunk::Add(std::unique_ptr<DataChunk> entry) {
 bool MacroDataChunk::Output(std::ostream& output, int indentLevel, int linePrefix) {
     output << mMacroName << '(';
 
-    StructureDataChunk::OutputChildren(mParameters, output, indentLevel, linePrefix + GetEstimatedLength());
+    StructureDataChunk::OutputChildren(mParameters, output, indentLevel, linePrefix + GetEstimatedLength(), false);
 
     output << ')';
     return true;

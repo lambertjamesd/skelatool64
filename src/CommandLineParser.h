@@ -12,7 +12,8 @@ struct CommandLineArguments {
     std::string mOutputFile;
     std::string mPrefix;
     std::vector<std::string> mMaterialFiles;
-    float mScale;
+    float mGraphicsScale;
+    float mCollisionScale;
     bool mExportAnimation;
     bool mExportGeometry;
     bool mIsLevel;

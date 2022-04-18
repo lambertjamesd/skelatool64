@@ -261,6 +261,15 @@ std::string CFileDefinition::GetUniqueName(std::string requestedName) {
 }
 
 
+std::string CFileDefinition::GetMacroName(std::string requestedName) {
+    std::string result = GetUniqueName(requestedName);
+
+    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+
+    return result;
+}
+
+
 void CFileDefinition::GenerateAll(const std::string& headerFileLocation) {
     std::set<std::string> keys;
 

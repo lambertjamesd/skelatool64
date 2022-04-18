@@ -97,7 +97,7 @@ public:
     virtual bool Output(std::ostream& output, int indentLevel, int linePrefix);
     
     static void OutputIndent(std::ostream& output, int indentLevel);
-    static void OutputChildren(std::vector<std::unique_ptr<DataChunk>>& children, std::ostream& output, int indentLevel, int totalLength);
+    static void OutputChildren(std::vector<std::unique_ptr<DataChunk>>& children, std::ostream& output, int indentLevel, int totalLength, bool trailingComma);
 protected:
     virtual int CalculateEstimatedLength();
 private:

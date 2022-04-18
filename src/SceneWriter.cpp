@@ -16,19 +16,6 @@
 #include "MeshWriter.h"
 #include "FileUtils.h"
 
-DisplayListSettings::DisplayListSettings():
-    mPrefix(""),
-    mVertexCacheSize(MAX_VERTEX_CACHE_SIZE),
-    mHasTri2(true),
-    mScale(256.0f),
-    mMaxMatrixDepth(10),
-    mCanPopMultipleMatrices(true),
-    mTicksPerSecond(30),
-    mExportAnimation(true),
-    mExportGeometry(true),
-    mIncludeCulling(true) {
-}
-
 std::vector<SKAnimationHeader> generateAnimationData(const aiScene* scene, BoneHierarchy& bones, CFileDefinition& fileDef, float modelScale, unsigned short targetTicksPerSecond, aiQuaternion rotate) {
     std::vector<SKAnimationHeader> animations;
 
@@ -90,13 +77,13 @@ void generateMeshFromScene(const aiScene* scene, CFileDefinition& fileDefinition
     if (shouldExportAnimations) {        
         std::string bonesName = fileDefinition.GetUniqueName("default_bones");
         std::string boneParentName = fileDefinition.GetUniqueName("bone_parent");
-        bones.GenerateRestPosiitonData(fileDefinition, bonesName, settings.mScale, settings.mRotateModel);
+        bones.GenerateRestPosiitonData(fileDefinition, bonesName, settings.mGraphicsScale, settings.mRotateModel);
         std::string boneCountName = bonesName + "_COUNT";
         std::transform(boneCountName.begin(), boneCountName.end(), boneCountName.begin(), ::toupper);
         fileDefinition.AddMacro(boneCountName, std::to_string(bones.GetBoneCount()));
 
         std::string animationsName = fileDefinition.GetUniqueName("animations");
-        auto animations = generateAnimationData(scene, bones, fileDefinition, settings.mScale, settings.mTicksPerSecond, settings.mRotateModel);
+        auto animations = generateAnimationData(scene, bones, fileDefinition, settings.mGraphicsScale, settings.mTicksPerSecond, settings.mRotateModel);
 
         std::unique_ptr<StructureDataChunk> animationNameData(new StructureDataChunk());
 
@@ -137,7 +124,7 @@ void generateMeshFromScene(const aiScene* scene, CFileDefinition& fileDefinition
 }
 
 void generateMeshFromSceneToFile(const aiScene* scene, std::string filename, DisplayListSettings& settings) {
-    CFileDefinition fileDefinition(settings.mPrefix, settings.mScale, settings.mRotateModel);
+    CFileDefinition fileDefinition(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
 
     generateMeshFromScene(scene, fileDefinition, settings);
 

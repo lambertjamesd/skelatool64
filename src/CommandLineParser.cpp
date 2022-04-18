@@ -13,12 +13,13 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
     output.mInputFile = "";
     output.mOutputFile = "";
     output.mPrefix = "output";
-    output.mScale = 256.0f;
+    output.mGraphicsScale = 256.0f;
+    output.mCollisionScale = 1.0f;
     output.mExportAnimation = true;
     output.mExportGeometry = true;
     output.mIsLevel = false;
     output.mIsLevelDef = false;
-    output.mEulerAngles = aiVector3D(-90.0f, 180.0f, 0.0f);
+    output.mEulerAngles = aiVector3D(0.0f, 0.0f, 0.0f);
 
     char lastParameter = '\0';
     bool hasError = false;
@@ -40,7 +41,10 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
                     output.mPrefix = curr;
                     break;
                 case 's':
-                    output.mScale = (float)atof(curr);
+                    output.mGraphicsScale = (float)atof(curr);
+                    break;
+                case 'c':
+                    output.mCollisionScale = (float)atof(curr);
                     break;
                 case 'm':
                     output.mMaterialFiles.push_back(curr);
@@ -63,6 +67,10 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
             strcmp(curr, "-s") == 0 || 
             strcmp(curr, "--scale") == 0) {
             lastParameter = 's';
+        } else if (
+            strcmp(curr, "-c") == 0 || 
+            strcmp(curr, "--collision-scale") == 0) {
+            lastParameter = 'c';
         } else if (
             strcmp(curr, "-m") == 0 || 
             strcmp(curr, "--materials") == 0) {

@@ -138,7 +138,7 @@ void ExtendedMesh::ReplaceColor(const aiColor4D& color) {
     }
 }
 
-void findAdjacentVertices(aiMesh* mesh, int fromIndex, std::set<int>& result) {
+void findAdjacentVertices(aiMesh* mesh, unsigned fromIndex, std::set<int>& result) {
     for (unsigned faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex) {
         aiFace* face = &mesh->mFaces[faceIndex];
 
