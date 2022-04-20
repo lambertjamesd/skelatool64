@@ -71,7 +71,8 @@ int main(int argc, char *argv[]) {
 
     DisplayListSettings settings = DisplayListSettings();
 
-    settings.mScale = args.mScale;
+    settings.mGraphicsScale = args.mGraphicsScale;
+    settings.mCollisionScale = args.mCollisionScale;
     settings.mRotateModel = getUpRotation(args.mEulerAngles);
     settings.mPrefix = args.mPrefix;
     settings.mExportAnimation = args.mExportAnimation;
@@ -101,7 +102,7 @@ int main(int argc, char *argv[]) {
     MeshDefinitionGenerator meshGenerator(settings);
 
     meshGenerator.TraverseScene(scene);
-    CFileDefinition fileDef(settings.mPrefix, settings.mScale, settings.mRotateModel);
+    CFileDefinition fileDef(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
     meshGenerator.GenerateDefinitions(scene, fileDef);
 
     CollisionGenerator colliderGenerator(settings);
