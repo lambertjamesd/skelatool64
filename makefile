@@ -1,7 +1,7 @@
 
-GCC_FLAGS = -Wall -Werror -g -I./assimp/include -I./yaml-cpp/include
+GCC_FLAGS = -Wall -Werror -g -I./assimp/include -I./yaml-cpp/include 
 
-LINKER_FLAGS = -L./assimp/bin -L./yaml-cpp -lassimp -lyaml-cpp
+LINKER_FLAGS = -L./assimp/bin -L./yaml-cpp -lassimp -lyaml-cpp -lpng -ltiff
 
 SRC_FILES = main.cpp $(shell find src/ -type f -name '*.cpp')
 
