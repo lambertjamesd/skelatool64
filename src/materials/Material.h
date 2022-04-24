@@ -7,9 +7,10 @@
 #include <map>
 #include <ostream>
 
-#include "DisplayList.h"
-#include "ExtendedMesh.h"
-#include "CFileDefinition.h"
+#include "TextureDefinition.h"
+#include "../DisplayList.h"
+#include "../ExtendedMesh.h"
+#include "../CFileDefinition.h"
 
 enum class CullMode {
     Unknown,
@@ -70,6 +71,9 @@ public:
     MaterialColor mEnvColor;
     MaterialColor mFogColor;
     MaterialColor mBlendColor;
+
+    std::shared_ptr<TextureDefinition> mTexture0;
+    std::shared_ptr<TextureDefinition> mTexture1;
 
     VertexType mVertexType;
 

@@ -4,6 +4,22 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <unistd.h>
+
+std::string gCwd;
+
+#define MAX_PATH    256
+
+const std::string& GetCwd() {
+    if (!gCwd.length()) {
+        char buffer[MAX_PATH];
+        if (getcwd(buffer, MAX_PATH)) {
+            gCwd = buffer;
+        }
+    }
+
+    return gCwd;
+}
 
 bool isPathCharacter(char chr) {
     return chr == '\\' || chr == '/';
@@ -51,6 +67,36 @@ std::string DirectoryName(const std::string& filename) {
     return filename.substr(0, correctSlash);
 }
 
+std::size_t nextPathCharacter(const std::string& input, std::size_t curr) {
+    std::size_t correctPath = input.find('/', curr);
+    std::size_t wrongPath = input.find('\\', curr);
+
+    if (correctPath != std::string::npos && wrongPath != std::string::npos) {
+        return std::min(correctPath, wrongPath);
+    } else if (correctPath != std::string::npos) {
+        return correctPath;
+    } else {
+        return wrongPath;
+    }
+}
+
+void separatePath(const std::string& input, std::vector<std::string>& output) {
+    std::size_t curr = 0;
+
+    do {
+        std::size_t next = nextPathCharacter(input, curr);
+
+        if (next == std::string::npos) {
+            output.push_back(input.substr(curr));
+            curr = std::string::npos;
+        } else {
+            output.push_back(input.substr(curr, next - curr));
+            curr = next + 1;
+        }
+
+    } while (curr != std::string::npos);
+}
+
 std::string Join(const std::string& a, const std::string& b) {
     if (b.length() == 0) {
         return a;
@@ -60,19 +106,32 @@ std::string Join(const std::string& a, const std::string& b) {
         return b;
     }
 
-    std::string firstPath = a;
-    std::string secondPath = b;
+    std::vector<std::string> parts;
 
-    while (secondPath.rfind("../", 0) == 0 || secondPath.rfind("..\\", 0) == 0) {
-        firstPath = DirectoryName(firstPath);
-        secondPath = secondPath.substr(3);
+    separatePath(a, parts);
+    separatePath(b, parts);
+
+    std::vector<std::string> normalizedParts;
+
+    for (int i = parts.size() - 1; i >= 0; --i) {
+        if (parts[i] == "..") {
+            --i;
+        } else if (parts[i] != ".") {
+            normalizedParts.push_back(parts[i]);
+        }
     }
 
-    if (firstPath == "") {
-        return secondPath;
+    std::ostringstream result;
+
+    for (int i = normalizedParts.size() -1; i >= 0; --i) {
+        if (i != 0) {
+            result << "/";
+        }
+
+        result << normalizedParts[i];
     }
 
-    return firstPath + "/" + secondPath;
+    return result.str();
 }
 
 std::vector<std::string> SplitOnFirstPath(const std::string& path) {
@@ -129,4 +188,9 @@ std::string Relative(const std::string& from, const std::string& to) {
     }
 
     return result.str();
+}
+
+
+std::string NormalizePath(const std::string& path) {
+    return Join(GetCwd(), path);
 }

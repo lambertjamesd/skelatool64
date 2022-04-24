@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 #include <assimp/scene.h>
-#include "./Material.h"
+#include "./materials/Material.h"
 
 struct DisplayListSettings {
     DisplayListSettings();

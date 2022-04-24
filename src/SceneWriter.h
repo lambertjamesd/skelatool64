@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 #include <map>
-#include "./Material.h"
+#include "./materials/Material.h"
 #include "./DisplayListSettings.h"
 #include "CFileDefinition.h"
 

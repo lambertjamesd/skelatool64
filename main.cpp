@@ -6,13 +6,8 @@
 
 #include "src/SceneWriter.h"
 #include "src/CommandLineParser.h"
-#include "src/MaterialParser.h"
+#include "src/materials/MaterialParser.h"
 #include "src/SceneLoader.h"
-
-#define cimg_display 0
-#define cimg_use_png
-#define cimg_use_tiff
-#include "cimg/CImg.h"
 
 #include "src/definition_generator/MeshDefinitionGenerator.h"
 #include "src/definition_generator/CollisionGenerator.h"

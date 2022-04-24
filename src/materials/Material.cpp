@@ -1,8 +1,8 @@
 
 #include "Material.h"
 
-#include "StringUtils.h"
-#include "CFileDefinition.h"
+#include "../StringUtils.h"
+#include "../CFileDefinition.h"
 
 MaterialColor::MaterialColor() : mIsDefined(false), r(0), g(0), b(0), a(255) {}
 
