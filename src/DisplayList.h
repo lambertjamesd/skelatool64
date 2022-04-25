@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "./definitions/FileDefinition.h"
+#include "./materials/MaterialEnums.h"
 
 enum class DisplayListCommandType {
     COMMENT,
@@ -120,11 +121,6 @@ struct PopMatrixCommand : DisplayListCommand {
     std::unique_ptr<DataChunk> GenerateCommand();
 
     unsigned int mPopCount;
-};
-
-enum class GeometryMode {
-    None = 0,
-    G_LIGHTING = (1 << 0),
 };
 
 struct ChangeGeometryMode : DisplayListCommand {

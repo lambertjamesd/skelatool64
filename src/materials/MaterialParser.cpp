@@ -9,6 +9,11 @@
 #include <stdexcept>
 #include <map>
 
+#include "./TextureCache.h"
+#include "../FileUtils.h"
+
+TextureCache gTextureCache;
+
 ParseError::ParseError(const std::string& message) :
     mMessage(message) {
     
@@ -159,14 +164,6 @@ void parseRenderMode(const YAML::Node& node, RenderMode& renderMode, ParseResult
     renderMode.mRenderMode2 = arrayEnd->mName;
 }
 
-const char* gCycleTypeNames[(int)CycleType::Count] = {
-    "Unknown",
-    "G_CYC_1CYCLE",
-    "G_CYC_2CYCLE",
-    "G_CYC_COPY",
-    "G_CYC_FILL",
-};
-
 void parseCycleType(const YAML::Node& node, CycleType& cycleType, ParseResult& output) {
     if (!node.IsDefined()) {
         return;
@@ -237,6 +234,134 @@ VertexType parseMaterialVertexType(const YAML::Node& node) {
 
     return VertexType::PosUVColor;
 }
+
+G_IM_FMT parseTextureFormat(const YAML::Node& node, ParseResult& output) {
+    std::string asString = parseString(node, output);
+
+    if (asString == "RGBA") {
+        return G_IM_FMT::G_IM_FMT_RGBA;
+    }
+
+    if (asString == "YUV") {
+        return G_IM_FMT::G_IM_FMT_YUV;
+    }
+
+    if (asString == "CI") {
+        return G_IM_FMT::G_IM_FMT_CI;
+    }
+
+    if (asString == "I") {
+        return G_IM_FMT::G_IM_FMT_I;
+    }
+
+    if (asString == "IA") {
+        return G_IM_FMT::G_IM_FMT_IA;
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Texture format should be RGBA, YUV, CI, I, or IA", node.Mark())));
+
+    return G_IM_FMT::G_IM_FMT_RGBA;
+}
+
+G_IM_SIZ parseTextureSize(const YAML::Node& node, ParseResult& output) {
+    std::string asString = parseString(node, output);
+
+    if (asString == "32") {
+        return G_IM_SIZ::G_IM_SIZ_32b;
+    }
+
+    if (asString == "16") {
+        return G_IM_SIZ::G_IM_SIZ_16b;
+    }
+
+    if (asString == "8") {
+        return G_IM_SIZ::G_IM_SIZ_8b;
+    }
+
+    if (asString == "4") {
+        return G_IM_SIZ::G_IM_SIZ_4b;
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Texture size should be 32, 16, 8, or 4", node.Mark())));
+
+    return G_IM_SIZ::G_IM_SIZ_16b;
+}
+
+G_IM_SIZ gDefaultImageSize[] = {
+    // G_IM_FMT_RGBA
+    G_IM_SIZ::G_IM_SIZ_16b,
+    // G_IM_FMT_YUV
+    G_IM_SIZ::G_IM_SIZ_16b,
+    // G_IM_FMT_CI
+    G_IM_SIZ::G_IM_SIZ_8b,
+    // G_IM_FMT_I
+    G_IM_SIZ::G_IM_SIZ_8b,
+    // G_IM_FMT_IA
+    G_IM_SIZ::G_IM_SIZ_16b,
+};
+
+std::shared_ptr<TextureDefinition> parseTexture(const YAML::Node& node, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return NULL;
+    }
+
+    std::string filename;
+
+    bool hasFormat = false;
+    G_IM_FMT requestedFormat;
+    bool hasSize = false;
+    G_IM_SIZ requestedSize;
+
+    if (node.IsScalar()) {
+        filename = parseString(node, output);
+    } else {
+        filename = parseString(node["Filename"], output);
+
+        auto yamlFormat = node["Format"];
+        if (yamlFormat.IsDefined()) {
+            requestedFormat = parseTextureFormat(yamlFormat, output);
+            hasFormat = true;
+        }
+
+        auto yamlSize = node["Size"];
+        if (yamlSize.IsDefined()) {
+            requestedSize = parseTextureSize(yamlSize, output);
+        }
+    }
+
+    if (!FileExists(filename)) {
+        output.mErrors.push_back(ParseError(formatError(std::string("Could not open file ") + filename, node.Mark())));
+        return NULL;
+    }
+
+    G_IM_FMT format;
+    G_IM_SIZ size;
+
+    if (hasFormat && hasSize) {
+        format = requestedFormat;
+        size = requestedSize;
+    } else {
+        TextureDefinition::DetermineIdealFormat(filename, format, size);
+
+        if (hasFormat) {
+            if (format != requestedFormat) {
+                size = gDefaultImageSize[(int)requestedFormat];
+            }
+            format = requestedFormat;
+        }
+
+        if (hasSize) {
+            size = requestedSize;
+        }
+    }
+
+    if (!isImageFormatSupported(format, size)) {
+        output.mErrors.push_back(ParseError(formatError("Unsupported image format ", node.Mark())));
+        return NULL;
+    }
+
+    return gTextureCache.GetTexture(filename, format, size);
+}
  
 void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output, std::map<std::string, std::shared_ptr<MaterialResource>>& resources) {
     parseRenderMode(node["RenderMode"], material.mRenderMode, output);
@@ -246,6 +371,9 @@ void parseMaterial(const YAML::Node& node, Material& material, ParseResult& outp
     parseMaterialColor(node["FogColor"], material.mFogColor, output);
     parseMaterialColor(node["BlendColor"], material.mBlendColor, output);
     material.mVertexType = parseMaterialVertexType(node["VertexType"]);
+
+    material.mTexture0 = parseTexture(node["Texture0"], output);
+    material.mTexture1 = parseTexture(node["Texture1"], output);
 
     const YAML::Node& content = node["Content"];
 

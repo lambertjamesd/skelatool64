@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <unistd.h>
+#include <fstream>
 
 std::string gCwd;
 
@@ -190,7 +191,19 @@ std::string Relative(const std::string& from, const std::string& to) {
     return result.str();
 }
 
-
 std::string NormalizePath(const std::string& path) {
     return Join(GetCwd(), path);
+}
+
+bool FileExists(const std::string& path) {
+    std::ifstream tmp;
+    tmp.open(path);
+
+    bool result = (bool)tmp;
+
+    if (result) {
+        tmp.close();
+    }
+
+    return result;
 }

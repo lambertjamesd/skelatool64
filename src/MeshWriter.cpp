@@ -24,6 +24,14 @@ void MaterialCollector::UseMaterial(const std::string& material, DisplayListSett
         for (auto resource = materialDL->second.mUsedResources.begin(); resource != materialDL->second.mUsedResources.end(); ++resource) {
             mUsedResources.insert(*resource);
         }
+
+        if (materialDL->second.mTexture0) {
+            mUsedTextures.insert(materialDL->second.mTexture0);
+        }
+
+        if (materialDL->second.mTexture1) {
+            mUsedTextures.insert(materialDL->second.mTexture1);
+        }
     } else {
         mMaterialUseCount[material] = prevCount->second + 1;
     }
@@ -39,6 +47,10 @@ void MaterialCollector::CollectMaterialResources(const aiScene* scene, std::vect
 
 void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDefinition& fileDefinition, const std::string& fileSuffix) {
     std::vector<std::shared_ptr<MaterialResource>> resources(mUsedResources.begin(), mUsedResources.end());
+
+    for (auto image : mUsedTextures) {
+        fileDefinition.AddDefinition(std::move(image->GenerateDefinition(fileDefinition.GetUniqueName(image->Name()), fileSuffix)));
+    }
     
     Material::WriteResources(resources, mResourceNameMapping, fileDefinition, fileSuffix);
     for (auto useCount = mMaterialUseCount.begin(); useCount != mMaterialUseCount.end(); ++useCount) {
@@ -76,7 +88,7 @@ void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& file
         }
 
         
-        std::string vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mVertexType, modelSuffix);
+        std::string vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mMaterial, modelSuffix);
         generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
     }
     rcpState.TraverseToBone(nullptr, displayList);

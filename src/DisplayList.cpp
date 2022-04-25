@@ -168,31 +168,8 @@ std::unique_ptr<DataChunk> PopMatrixCommand::GenerateCommand() {
     return std::move(result);
 }
 
-const char* gGeometryModeNames[] = {
-    "G_LIGHTING",
-};
-
 std::string generateGeometryMode(GeometryMode mode) {
     std::string result = "";
-    unsigned index = 0;
-    unsigned modeAsNumber = (unsigned)mode;
-
-    while (modeAsNumber) {
-        if (modeAsNumber & 1) {
-            if (result.length()) {
-                result += " | ";
-            }
-
-            result += gGeometryModeNames[index];
-        }
-        
-        modeAsNumber >>= 1;
-        index += 1;
-    }
-
-    if (result.length() == 0) {
-        return "0";
-    }
 
     return result;
 }

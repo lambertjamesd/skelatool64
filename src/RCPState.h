@@ -6,6 +6,7 @@
 #include "BoneHierarchy.h"
 #include "DisplayList.h"
 #include "ErrorCode.h"
+#include "materials/MaterialState.h"
 
 struct VertexData {
     VertexData();
@@ -32,6 +33,7 @@ private:
     bool mCanPopMultiple;
     VertexData mVertices[MAX_VERTEX_CACHE_SIZE];
     std::vector<Bone*> mBoneMatrixStack;
+    MaterialState mMaterialState;
 };
 
 #endif

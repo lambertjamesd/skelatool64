@@ -10,6 +10,7 @@
 #include "RenderChunk.h"
 #include "DisplayListSettings.h"
 #include "CFileDefinition.h"
+#include "./materials/TextureDefinition.h"
 
 class MaterialCollector {
 public:
@@ -20,6 +21,7 @@ public:
 
     unsigned mSceneCount;
     std::set<std::shared_ptr<MaterialResource>> mUsedResources;
+    std::set<std::shared_ptr<TextureDefinition>> mUsedTextures;
     std::map<std::string, int> mMaterialUseCount;
     std::map<std::string, std::string> mMaterialNameMapping;
     std::map<std::string, std::string> mResourceNameMapping;

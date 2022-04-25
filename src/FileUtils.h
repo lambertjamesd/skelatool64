@@ -12,6 +12,8 @@ std::string DirectoryName(const std::string& filename);
 std::string Join(const std::string& a, const std::string& b);
 std::string Relative(const std::string& from, const std::string& to);
 
-std::string NormalizePath(const std::string& path):
+std::string NormalizePath(const std::string& path);
+
+bool FileExists(const std::string& path);
 
 #endif

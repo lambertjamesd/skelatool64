@@ -22,6 +22,11 @@ Materials:
       gSPCommand(foo, bar),
 
   Material Name A:
+    Texture0: 
+      Filename: texture_filename.png
+      Format: IA
+      Size: 4
+
     RenderMode: G_RM_AA_ZB_OPA_SURF
     CycleMode: G_RM_ZB_OPA_SURF
     PrimColor:

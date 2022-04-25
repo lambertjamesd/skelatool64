@@ -4,9 +4,11 @@
 #include "../../cimg/CImg.h"
 
 #include "TextureDefinition.h"
+#include "../FileUtils.h"
 
 #include <iomanip>
 #include <algorithm>
+#include <iomanip>
 
 DataChunkStream::DataChunkStream() :
     mCurrentBufferPos(0),
@@ -194,7 +196,23 @@ bool convertPixel(cimg_library_suffixed::CImg<unsigned char>& input, int x, int 
     }
 }
 
+const char* gFormatShortName[] = {
+    "rgba",
+    "yuv",
+    "ci",
+    "i",
+    "ia",
+};
+
+const char* gSizeName[] = {
+    "4b",
+    "8b",
+    "16b",
+    "32b",
+};
+
 TextureDefinition::TextureDefinition(const std::string& filename, G_IM_FMT fmt, G_IM_SIZ siz) :
+    mName(getBaseName(replaceExtension(filename, "")) + "_" + gFormatShortName[(int)fmt] + "_" + gSizeName[(int)siz]),
     mFmt(fmt),
     mSiz(siz) {
 
@@ -243,8 +261,8 @@ int colorHash(cimg_library_suffixed::CImg<unsigned char>& input, int x, int y) {
     return 0;
 }
 
-void TextureDefinition::DetermineIdealFormat(const char* filename, G_IM_FMT& fmt, G_IM_SIZ& siz) {
-    cimg_library_suffixed::CImg<unsigned char> imageData(filename);
+void TextureDefinition::DetermineIdealFormat(const std::string& filename, G_IM_FMT& fmt, G_IM_SIZ& siz) {
+    cimg_library_suffixed::CImg<unsigned char> imageData(filename.c_str());
 
     bool hasColor = false;
     bool hasFullTransparency = false;
@@ -292,4 +310,16 @@ std::unique_ptr<FileDefinition> TextureDefinition::GenerateDefinition(const std:
     }
 
     return std::unique_ptr<FileDefinition>(new DataFileDefinition("u64", name, true, location, std::move(dataChunk)));
+}
+
+int TextureDefinition::Width() const {
+    return mWidth;
+}
+
+int TextureDefinition::Height() const {
+    return mHeight;
+}
+
+const std::string& TextureDefinition::Name() const {
+    return mName;
 }

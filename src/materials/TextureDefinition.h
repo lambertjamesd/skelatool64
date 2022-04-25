@@ -1,3 +1,5 @@
+#ifndef __TEXTURE_DEFINITION_H__
+#define __TEXTURE_DEFINITION_H__
 
 #include <vector>
 #include <inttypes.h>
@@ -52,13 +54,21 @@ class TextureDefinition {
 public:
     TextureDefinition(const std::string& filename, G_IM_FMT fmt, G_IM_SIZ siz);
 
-    static void DetermineIdealFormat(const char* filename, G_IM_FMT& fmt, G_IM_SIZ& siz);
+    static void DetermineIdealFormat(const std::string& filename, G_IM_FMT& fmt, G_IM_SIZ& siz);
 
     std::unique_ptr<FileDefinition> GenerateDefinition(const std::string& name, const std::string& location) const;
+
+    int Width() const;
+    int Height() const;
+
+    const std::string& Name() const;
 private:
+    std::string mName;
     G_IM_FMT mFmt;
     G_IM_SIZ mSiz;
     int mWidth;
     int mHeight;
     std::vector<unsigned long long> mData;
 };
+
+#endif

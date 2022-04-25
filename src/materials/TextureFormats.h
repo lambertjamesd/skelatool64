@@ -1,3 +1,6 @@
+#ifndef __TEXTURE_FORMATS_H__
+#define __TEXTURE_FORMATS_H__
+
 enum class G_IM_FMT {
     G_IM_FMT_RGBA,
     G_IM_FMT_YUV,
@@ -16,3 +19,7 @@ enum class G_IM_SIZ {
 };
 
 const char* nameForImageSize(G_IM_SIZ size);
+
+bool isImageFormatSupported(G_IM_FMT format, G_IM_SIZ size);
+
+#endif

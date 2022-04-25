@@ -22,3 +22,15 @@ const char* G_IM_SIZ_NAMES[] = {
 const char* nameForImageSize(G_IM_SIZ size) {
     return G_IM_SIZ_NAMES[(int)size];
 }
+
+bool G_IM_SUPPORTED[5][4] = {
+    {false, false, true, true},
+    {false, false, true, false},
+    {true, true, false, false},
+    {true, true, true, false},
+    {true, true, false, false},
+};
+
+bool isImageFormatSupported(G_IM_FMT format, G_IM_SIZ size) {
+    return G_IM_SUPPORTED[(int)format][(int)size];
+}

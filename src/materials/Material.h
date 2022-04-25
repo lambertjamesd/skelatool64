@@ -10,22 +10,14 @@
 #include "TextureDefinition.h"
 #include "../DisplayList.h"
 #include "../ExtendedMesh.h"
-#include "../CFileDefinition.h"
+
+#include "MaterialEnums.h"
 
 enum class CullMode {
     Unknown,
     Front,
     Back,
     Both,
-};
-
-enum class CycleType {
-    Unknown,
-    _1Cycle,
-    _2Cycle,
-    Copy,
-    Fill,
-    Count,
 };
 
 struct BlendModeSource {
@@ -82,6 +74,11 @@ public:
 
     static void WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDefinition, const std::string& fileSuffix);
     void WriteToDL(const std::map<std::string, std::string>& nameMapping, DisplayList& output);
+
+    static int TextureWidth(Material* material);
+    static int TextureHeight(Material* material);
+
+    static VertexType GetVertexType(Material* material);
 };
 
 #endif

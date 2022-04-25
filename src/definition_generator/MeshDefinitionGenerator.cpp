@@ -32,10 +32,18 @@ void MeshDefinitionGenerator::GenerateDefinitions(const aiScene* scene, CFileDef
 
             lastMesh->Transform((*node)->mTransformation);
 
+            auto material = mSettings.mMaterials.find(scene->mMaterials[lastMesh->mMesh->mMaterialIndex]->GetName().C_Str());
+
+            Material* materialPtr = NULL;
+
+            if (material != mSettings.mMaterials.end()) {
+                materialPtr = &material->second;
+            }
+
             renderChunks.push_back(RenderChunk(
                 std::pair<Bone*, Bone*>(NULL, NULL),
                 lastMesh,
-                VertexType::PosUVNormal
+                materialPtr
             ));
         }
     }

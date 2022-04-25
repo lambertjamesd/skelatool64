@@ -6,10 +6,10 @@
 
 #include <fstream>
 
-VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType):
+VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, Material* material):
     mTargetMesh(targetMesh),
     mName(name),
-    mVertexType(vertexType) {
+    mMaterial(material) {
 
 }
 
@@ -95,11 +95,11 @@ unsigned convertByteRange(float value) {
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
-            code = convertToShort(uv.x * (1 << 10), converted);
+            code = convertToShort(uv.x * Material::TextureWidth(mMaterial) * (1 << 5), converted);
             if (code.HasError()) return ErrorResult(code.GetMessage() + " for texture u coordinate");
             texCoords->AddPrimitive(converted);
 
-            code = convertToShort((1.0f - uv.y) * (1 << 10), converted);
+            code = convertToShort((1.0f - uv.y) * Material::TextureHeight(mMaterial) * (1 << 5), converted);
             if (code.HasError()) return ErrorResult(code.GetMessage() + " for texture y coordinate");
             texCoords->AddPrimitive(converted);
         }
@@ -108,7 +108,7 @@ unsigned convertByteRange(float value) {
 
         std::unique_ptr<StructureDataChunk> vertexNormal(new StructureDataChunk());
 
-        switch (mVertexType) {
+        switch (Material::GetVertexType(mMaterial)) {
         case VertexType::PosUVNormal:
             if (mTargetMesh->mMesh->HasNormals()) {
                 aiVector3D normal = mTargetMesh->mMesh->mNormals[i];
@@ -173,9 +173,9 @@ void CFileDefinition::AddMacro(const std::string& name, const std::string& value
     mMacros.push_back(name + " " + value);
 }
 
-std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, const std::string& modelSuffix) {
+std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, Material* material, const std::string& modelSuffix) {
     for (auto existing = mVertexBuffers.begin(); existing != mVertexBuffers.end(); ++existing) {
-        if (existing->second.mTargetMesh == mesh && existing->second.mVertexType == vertexType) {
+        if (existing->second.mTargetMesh == mesh && existing->second.mMaterial == material) {
             return existing->first;
         }
     }
@@ -188,7 +188,7 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vert
         requestedName = "_mesh";
     }
 
-    switch (vertexType) {
+    switch (Material::GetVertexType(material)) {
         case VertexType::PosUVColor:
             requestedName += "_color";
             break;
@@ -205,7 +205,7 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vert
     mVertexBuffers.insert(std::pair<std::string, VertexBufferDefinition>(name, VertexBufferDefinition(
         mesh, 
         name, 
-        vertexType
+        material
     )));
 
     std::unique_ptr<FileDefinition> vtxDef;
@@ -237,7 +237,7 @@ std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiV
     mesh->mVertices[7] = aiVector3D(max.x, max.y, max.z);
 
     BoneHierarchy boneHierarchy;
-    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVColor, modelSuffix);
+    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), NULL, modelSuffix);
 }
 
 

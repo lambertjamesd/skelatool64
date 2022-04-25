@@ -11,14 +11,15 @@
 #include "./ErrorResult.h"
 #include "./ExtendedMesh.h"
 #include "./definitions/FileDefinition.h"
+#include "./RenderChunk.h"
 
 class VertexBufferDefinition {
 public:
-    VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType);
+    VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, Material* material);
 
     ExtendedMesh* mTargetMesh;
     std::string mName;
-    VertexType mVertexType;
+    Material* mMaterial;
 
     ErrorResult Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
 private:
@@ -31,7 +32,7 @@ public:
     void AddDefinition(std::unique_ptr<FileDefinition> definition);
     void AddMacro(const std::string& name, const std::string& value);
 
-    std::string GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, const std::string& modelSuffix);
+    std::string GetVertexBuffer(ExtendedMesh* mesh, Material* material, const std::string& modelSuffix);
     std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max, const std::string& modelSuffix);
 
     std::string GetUniqueName(std::string requestedName);

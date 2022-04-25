@@ -40,3 +40,15 @@ void Material::WriteToDL(const std::map<std::string, std::string>& nameMapping, 
 
     output.AddCommand(std::unique_ptr<DisplayListCommand>(new RawContentCommand(Trim(Indent(result, "    ")))));
 }
+
+int Material::TextureWidth(Material* material) {
+    return material && material->mTexture0 ? material->mTexture0->Width() : 0;
+}
+
+int Material::TextureHeight(Material* material) {
+    return material && material->mTexture0 ? material->mTexture0->Height() : 0;
+}
+
+VertexType Material::GetVertexType(Material* material) {
+    return material ? material->mVertexType : VertexType::PosUVNormal;
+}
