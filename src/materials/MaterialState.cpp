@@ -51,6 +51,28 @@ TileState::TileState():
 
 }
 
+ColorCombineMode::ColorCombineMode() : 
+    a(ColorCombineSource::_0),
+    b(ColorCombineSource::_0),
+    c(ColorCombineSource::_0),
+    d(ColorCombineSource::_0),
+    aAlpha(AlphaCombineSource::_0),
+    bAlpha(AlphaCombineSource::_0),
+    cAlpha(AlphaCombineSource::_0),
+    dAlpha(AlphaCombineSource::_0) {}
+
+
+bool ColorCombineMode::operator==(const ColorCombineMode& other) const {
+    return a == other.a &&
+        b == other.b &&
+        c == other.c &&
+        d == other.d &&
+        aAlpha == other.aAlpha &&
+        bAlpha == other.bAlpha &&
+        cAlpha == other.cAlpha &&
+        dAlpha == other.dAlpha;
+}
+
 MaterialState::MaterialState() :
     cycleType(CycleType::Unknown) {}
 
@@ -115,6 +137,37 @@ std::unique_ptr<DataChunk> generateCycleType(const MaterialState& from, const Ma
     return result;
 }
 
+std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const MaterialState& to) {
+    if (!to.hasCombineMode || 
+        from.hasCombineMode && from.cycle1Combine == to.cycle1Combine && from.cycle2Combine  == to.cycle2Combine) {
+        return NULL;
+    }
+
+    std::unique_ptr<MacroDataChunk> result(new MacroDataChunk("gsDPSetCombineLERP"));
+
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.a]);
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.b]);
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.c]);
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.d]);
+
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.aAlpha]);
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.bAlpha]);
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.cAlpha]);
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.dAlpha]);
+
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.a]);
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.b]);
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.c]);
+    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.d]);
+
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.aAlpha]);
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.bAlpha]);
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.cAlpha]);
+    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.dAlpha]);
+
+    return result;
+}
+
 void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
     output.Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsDPPipeSync")));
 
@@ -126,5 +179,10 @@ void generateMaterial(const MaterialState& from, const MaterialState& to, Struct
     std::unique_ptr<DataChunk> geometryMode = std::move(generateGeometryModes(from, to));
     if (geometryMode) {
         output.Add(std::move(geometryMode));
+    }
+
+    std::unique_ptr<DataChunk> combineMode = std::move(generateCombineMode(from, to));
+    if (combineMode) {
+        output.Add(std::move(combineMode));
     }
 }

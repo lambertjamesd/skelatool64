@@ -39,6 +39,23 @@ public:
     struct TextureCoordinateState vCoord;
 };
 
+
+struct ColorCombineMode {
+    ColorCombineMode();
+
+    bool operator==(const ColorCombineMode& other) const;
+
+    ColorCombineSource a;
+    ColorCombineSource b;
+    ColorCombineSource c;
+    ColorCombineSource d;
+
+    AlphaCombineSource aAlpha;
+    AlphaCombineSource bAlpha;
+    AlphaCombineSource cAlpha;
+    AlphaCombineSource dAlpha;
+};
+
 struct MaterialState {
 public:
     MaterialState();
@@ -51,11 +68,14 @@ public:
     // cycle type
     CycleType cycleType;
     // render mode
+    FlagList otherModeH;
+    FlagList otherModeL;
     // combine mode
+    bool hasCombineMode;
+    ColorCombineMode cycle1Combine;
+    ColorCombineMode cycle2Combine;
     // RDP colors
 };
-
-std::unique_ptr<DataChunk> generateGeometryModes(const MaterialState& from, const MaterialState& to);
 
 void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output);
 

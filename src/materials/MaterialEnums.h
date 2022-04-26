@@ -32,4 +32,51 @@ enum class CycleType {
 
 extern const char* gCycleTypeNames[];
 
+enum class ColorCombineSource {
+    Combined,
+    Texel0,
+    Texel1,
+    PrimitiveColor,
+    ShadeColor,
+    EnvironmentColor,
+    KeyCenter,
+    KeyScale,
+    CombinedAlpha,
+    Texture0Alpha,
+    Texture1Alpha,
+    PrimitiveAlpha,
+    ShadedAlpha,
+    EnvironmentAlpha,
+    LODFraction,
+    PrimitiveLODFraction,
+    Noise,
+    ConvertK4,
+    ConvertK5,
+    _1,
+    _0,
+    Count,
+};
+
+extern const char* gColorCombineSourceNames[];
+
+bool canUseColorCombineSource(int offset, ColorCombineSource source);
+
+enum class AlphaCombineSource {
+    CombinedAlpha,
+    Texture0Alpha,
+    Texture1Alpha,
+    PrimitiveAlpha,
+    ShadedAlpha,
+    EnvironmentAlpha,
+    LODFraction,
+    PrimitiveLODFraction,
+    _1,
+    _0,
+    Count,
+};
+
+extern const char* gAlphaCombineSourceNames[];
+
+bool canUseAlphaCombineSource(int offset, AlphaCombineSource source);
+
 #endif
