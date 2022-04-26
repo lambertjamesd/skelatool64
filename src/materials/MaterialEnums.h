@@ -79,4 +79,98 @@ extern const char* gAlphaCombineSourceNames[];
 
 bool canUseAlphaCombineSource(int offset, AlphaCombineSource source);
 
+
+enum class PipelineMode {
+    Unknown,
+    _1Primitive,
+    _NPrimitive,
+    Count,
+};
+
+enum class PerspectiveMode {
+    Unknown,
+    None,
+    Perspective,
+    Count,
+};
+
+enum class TextureDetail {
+    Unknown,
+    Clamp,
+    Sharpen,
+    Detail,
+    Count,
+};
+
+enum class TextureLOD {
+    Unknown,
+    Tile,
+    LOD,
+    Count,
+};
+
+enum class TextureLUT {
+    Unknown,
+    None,
+    RGBA16,
+    IA16,
+    Count,
+};
+
+enum class TextureFilter {
+    Unknown,
+    Point,
+    Average,
+    Bilerp,
+    Count,
+};
+
+enum class TextureConvert {
+    Unknown,
+    Conv,
+    FiltConv,
+    Filt,
+    Count,
+};
+
+enum class CombineKey {
+    Unknown,
+    None,
+    Key,
+    Count,
+};
+
+enum class ColorDither {
+    Unknown,
+    MagicSQ,
+    Bayer,
+    Noise,
+    Disable,
+    Count,
+};
+
+enum class AlphaDither {
+    Unknown,
+    Pattern,
+    NotPattern,
+    Noise,
+    Disable,
+    Count,
+};
+
+enum class AlphaCompare {
+    Unknown,
+    None,
+    Threshold,
+    Dither,
+    Count,
+};
+
+enum class DepthSource {
+    Unknown,
+    Pixel,
+    Primitive,
+    Count,
+};
+
 #endif

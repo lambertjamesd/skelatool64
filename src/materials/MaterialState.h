@@ -68,8 +68,7 @@ public:
     // cycle type
     CycleType cycleType;
     // render mode
-    FlagList otherModeH;
-    FlagList otherModeL;
+    PipelineMode pipelineMode;
     // combine mode
     bool hasCombineMode;
     ColorCombineMode cycle1Combine;
