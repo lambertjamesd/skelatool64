@@ -5,6 +5,13 @@
 #include "TextureDefinition.h"
 #include "MaterialEnums.h"
 
+struct Coloru8 {
+    u_int8_t r;
+    u_int8_t g;
+    u_int8_t b;
+    u_int8_t a;
+};
+
 struct FlagList {
     FlagList();
     uint64_t flags;
@@ -56,6 +63,26 @@ struct ColorCombineMode {
     AlphaCombineSource dAlpha;
 };
 
+struct RenderModeState {
+public:
+    RenderModeState();
+    bool aaEnable;
+    bool zCompare;
+    bool zUpdate;
+    bool imageRead;
+    bool clearOnCvg;
+    CVG_DST cvgDst;
+    ZMODE zMode;
+    bool cvgXAlpha;
+    bool alphaCvgSel;
+    bool forceBL;
+
+    BlendSource blendSource0;
+    BlendSource blendSource1;
+    AlphaBlendSource alphaSource0;
+    AlphaBlendSource alphaSource1;
+};
+
 struct MaterialState {
 public:
     MaterialState();
@@ -65,15 +92,49 @@ public:
     struct TileState tiles[8];
     // geometry modes
     FlagList geometryModes;
-    // cycle type
-    CycleType cycleType;
-    // render mode
+
+    // G_SETOTHERMODE_H
     PipelineMode pipelineMode;
+    CycleType cycleType;
+    PerspectiveMode perspectiveMode;
+    TextureDetail textureDetail;
+    TextureLOD textureLOD;
+    TextureLUT textureLUT;
+    TextureFilter textureFilter;
+    TextureConvert textureConvert;
+    CombineKey combineKey;
+    ColorDither colorDither;
+    AlphaDither alphaDither;
+    // G_SETOTHERMODE_L
+    AlphaCompare alphaCompare;
+    DepthSource depthSource;
+
     // combine mode
     bool hasCombineMode;
     ColorCombineMode cycle1Combine;
     ColorCombineMode cycle2Combine;
+
+    bool hasRenderMode;
+    RenderModeState cycle1RenderMode;
+    RenderModeState cycle2RenderMode;
+
     // RDP colors
+    bool usePrimitiveColor;
+    Coloru8 primitiveColor;
+    uint8_t primitiveM;
+    uint8_t primitiveL;
+
+    bool useEnvColor;
+    Coloru8 envColor;
+
+    bool useFillColor;
+    Coloru8 fillColor;
+    
+    bool useFogColor;
+    Coloru8 fogColor;
+
+    bool useBlendColor;
+    Coloru8 blendColor;
 };
 
 void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output);

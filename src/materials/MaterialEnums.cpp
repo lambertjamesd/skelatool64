@@ -59,7 +59,7 @@ bool canUseColorCombineSource(int offset, ColorCombineSource source) {
 }
 
 
-extern const char* gAlphaCombineSourceNames[(int)AlphaCombineSource::Count] = {
+const char* gAlphaCombineSourceNames[(int)AlphaCombineSource::Count] = {
     "COMBINED",
     "TEXEL0",
     "TEXEL1",
@@ -81,4 +81,94 @@ bool gCanUseAlphaCombineSources[4][(int)AlphaCombineSource::Count] = {
 
 bool canUseAlphaCombineSource(int offset, ColorCombineSource source) {
     return gCanUseAlphaCombineSources[offset][(int)source];
+}
+
+const char* gPipelineModeNames[(int)PipelineMode::Count] = {
+    "Unknown",
+    "G_PM_1PRIMITIVE",
+    "G_PM_NPRIMITIVE",
+};
+
+const char* gPerspectiveModeNames[(int)PerspectiveMode::Count] = {
+    "Unknown",
+    "G_TP_NONE",
+    "G_TP_PERSP",
+};
+
+const char* gTextureDetailNames[(int)TextureDetail::Count] = {
+    "Unknown",
+    "G_TD_CLAMP",
+    "G_TD_SHARPEN",
+    "G_TD_DETAIL",
+};
+
+const char* gTextureLODNames[] = {
+    "Unknown",
+    "G_TL_TILE",
+    "G_TL_LOD",
+};
+
+const char* gTextureLUTNames[] = {
+    "Unknown",
+    "G_TT_NONE",
+    "G_TT_RGBA16",
+    "G_TT_IA16",
+};
+
+const char* gTextureFilterNames[] = {
+    "Unknown",
+    "G_TF_POINT",
+    "G_TF_AVERAGE",
+    "G_TF_BILERP",
+};
+
+const char* gTextureConvertNames[] = {
+    "Unknown",
+    "G_TC_CONV",
+    "G_TC_FILTCONV",
+    "G_TC_FILT",
+};
+
+const char* gCombineKeyNames[] = {
+    "Unknown",
+    "G_CK_NONE",
+    "G_CK_KEY",
+};
+
+const char* gCotherDitherNames[] = {
+    "Unknown",
+    "G_CD_MAGICSQ",
+    "G_CD_BAYER",
+    "G_CD_NOISE",
+    "G_CD_DISABLE",
+};
+
+const char* gAlphaDitherNames[] = {
+    "Unknown",
+    "G_AD_PATTERN",
+    "G_AD_NOTPATTERN",
+    "G_AD_NOISE",
+    "G_AD_DISABLE",
+};
+
+const char* gAlphaCompareNames[] = {
+    "Unknown",
+    "G_AC_NONE",
+    "G_AC_THRESHOLD",
+    "G_AC_DITHER",
+};
+
+const char* gDepthSourceNames[] = {
+    "Unknown",
+    "G_ZS_PIXEL",
+    "G_ZS_PRIM",
+};
+
+bool gCanUseAlphaBlendSource[2][7] = {
+    {false, false, true, true, true, false, true},
+    {true, true, false, false, false, true, true},
+};
+
+bool canUseAlphaBlendSource(int offset, AlphaBlendSource source) {
+    return gCanUseAlphaBlendSource[offset][(int)source];
 }

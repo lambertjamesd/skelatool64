@@ -79,7 +79,6 @@ extern const char* gAlphaCombineSourceNames[];
 
 bool canUseAlphaCombineSource(int offset, AlphaCombineSource source);
 
-
 enum class PipelineMode {
     Unknown,
     _1Primitive,
@@ -87,12 +86,16 @@ enum class PipelineMode {
     Count,
 };
 
+extern const char* gPipelineModeNames[];
+
 enum class PerspectiveMode {
     Unknown,
     None,
     Perspective,
     Count,
 };
+
+extern const char* gPerspectiveModeNames[];
 
 enum class TextureDetail {
     Unknown,
@@ -102,12 +105,16 @@ enum class TextureDetail {
     Count,
 };
 
+extern const char* gTextureDetailNames[];
+
 enum class TextureLOD {
     Unknown,
     Tile,
     LOD,
     Count,
 };
+
+extern const char* gTextureLODNames[];
 
 enum class TextureLUT {
     Unknown,
@@ -117,6 +124,8 @@ enum class TextureLUT {
     Count,
 };
 
+extern const char* gTextureLUTNames[];
+
 enum class TextureFilter {
     Unknown,
     Point,
@@ -124,6 +133,8 @@ enum class TextureFilter {
     Bilerp,
     Count,
 };
+
+extern const char* gTextureFilterNames[];
 
 enum class TextureConvert {
     Unknown,
@@ -133,12 +144,16 @@ enum class TextureConvert {
     Count,
 };
 
+extern const char* gTextureConvertNames[];
+
 enum class CombineKey {
     Unknown,
     None,
     Key,
     Count,
 };
+
+extern const char* gCombineKeyNames[];
 
 enum class ColorDither {
     Unknown,
@@ -149,6 +164,8 @@ enum class ColorDither {
     Count,
 };
 
+extern const char* gCotherDitherNames[];
+
 enum class AlphaDither {
     Unknown,
     Pattern,
@@ -158,6 +175,8 @@ enum class AlphaDither {
     Count,
 };
 
+extern const char* gAlphaDitherNames[];
+
 enum class AlphaCompare {
     Unknown,
     None,
@@ -166,11 +185,48 @@ enum class AlphaCompare {
     Count,
 };
 
+extern const char* gAlphaCompareNames[];
+
 enum class DepthSource {
     Unknown,
     Pixel,
     Primitive,
     Count,
 };
+
+extern const char* gDepthSourceNames[];
+
+enum class CVG_DST {
+    CVG_DST_CLAMP,
+    CVG_DST_WRAP,
+    CVG_DST_FULL,
+    CVG_DST_SAVE,
+};
+
+enum class ZMODE {
+    ZMODE_OPA,
+    ZMODE_INTER,
+    ZMODE_XLU,
+    ZMODE_DEC,
+};
+
+enum class BlendSource {
+    G_BL_CLR_IN,
+    G_BL_CLR_MEM,
+    G_BL_CLR_BL,
+    G_BL_CLR_FOG,
+};
+
+enum class AlphaBlendSource {
+    G_BL_1MA,
+    G_BL_A_MEM,
+    G_BL_A_IN,
+    G_BL_A_FOG,
+    G_BL_A_SHADE,
+    G_BL_1,
+    G_BL_0,
+};
+
+bool canUseAlphaBlendSource(int offset, AlphaBlendSource source);
 
 #endif

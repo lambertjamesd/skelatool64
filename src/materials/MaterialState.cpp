@@ -123,18 +123,16 @@ std::unique_ptr<DataChunk> generateGeometryModes(const MaterialState& from, cons
     return result;
 }
 
-std::unique_ptr<DataChunk> generateCycleType(const MaterialState& from, const MaterialState& to) {
-    if (from.cycleType == to.cycleType || 
-        to.cycleType != CycleType::Unknown ||
-        to.cycleType != CycleType::Count) {
-        return NULL;
+void generateEnumMacro(int from, int to, const char* macroName, const char** options, StructureDataChunk& output) {
+    if (from == to || to == 0) {
+        return;
     }
 
-    std::unique_ptr<MacroDataChunk> result(new MacroDataChunk("gDPSetCycleType"));
+    std::unique_ptr<MacroDataChunk> result(new MacroDataChunk(macroName));
 
-    result->AddPrimitive(gCycleTypeNames[(int)to.cycleType]);
+    result->AddPrimitive(options[to]);
 
-    return result;
+    output.Add(std::move(result));
 }
 
 std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const MaterialState& to) {
@@ -171,14 +169,23 @@ std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const 
 void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
     output.Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsDPPipeSync")));
 
-    std::unique_ptr<DataChunk> cycleType = std::move(generateCycleType(from, to));
-    if (cycleType) {
-        output.Add(std::move(cycleType));
-    }
+    generateEnumMacro((int)from.pipelineMode, (int)to.pipelineMode, "gsDPPipelineMode", gPipelineModeNames, output);
+    generateEnumMacro((int)from.cycleType, (int)to.cycleType, "gsDPSetCycleType", gCycleTypeNames, output);
+    generateEnumMacro((int)from.perspectiveMode, (int)to.perspectiveMode, "gsDPSetTexturePersp", gPerspectiveModeNames, output);
+    generateEnumMacro((int)from.textureDetail, (int)to.textureDetail, "gsDPSetTextureDetail", gTextureDetailNames, output);
+    generateEnumMacro((int)from.textureLOD, (int)to.textureLOD, "gsDPSetTextureLOD", gTextureLODNames, output);
+    generateEnumMacro((int)from.textureLUT, (int)to.textureLUT, "gsDPSetTextureLUT", gTextureLUTNames, output);
+    generateEnumMacro((int)from.textureFilter, (int)to.textureFilter, "gsDPSetTextureFilter", gTextureFilterNames, output);
+    generateEnumMacro((int)from.textureConvert, (int)to.textureConvert, "gsDPSetTextureConvert", gTextureConvertNames, output);
+    generateEnumMacro((int)from.combineKey, (int)to.combineKey, "gsDPSetCombineKey", gCombineKeyNames, output);
+    generateEnumMacro((int)from.colorDither, (int)to.colorDither, "gsDPSetColorDither", gCotherDitherNames, output);
+    generateEnumMacro((int)from.alphaDither, (int)to.alphaDither, "gsDPSetAlphaDither", gAlphaDitherNames, output);
+    generateEnumMacro((int)from.alphaCompare, (int)to.alphaCompare, "gsDPSetAlphaCompare", gAlphaCompareNames, output);
+    generateEnumMacro((int)from.depthSource, (int)to.depthSource, "gsDPSetDepthSource", gDepthSourceNames, output);
 
-    std::unique_ptr<DataChunk> geometryMode = std::move(generateGeometryModes(from, to));
-    if (geometryMode) {
-        output.Add(std::move(geometryMode));
+    std::unique_ptr<DataChunk> geometryModes = std::move(generateGeometryModes(from, to));
+    if (geometryModes) {
+        output.Add(std::move(geometryModes));
     }
 
     std::unique_ptr<DataChunk> combineMode = std::move(generateCombineMode(from, to));
