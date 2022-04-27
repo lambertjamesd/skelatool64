@@ -2,6 +2,8 @@
 
 #include "MaterialEnums.h"
 
+#include "RenderMode.h"
+
 FlagList::FlagList() : flags(0), knownFlags(0) {}
 
 void FlagList::SetFlag(int mask, bool value) {
@@ -73,6 +75,81 @@ bool ColorCombineMode::operator==(const ColorCombineMode& other) const {
         dAlpha == other.dAlpha;
 }
 
+RenderModeState::RenderModeState() {
+    
+}
+
+RenderModeState::RenderModeState(int data) : data(data) {};
+
+bool RenderModeState::operator==(const RenderModeState& other) const {
+    return data == other.data;
+}
+
+#define DEFINE_RENDER_MODE_ENTRY(name)  std::make_pair(std::string(#name), RenderModeState(name))
+
+std::pair<std::string, RenderModeState> gRenderModes[] = {
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_OPA_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_RA_ZB_OPA_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_XLU_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_OPA_DECAL),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_RA_ZB_OPA_DECAL),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_XLU_DECAL),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_OPA_INTER),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_RA_ZB_OPA_INTER),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_XLU_INTER),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_XLU_LINE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_DEC_LINE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_TEX_EDGE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_TEX_INTER),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_SUB_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_PCL_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_OPA_TERR),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_TEX_TERR),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_ZB_SUB_TERR),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_OPA_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_RA_OPA_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_XLU_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_XLU_LINE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_DEC_LINE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_TEX_EDGE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_SUB_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_PCL_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_OPA_TERR),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_TEX_TERR),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_AA_SUB_TERR),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_OPA_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_XLU_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_OPA_DECAL),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_XLU_DECAL),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_CLD_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_OVL_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ZB_PCL_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_OPA_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_XLU_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_TEX_EDGE),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_CLD_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_PCL_SURF),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_ADD),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_NOOP),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_VISCVG),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_OPA_CI),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_FOG_SHADE_A),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_FOG_PRIM_A),
+    DEFINE_RENDER_MODE_ENTRY(G_RM_PASS),
+};
+
+
+bool findRenderModeByName(const std::string& name, RenderModeState& output) {
+    for (auto pair : gRenderModes) {
+        if (pair.first == name) {
+            output = pair.second;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 MaterialState::MaterialState() :
     cycleType(CycleType::Unknown) {}
 
@@ -137,7 +214,7 @@ void generateEnumMacro(int from, int to, const char* macroName, const char** opt
 
 std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const MaterialState& to) {
     if (!to.hasCombineMode || 
-        from.hasCombineMode && from.cycle1Combine == to.cycle1Combine && from.cycle2Combine  == to.cycle2Combine) {
+        (from.hasCombineMode && from.cycle1Combine == to.cycle1Combine && from.cycle2Combine  == to.cycle2Combine)) {
         return NULL;
     }
 
@@ -162,6 +239,42 @@ std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const 
     result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.bAlpha]);
     result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.cAlpha]);
     result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.dAlpha]);
+
+    return result;
+}
+
+std::unique_ptr<DataChunk> generateRenderMode(const MaterialState& from, const MaterialState& to) {
+    if (!to.hasRenderMode ||
+        (from.hasRenderMode && from.cycle1RenderMode == to.cycle1RenderMode && from.cycle2RenderMode == to.cycle2RenderMode)) {
+        return NULL;
+    }
+
+    std::unique_ptr<MacroDataChunk> result(new MacroDataChunk("gsDPSetRenderMode"));
+
+    std::string firstName;
+    std::string secondName;
+
+    for (auto pair : gRenderModes) {
+        if (pair.second == to.cycle1RenderMode) {
+            firstName = pair.first;
+        }
+
+        if (pair.second == to.cycle2RenderMode) {
+            secondName = pair.first;
+        }
+    }
+
+    if (firstName.length()) {
+        result->AddPrimitive(firstName);
+    } else {
+        // TODO
+    }
+
+    if (secondName.length()) {
+        result->AddPrimitive(secondName + "2");
+    } else {
+        // TODO
+    }
 
     return result;
 }
@@ -191,5 +304,10 @@ void generateMaterial(const MaterialState& from, const MaterialState& to, Struct
     std::unique_ptr<DataChunk> combineMode = std::move(generateCombineMode(from, to));
     if (combineMode) {
         output.Add(std::move(combineMode));
+    }
+
+    std::unique_ptr<DataChunk> renderMode = std::move(generateRenderMode(from, to));
+    if (renderMode) {
+        output.Add(std::move(renderMode));
     }
 }

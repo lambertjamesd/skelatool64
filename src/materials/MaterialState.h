@@ -66,22 +66,14 @@ struct ColorCombineMode {
 struct RenderModeState {
 public:
     RenderModeState();
-    bool aaEnable;
-    bool zCompare;
-    bool zUpdate;
-    bool imageRead;
-    bool clearOnCvg;
-    CVG_DST cvgDst;
-    ZMODE zMode;
-    bool cvgXAlpha;
-    bool alphaCvgSel;
-    bool forceBL;
+    RenderModeState(int data);
 
-    BlendSource blendSource0;
-    BlendSource blendSource1;
-    AlphaBlendSource alphaSource0;
-    AlphaBlendSource alphaSource1;
+    bool operator==(const RenderModeState& other) const;
+    
+    int data;
 };
+
+bool findRenderModeByName(const std::string& name, RenderModeState& output);
 
 struct MaterialState {
 public:
