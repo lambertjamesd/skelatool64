@@ -23,7 +23,8 @@ const bool VertexData::operator==(const VertexData& other) {
         mMatrixIndex == other.mMatrixIndex;
 }
 
-RCPState::RCPState(unsigned int maxVertexCount, unsigned int maxMatrixDepth, bool canPopMultiple) :
+RCPState::RCPState(const MaterialState& materialState, unsigned int maxVertexCount, unsigned int maxMatrixDepth, bool canPopMultiple) :
+    mMaterialState(materialState),
     mMaxVertices(maxVertexCount),
     mMaxMatrixDepth(maxMatrixDepth),
     mCanPopMultiple(canPopMultiple) {
@@ -111,4 +112,8 @@ void RCPState::AssignSlots(VertexData* newVertices, unsigned int* slotIndex, uns
 
 const unsigned int RCPState::GetMaxVertices() {
     return mMaxVertices;
+}
+
+MaterialState& RCPState::GetMaterialState() {
+    return mMaterialState;
 }

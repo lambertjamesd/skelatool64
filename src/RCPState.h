@@ -23,17 +23,18 @@ struct VertexData {
 
 class RCPState {
 public:
-    RCPState(unsigned int maxVertexCount, unsigned int maxMatrixDepth, bool canPopMultiple);
+    RCPState(const MaterialState& materialState, unsigned int maxVertexCount, unsigned int maxMatrixDepth, bool canPopMultiple);
     ErrorCode TraverseToBone(Bone* bone, DisplayList& output);
     void AssignSlots(VertexData* newVertices, unsigned int* slotIndex, unsigned int vertexCount);
     const unsigned int GetMaxVertices();
+    MaterialState& GetMaterialState();
 private:
+    MaterialState mMaterialState;
     unsigned int mMaxVertices;
     unsigned int mMaxMatrixDepth;
     bool mCanPopMultiple;
     VertexData mVertices[MAX_VERTEX_CACHE_SIZE];
     std::vector<Bone*> mBoneMatrixStack;
-    MaterialState mMaterialState;
 };
 
 #endif

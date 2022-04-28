@@ -204,12 +204,17 @@ std::unique_ptr<DataChunk> CullDisplayList::GenerateCommand() {
 }
 
 DisplayList::DisplayList(std::string name):
-    mName(name) {
+    mName(name),
+    mDataChunk(new StructureDataChunk()) {
     
 }
 
 void DisplayList::AddCommand(std::unique_ptr<DisplayListCommand> command) {
-    mDisplayList.push_back(std::move(command));
+    mDataChunk->Add(std::move(command->GenerateCommand()));
+}
+
+StructureDataChunk& DisplayList::GetDataChunk() {
+    return *mDataChunk;
 }
 
 const std::string& DisplayList::GetName() {
@@ -217,20 +222,14 @@ const std::string& DisplayList::GetName() {
 }
 
 std::unique_ptr<FileDefinition> DisplayList::Generate(const std::string& fileSuffix) {
-    std::unique_ptr<StructureDataChunk> data(new StructureDataChunk());
-
-    for (auto command = mDisplayList.begin(); command != mDisplayList.end(); ++command) {
-        data->Add(std::move((*command)->GenerateCommand()));
-    }
-
-    data->Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsSPEndDisplayList")));
+    mDataChunk->Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsSPEndDisplayList")));
 
     std::unique_ptr<FileDefinition> result(new DataFileDefinition(
         std::string("Gfx"), 
         mName, 
         true, 
         fileSuffix, 
-        std::move(data)
+        std::move(mDataChunk)
     ));
 
     result->AddTypeHeader("<ultra64.h>");

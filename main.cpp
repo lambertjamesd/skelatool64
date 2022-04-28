@@ -11,6 +11,41 @@
 
 #include "src/definition_generator/MeshDefinitionGenerator.h"
 #include "src/definition_generator/CollisionGenerator.h"
+#include "src/materials/MaterialState.h"
+
+void materialTest(CFileDefinition& fileDef) {
+    MaterialState fromState;
+    MaterialState toState;
+
+    toState.alphaCompare = AlphaCompare::Dither;
+    toState.hasCombineMode = true;
+    toState.cycle1Combine.d = ColorCombineSource::EnvironmentColor;
+    toState.cycle1Combine.dAlpha = AlphaCombineSource::EnvironmentAlpha;
+    toState.cycle2Combine.d = ColorCombineSource::EnvironmentColor;
+    toState.cycle2Combine.dAlpha = AlphaCombineSource::EnvironmentAlpha;
+
+    toState.hasRenderMode = true;
+
+    toState.geometryModes.SetFlag((int)GeometryMode::G_LIGHTING, true);
+    toState.geometryModes.SetFlag((int)GeometryMode::G_SHADE, true);
+    toState.geometryModes.SetFlag((int)GeometryMode::G_TEXTURE_ENABLE, false);
+
+    std::unique_ptr<StructureDataChunk> dataChunk(new StructureDataChunk());
+
+    generateMaterial(fromState, toState, *dataChunk);
+
+    dataChunk->Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsSPEndDisplayList")));
+
+    fileDef.AddDefinition(std::unique_ptr<FileDefinition>(
+        new DataFileDefinition(
+            "Gfx", 
+            "materialTest", 
+            true, 
+            "_geo", 
+            std::move(dataChunk)
+        )
+    ));
+}
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
@@ -108,6 +143,8 @@ int main(int argc, char *argv[]) {
     CollisionGenerator colliderGenerator(settings);
     colliderGenerator.TraverseScene(scene);
     colliderGenerator.GenerateDefinitions(scene, fileDef);
+
+    materialTest(fileDef);
 
     fileDef.GenerateAll(args.mOutputFile);
     

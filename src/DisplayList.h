@@ -141,12 +141,13 @@ class DisplayList {
 public:
     DisplayList(std::string name);
     void AddCommand(std::unique_ptr<DisplayListCommand> command);
+    StructureDataChunk& GetDataChunk(); 
 
     const std::string& GetName();
     std::unique_ptr<FileDefinition> Generate(const std::string& fileSuffix);
 private:
     std::string mName;
-    std::vector<std::unique_ptr<DisplayListCommand>> mDisplayList;
+    std::unique_ptr<StructureDataChunk> mDataChunk;
 };
 
 #endif

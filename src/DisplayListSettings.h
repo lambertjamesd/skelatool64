@@ -5,6 +5,7 @@
 #include <map>
 #include <assimp/scene.h>
 #include "./materials/Material.h"
+#include "./materials/MaterialState.h"
 
 struct DisplayListSettings {
     DisplayListSettings();
@@ -17,6 +18,7 @@ struct DisplayListSettings {
     bool mCanPopMultipleMatrices;
     unsigned short mTicksPerSecond;
     std::map<std::string, Material> mMaterials;
+    MaterialState mDefaultMaterialState;
     aiQuaternion mRotateModel;
     bool mExportAnimation;
     bool mExportGeometry;

@@ -21,16 +21,11 @@ void MaterialCollector::UseMaterial(const std::string& material, DisplayListSett
     if (prevCount == mMaterialUseCount.end()) {
         mMaterialUseCount[material] = 1;
 
-        for (auto resource = materialDL->second.mUsedResources.begin(); resource != materialDL->second.mUsedResources.end(); ++resource) {
-            mUsedResources.insert(*resource);
-        }
-
-        if (materialDL->second.mTexture0) {
-            mUsedTextures.insert(materialDL->second.mTexture0);
-        }
-
-        if (materialDL->second.mTexture1) {
-            mUsedTextures.insert(materialDL->second.mTexture1);
+        for (int i = 0; i < MAX_TILE_COUNT; ++i) {
+            auto tile = &materialDL->second.mState.tiles[i];
+            if (tile->isOn && tile->texture) {
+                mUsedTextures.insert(tile->texture);
+            }
         }
     } else {
         mMaterialUseCount[material] = prevCount->second + 1;
@@ -52,11 +47,10 @@ void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDe
         fileDefinition.AddDefinition(std::move(image->GenerateDefinition(fileDefinition.GetUniqueName(image->Name()), fileSuffix)));
     }
     
-    Material::WriteResources(resources, mResourceNameMapping, fileDefinition, fileSuffix);
     for (auto useCount = mMaterialUseCount.begin(); useCount != mMaterialUseCount.end(); ++useCount) {
         if (useCount->second > 1 || mSceneCount > 1) {
             DisplayList materialDL(fileDefinition.GetUniqueName(useCount->first));
-            settings.mMaterials.find(useCount->first)->second.WriteToDL(mResourceNameMapping, materialDL);
+            settings.mMaterials.find(useCount->first)->second.Write(settings.mDefaultMaterialState, materialDL.GetDataChunk());
             mMaterialNameMapping[useCount->first] = materialDL.GetName();
             
             auto dl = materialDL.Generate(fileSuffix);
@@ -67,7 +61,7 @@ void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDe
 }
 
 void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& fileDefinition, MaterialCollector* materials, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList, const std::string& modelSuffix) {
-    RCPState rcpState(settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
+    RCPState rcpState(settings.mDefaultMaterialState, settings.mVertexCacheSize, settings.mMaxMatrixDepth, settings.mCanPopMultipleMatrices);
     for (auto chunk = renderChunks.begin(); chunk != renderChunks.end(); ++chunk) {
         if (materials) {
             std::string materialName = scene->mMaterials[chunk->mMesh->mMesh->mMaterialIndex]->GetName().C_Str();
@@ -80,7 +74,7 @@ void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& file
                 auto material = settings.mMaterials.find(materialName);
 
                 if (material != settings.mMaterials.end()) {
-                    material->second.WriteToDL(materials->mResourceNameMapping, displayList);
+                    material->second.Write(rcpState.GetMaterialState(), displayList.GetDataChunk());
                 }
             }
             

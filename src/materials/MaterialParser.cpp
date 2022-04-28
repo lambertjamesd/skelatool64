@@ -52,6 +52,14 @@ int parseInteger(const YAML::Node& node, ParseResult& output, int min, int max) 
     return result;
 }
 
+int parseOptionalInteger(const YAML::Node& node, ParseResult& output, int min, int max, int defaultValue) {
+    if (!node.IsDefined()) {
+        return defaultValue;
+    }
+
+    return parseInteger(node, output, min, max);
+}
+
 std::string parseString(const YAML::Node& node, ParseResult& output) {
     if (!node.IsDefined() || !node.IsScalar()) {
         output.mErrors.push_back(ParseError(formatError("Expected a string", node.Mark())));
@@ -61,162 +69,64 @@ std::string parseString(const YAML::Node& node, ParseResult& output) {
     return node.as<std::string>();
 }
 
-enum class RenderModeIndex {
-    Index1 = 0x1,
-    Index2 = 0x2,
-};
-
-struct RenderModePossibility {
-    const char* mName;
-    unsigned mIndices;
-
-    RenderModePossibility(const char* name): mName(name) {}
-    RenderModePossibility(const char* name, unsigned indices): mName(name), mIndices(indices) {}
-
-    bool operator == (const RenderModePossibility& other) const {
-        return strcmp(mName, other.mName) == 0;
-    }
-};
-
-struct RenderModePossibility gRenderModePossibilities[] = {
-    RenderModePossibility("G_RM_AA_ZB_OPA_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_XLU_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_OPA_DECAL", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_XLU_DECAL", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_OPA_INTER", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_XLU_INTER", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_XLU_LINE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_DEC_LINE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_TEX_EDGE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_TEX_INTER", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_SUB_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_PCL_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_OPA_TERR", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_TEX_TERR", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_ZB_SUB_TERR", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-
-    RenderModePossibility("G_RM_RA_ZB_OPA_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_RA_ZB_OPA_DECAL", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_RA_ZB_OPA_INTER", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-
-    RenderModePossibility("G_RM_AA_OPA_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_XLU_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_XLU_LINE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_DEC_LINE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_TEX_EDGE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_SUB_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_PCL_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_OPA_TERR", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_TEX_TERR", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_AA_SUB_TERR", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-
-    RenderModePossibility("G_RM_RA_OPA_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-
-    RenderModePossibility("G_RM_ZB_OPA_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ZB_XLU_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ZB_OPA_DECAL", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ZB_XLU_DECAL", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ZB_CLD_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ZB_OVL_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ZB_PCL_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-
-    RenderModePossibility("G_RM_OPA_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_XLU_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_CLD_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_TEX_EDGE", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_PCL_SURF", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_ADD", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_NOOP", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_VISCVG", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-    RenderModePossibility("G_RM_OPA_CI", (unsigned)RenderModeIndex::Index1 | (unsigned)RenderModeIndex::Index2),
-
-    RenderModePossibility("G_RM_FOG_SHADE_A", (unsigned)RenderModeIndex::Index1),
-    RenderModePossibility("G_RM_FOG_PRIM_A", (unsigned)RenderModeIndex::Index1),
-    RenderModePossibility("G_RM_PASS", (unsigned)RenderModeIndex::Index1),
-};
-
-void parseRenderMode(const YAML::Node& node, RenderMode& renderMode, ParseResult& output) {
+template <typename T>
+T parseEnumType(const YAML::Node& node, ParseResult& output, const char** names, T defaultValue, int count) {
     if (!node.IsDefined()) {
-        return;
+        return defaultValue;
     }
 
     if (!node.IsScalar()) {
-        output.mErrors.push_back(ParseError(formatError("Render mode should be a string", node.Mark())));
-        return;
-    }
-
-    RenderModePossibility* arrayEnd = &gRenderModePossibilities[sizeof(gRenderModePossibilities)/sizeof(*gRenderModePossibilities)];
-
-    std::string asString = node.as<std::string>();
-    
-    auto namedRenderMode = std::find(
-        &gRenderModePossibilities[0], 
-        arrayEnd, 
-        RenderModePossibility(asString.c_str())
-    );
-
-    if (namedRenderMode == arrayEnd) {
-        output.mErrors.push_back(ParseError(formatError("Invalid render mode", node.Mark())));
-        return;
-    }
-
-    renderMode.mRenderMode1 = arrayEnd->mName;
-    renderMode.mRenderMode2 = arrayEnd->mName;
-}
-
-void parseCycleType(const YAML::Node& node, CycleType& cycleType, ParseResult& output) {
-    if (!node.IsDefined()) {
-        return;
-    }
-
-    if (!node.IsScalar()) {
-        output.mErrors.push_back(ParseError(formatError("CycleType should be G_CYC_1CYCLE, G_CYC_2CYCLE, G_CYC_COPY, or G_CYC_FILL", node.Mark())));
-        return;
+        output.mErrors.push_back(ParseError(formatError("Invalid type for enum", node.Mark())));
+        return defaultValue;
     }
 
     std::string asString = node.as<std::string>();
-    
-    for (unsigned i = 0; i < (unsigned)CycleType::Count; ++i) {
-        if (asString == gCycleTypeNames[i]) {
-            cycleType = (CycleType)i;
-            return;
+
+    for (int i = 0; i < count; ++i) {
+        if (asString == names[i]) {
+            return (T)i;
         }
     }
 
-    output.mErrors.push_back(ParseError(formatError("CycleType should be G_CYC_1CYCLE, G_CYC_2CYCLE, G_CYC_COPY, or G_CYC_FILL", node.Mark())));
-    return;
+    output.mErrors.push_back(ParseError(formatError("Invalid type for enum", node.Mark())));
+    return defaultValue;
 }
 
-void parseMaterialColor(const YAML::Node& node, MaterialColor& color, ParseResult& output) {
-    color.mIsDefined = node.IsDefined();
-    if (!color.mIsDefined) {
-        return;
+bool parseMaterialColor(const YAML::Node& node, Coloru8& color, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return false;
     }
 
     if (!node.IsMap()) {
         output.mErrors.push_back(ParseError(formatError("Color is expected to be map with r,g,b", node.Mark())));
+        return false;
     }
 
     color.r = parseInteger(node["r"], output, 0, 255);
-    color.g = parseInteger(node["r"], output, 0, 255);
-    color.b = parseInteger(node["r"], output, 0, 255);
+    color.g = parseInteger(node["g"], output, 0, 255);
+    color.b = parseInteger(node["b"], output, 0, 255);
+    color.a = parseOptionalInteger(node["a"], output, 0, 255, 255);
+
+    return true;
 }
 
-void parsePrimColor(const YAML::Node& node, PrimitiveColor& color, ParseResult& output) {
-    parseMaterialColor(node, color, output);
+void parsePrimColor(const YAML::Node& node, MaterialState& state, ParseResult& output) {
+    bool result = parseMaterialColor(node, state.primitiveColor, output);
 
-    if (!node.IsDefined() || !node.IsMap()) {
+    if (!result) {
         return;
     }
 
+    state.usePrimitiveColor = true;
+
     YAML::Node m = node["m"];
     if (m.IsDefined()) {
-        color.m = parseInteger(m, output, 0, 255);
+        state.primitiveM = parseInteger(m, output, 0, 255);
     }
     
     YAML::Node l = node["l"];
     if (l.IsDefined()) {
-        color.l = parseInteger(l, output, 0, 255);
+        state.primitiveL = parseInteger(l, output, 0, 255);
     }
 } 
 
@@ -238,27 +148,27 @@ VertexType parseMaterialVertexType(const YAML::Node& node) {
 G_IM_FMT parseTextureFormat(const YAML::Node& node, ParseResult& output) {
     std::string asString = parseString(node, output);
 
-    if (asString == "RGBA") {
+    if (asString == "G_IM_FMT_RGBA") {
         return G_IM_FMT::G_IM_FMT_RGBA;
     }
 
-    if (asString == "YUV") {
+    if (asString == "G_IM_FMT_RGBA") {
         return G_IM_FMT::G_IM_FMT_YUV;
     }
 
-    if (asString == "CI") {
+    if (asString == "G_IM_FMT_CI") {
         return G_IM_FMT::G_IM_FMT_CI;
     }
 
-    if (asString == "I") {
+    if (asString == "G_IM_FMT_I") {
         return G_IM_FMT::G_IM_FMT_I;
     }
 
-    if (asString == "IA") {
+    if (asString == "G_IM_FMT_IA") {
         return G_IM_FMT::G_IM_FMT_IA;
     }
 
-    output.mErrors.push_back(ParseError(formatError("Texture format should be RGBA, YUV, CI, I, or IA", node.Mark())));
+    output.mErrors.push_back(ParseError(formatError("Texture format should be G_IM_FMT_RGBA, G_IM_FMT_YUV, G_IM_FMT_CI, G_IM_FMT_I, or G_IM_FMT_IA", node.Mark())));
 
     return G_IM_FMT::G_IM_FMT_RGBA;
 }
@@ -266,23 +176,23 @@ G_IM_FMT parseTextureFormat(const YAML::Node& node, ParseResult& output) {
 G_IM_SIZ parseTextureSize(const YAML::Node& node, ParseResult& output) {
     std::string asString = parseString(node, output);
 
-    if (asString == "32") {
+    if (asString == "G_IM_SIZ_32b") {
         return G_IM_SIZ::G_IM_SIZ_32b;
     }
 
-    if (asString == "16") {
+    if (asString == "G_IM_SIZ_16b") {
         return G_IM_SIZ::G_IM_SIZ_16b;
     }
 
-    if (asString == "8") {
+    if (asString == "G_IM_SIZ_8b") {
         return G_IM_SIZ::G_IM_SIZ_8b;
     }
 
-    if (asString == "4") {
+    if (asString == "G_IM_SIZ_4b") {
         return G_IM_SIZ::G_IM_SIZ_4b;
     }
 
-    output.mErrors.push_back(ParseError(formatError("Texture size should be 32, 16, 8, or 4", node.Mark())));
+    output.mErrors.push_back(ParseError(formatError("Texture size should be G_IM_SIZ_32b, G_IM_SIZ_16b, G_IM_SIZ_8b, or G_IM_SIZ_4b", node.Mark())));
 
     return G_IM_SIZ::G_IM_SIZ_16b;
 }
@@ -364,37 +274,17 @@ std::shared_ptr<TextureDefinition> parseTexture(const YAML::Node& node, ParseRes
 }
  
 void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output, std::map<std::string, std::shared_ptr<MaterialResource>>& resources) {
-    parseRenderMode(node["RenderMode"], material.mRenderMode, output);
-    parseCycleType(node["CycleType"], material.mCycleType, output);
-    parsePrimColor(node["PrimColor"], material.mPrimColor, output);
-    parseMaterialColor(node["EnvColor"], material.mEnvColor, output);
-    parseMaterialColor(node["FogColor"], material.mFogColor, output);
-    parseMaterialColor(node["BlendColor"], material.mBlendColor, output);
-    material.mVertexType = parseMaterialVertexType(node["VertexType"]);
+    // parseRenderMode(node["RenderMode"], material.mRenderMode, output);
 
-    material.mTexture0 = parseTexture(node["Texture0"], output);
-    material.mTexture1 = parseTexture(node["Texture1"], output);
+    material.mState.cycleType = parseEnumType(node["gDPSetCycleType"], output, gCycleTypeNames, CycleType::Unknown, (int)CycleType::Count);
+    
+    parsePrimColor(node["gDPSetPrimColor"], material.mState, output);
+    material.mState.useEnvColor = parseMaterialColor(node["gDPSetEnvColor"], material.mState.envColor, output);
+    material.mState.useFogColor = parseMaterialColor(node["gDPSetFogColor"], material.mState.fogColor, output);
+    material.mState.useBlendColor = parseMaterialColor(node["gDPSetBlendColor"], material.mState.blendColor, output);
 
-    const YAML::Node& content = node["Content"];
-
-    if (content.IsDefined()) {
-        material.mRawContent = content.as<std::string>();
-    }
-
-    const YAML::Node& usedResources = node["UsedResources"];
-
-    if (usedResources.IsDefined() && usedResources.IsSequence()) {
-        for (unsigned i = 0; i < usedResources.size(); ++i) {
-            std::string resourceName = parseString(usedResources[i], output);
-            auto resource = resources.find(resourceName);
-
-            if (resource == resources.end()) {
-                output.mErrors.push_back(ParseError(formatError("Could not find resource with given name", usedResources[i].Mark())));
-            } else {
-                material.mUsedResources.push_back(resource->second);
-            }
-        }
-    }
+    // material.mTexture0 = parseTexture(node["Texture0"], output);
+    // material.mTexture1 = parseTexture(node["Texture1"], output);
 }
 
 void parseMaterialFile(std::istream& input, ParseResult& output) {

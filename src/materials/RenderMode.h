@@ -1,6 +1,9 @@
 #ifndef __RENDER_MODE_H__
 #define __RENDER_MODE_H__
 
+#include <vector>
+#include <string>
+
 #define	AA_EN		0x8
 #define	Z_CMP		0x10
 #define	Z_UPD		0x20
@@ -10,10 +13,12 @@
 #define	CVG_DST_WRAP	0x100
 #define	CVG_DST_FULL	0x200
 #define	CVG_DST_SAVE	0x300
+#define	CVG_DST_MASK	0x300
 #define	ZMODE_OPA	0
 #define	ZMODE_INTER	0x400
 #define	ZMODE_XLU	0x800
 #define	ZMODE_DEC	0xc00
+#define	ZMODE_MASK	0xc00
 #define	CVG_X_ALPHA	0x1000
 #define	ALPHA_CVG_SEL	0x2000
 #define	FORCE_BL	0x4000
@@ -259,5 +264,9 @@
 #define	G_RM_FOG_SHADE_A	GBL_c1(G_BL_CLR_FOG, G_BL_A_SHADE, G_BL_CLR_IN, G_BL_1MA)
 #define	G_RM_FOG_PRIM_A		GBL_c1(G_BL_CLR_FOG, G_BL_A_FOG, G_BL_CLR_IN, G_BL_1MA)
 #define	G_RM_PASS		GBL_c1(G_BL_CLR_IN, G_BL_0, G_BL_CLR_IN, G_BL_1)
+
+void renderModeExtractFlags(int flags, std::vector<std::string>& output);
+bool renderModeGetBlendModeValue(const std::string& name, int index, int& output);
+const std::string& renderModeGetBlendModeName(int blendMode, int index);
 
 #endif

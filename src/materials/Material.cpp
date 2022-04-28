@@ -4,51 +4,48 @@
 #include "../StringUtils.h"
 #include "../CFileDefinition.h"
 
-MaterialColor::MaterialColor() : mIsDefined(false), r(0), g(0), b(0), a(255) {}
+Material::Material() {}
 
-Material::Material() : 
-    mCycleType(CycleType::Unknown),
-    mCullMode(CullMode::Unknown),
-    mRenderMode(),
-    mVertexType(VertexType::PosUVColor)
-    {
-
-}
-
-void Material::WriteResources(const std::vector<std::shared_ptr<MaterialResource>>& resources, std::map<std::string, std::string>& nameMapping, CFileDefinition& fileDefinition, const std::string& fileSuffix) {
-    for (auto it = resources.begin(); it != resources.end(); ++it) {
-        std::string finalName = fileDefinition.GetUniqueName((*it)->mName);
-        nameMapping[(*it)->mName] = finalName;
-
-        fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new RawFileDefinition(
-            (*it)->mType,
-            finalName,
-            (*it)->mIsArray,
-            fileSuffix,
-            (*it)->mContent
-        )));
-    }
-}
-
-void Material::WriteToDL(const std::map<std::string, std::string>& nameMapping, DisplayList& output) {
-    std::string result = mRawContent;
-
-    for (auto it = mUsedResources.begin(); it != mUsedResources.end(); ++it) {
-        auto replacement = nameMapping.find((*it)->mName);
-        result = FindAndReplace(result, (*it)->mName, replacement->second, true);
-    }
-
-    output.AddCommand(std::unique_ptr<DisplayListCommand>(new RawContentCommand(Trim(Indent(result, "    ")))));
+void Material::Write(const MaterialState& from, StructureDataChunk& output) {
+    generateMaterial(from, mState, output);
 }
 
 int Material::TextureWidth(Material* material) {
-    return material && material->mTexture0 ? material->mTexture0->Width() : 0;
+    if (!material) {
+        return 0;
+    }
+
+    for (int i = 0; i < MAX_TILE_COUNT; ++i) {
+        if (material->mState.tiles[i].isOn && material->mState.tiles[i].texture) {
+            return material->mState.tiles[i].texture->Width();
+        }
+    }
+
+    return 0;
 }
 
 int Material::TextureHeight(Material* material) {
-    return material && material->mTexture0 ? material->mTexture0->Height() : 0;
+    if (!material) {
+        return 0;
+    }
+
+    for (int i = 0; i < MAX_TILE_COUNT; ++i) {
+        if (material->mState.tiles[i].isOn && material->mState.tiles[i].texture) {
+            return material->mState.tiles[i].texture->Height();
+        }
+    }
+
+    return 0;
 }
 
 VertexType Material::GetVertexType(Material* material) {
-    return material ? material->mVertexType : VertexType::PosUVNormal;
+    if (!material) {
+        return VertexType::PosUVNormal;
+    }
+
+    if (material->mState.geometryModes.knownFlags & material->mState.geometryModes.flags & (int)GeometryMode::G_LIGHTING) {
+        return VertexType::PosUVNormal;
+    }
+
+    return VertexType::PosUVColor;
 }

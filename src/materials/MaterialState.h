@@ -6,6 +6,10 @@
 #include "MaterialEnums.h"
 
 struct Coloru8 {
+    Coloru8();
+
+    bool operator==(const Coloru8& other) const;
+
     u_int8_t r;
     u_int8_t g;
     u_int8_t b;
@@ -75,13 +79,15 @@ public:
 
 bool findRenderModeByName(const std::string& name, RenderModeState& output);
 
+#define MAX_TILE_COUNT  8
+
 struct MaterialState {
 public:
     MaterialState();
     // state to keep track of
     // tiles
     // RDP tile cache
-    struct TileState tiles[8];
+    struct TileState tiles[MAX_TILE_COUNT];
     // geometry modes
     FlagList geometryModes;
 

@@ -4,6 +4,12 @@
 
 #include "RenderMode.h"
 
+Coloru8::Coloru8() : r(0), g(0), b(0), a(255) {}
+
+bool Coloru8::operator==(const Coloru8& other) const {
+    return r == other.r && g == other.g && b == other.b && a == other.a;
+}
+
 FlagList::FlagList() : flags(0), knownFlags(0) {}
 
 void FlagList::SetFlag(int mask, bool value) {
@@ -75,7 +81,7 @@ bool ColorCombineMode::operator==(const ColorCombineMode& other) const {
         dAlpha == other.dAlpha;
 }
 
-RenderModeState::RenderModeState() {
+RenderModeState::RenderModeState() : data(G_RM_OPA_SURF) {
     
 }
 
@@ -151,7 +157,29 @@ bool findRenderModeByName(const std::string& name, RenderModeState& output) {
 }
 
 MaterialState::MaterialState() :
-    cycleType(CycleType::Unknown) {}
+    pipelineMode(PipelineMode::Unknown),
+    cycleType(CycleType::Unknown),
+    perspectiveMode(PerspectiveMode::Unknown),
+    textureDetail(TextureDetail::Unknown),
+    textureLOD(TextureLOD::Unknown),
+    textureLUT(TextureLUT::Unknown),
+    textureFilter(TextureFilter::Unknown),
+    textureConvert(TextureConvert::Unknown),
+    combineKey(CombineKey::Unknown),
+    colorDither(ColorDither::Unknown),
+    alphaDither(AlphaDither::Unknown),
+    alphaCompare(AlphaCompare::Unknown),
+    depthSource(DepthSource::Unknown),
+    hasCombineMode(false),
+    hasRenderMode(false),
+    usePrimitiveColor(false),
+    primitiveM(255),
+    primitiveL(255),
+    useEnvColor(false),
+    useFillColor(false),
+    useFogColor(false),
+    useBlendColor(false)
+     {}
 
 void appendToFlags(std::ostringstream& flags, const std::string& value) {
     if (flags.tellp() != 0) {
@@ -243,6 +271,29 @@ std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const 
     return result;
 }
 
+std::string generateSingleRenderMode(int renderMode, int cycleNumber) {
+    std::ostringstream result;
+
+    std::vector<std::string> flags;
+    renderModeExtractFlags(renderMode, flags);
+
+    for (auto& flag : flags) {
+        if (result.tellp()) {
+            result << " | ";
+        }
+        result << flag;
+    }
+
+    result << "GBL_c" << cycleNumber << "(";
+
+    result << renderModeGetBlendModeName(renderMode, 0) << ", ";
+    result << renderModeGetBlendModeName(renderMode, 1) << ", ";
+    result << renderModeGetBlendModeName(renderMode, 2) << ", ";
+    result << renderModeGetBlendModeName(renderMode, 3) << ")";
+
+    return result.str();
+}
+
 std::unique_ptr<DataChunk> generateRenderMode(const MaterialState& from, const MaterialState& to) {
     if (!to.hasRenderMode ||
         (from.hasRenderMode && from.cycle1RenderMode == to.cycle1RenderMode && from.cycle2RenderMode == to.cycle2RenderMode)) {
@@ -267,16 +318,45 @@ std::unique_ptr<DataChunk> generateRenderMode(const MaterialState& from, const M
     if (firstName.length()) {
         result->AddPrimitive(firstName);
     } else {
-        // TODO
+        result->AddPrimitive(generateSingleRenderMode(to.cycle1RenderMode.data, 1));
     }
 
     if (secondName.length()) {
         result->AddPrimitive(secondName + "2");
     } else {
-        // TODO
+        result->AddPrimitive(generateSingleRenderMode(to.cycle1RenderMode.data, 2));
     }
 
     return result;
+}
+
+void generatePrimitiveColor(const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
+    if (!to.usePrimitiveColor ||
+        (from.usePrimitiveColor && from.primitiveColor == to.primitiveColor && from.primitiveL == to.primitiveL && from.primitiveM == to.primitiveM)) {
+        return;   
+    }
+
+    std::unique_ptr<MacroDataChunk> result(new MacroDataChunk("gsDPSetPrimColor"));
+
+    result->AddPrimitive(to.primitiveM);
+    result->AddPrimitive(to.primitiveL);
+    result->AddPrimitive(to.primitiveColor.r);
+    result->AddPrimitive(to.primitiveColor.g);
+    result->AddPrimitive(to.primitiveColor.b);
+    result->AddPrimitive(to.primitiveColor.a);
+
+    output.Add(std::move(result));
+}
+
+void generateColor(const Coloru8& to, const char* macroName, StructureDataChunk& output) {
+    std::unique_ptr<MacroDataChunk> result(new MacroDataChunk(macroName));
+
+    result->AddPrimitive(to.r);
+    result->AddPrimitive(to.g);
+    result->AddPrimitive(to.b);
+    result->AddPrimitive(to.a);
+
+    output.Add(std::move(result));
 }
 
 void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
@@ -310,4 +390,20 @@ void generateMaterial(const MaterialState& from, const MaterialState& to, Struct
     if (renderMode) {
         output.Add(std::move(renderMode));
     }
+
+    generatePrimitiveColor(from, to, output);
+
+    if (to.useEnvColor && (!from.useEnvColor || !(to.envColor == from.envColor))) {
+        generateColor(to.envColor, "gsDPSetEnvColor", output);
+    }
+
+    if (to.useFogColor && (!from.useFogColor || !(to.fogColor == from.fogColor))) {
+        generateColor(to.fogColor, "gsDPSetFogColor", output);
+    }
+
+    if (to.useBlendColor && (!from.useBlendColor || !(to.blendColor == from.blendColor))) {
+        generateColor(to.blendColor, "gsDPSetBlendColor", output);
+    }
+
+    // TODO fill color
 }

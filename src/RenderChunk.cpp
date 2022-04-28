@@ -10,27 +10,15 @@ RenderChunk::RenderChunk(std::pair<Bone*, Bone*> bonePair, ExtendedMesh* mesh, M
 }
 
 VertexType RenderChunk::GetVertexType() {
-    if (mMaterial) {
-        return mMaterial->mVertexType;
-    }
-
-    return VertexType::PosUVNormal;
+    return Material::GetVertexType(mMaterial);
 }
 
 int RenderChunk::GetTextureWidth() {
-    if (mMaterial) {
-        return Material::TextureWidth(mMaterial);
-    }
-
-    return 0;
+    return Material::TextureWidth(mMaterial);
 }
 
 int RenderChunk::GetTextureHeight() {
-    if (mMaterial) {
-        return Material::TextureHeight(mMaterial);
-    }
-
-    return 0;
+    return Material::TextureHeight(mMaterial);
 }
 
 const std::vector<aiFace*>& RenderChunk::GetFaces() {
