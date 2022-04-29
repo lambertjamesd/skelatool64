@@ -43,13 +43,27 @@ public:
     TileState();
     bool isOn;
     std::shared_ptr<TextureDefinition> texture;
+    G_IM_FMT format;
+    G_IM_SIZ size;
     // 1 line is a 64 bit offset in TMEM
     int line;
+    int tmem;
     int pallete;
     struct TextureCoordinateState uCoord;
     struct TextureCoordinateState vCoord;
 };
 
+struct TextureState {
+public:
+    TextureState();
+    uint16_t sc;
+    uint16_t tc;
+
+    int level;
+    int tile;
+
+    bool isOn;
+};
 
 struct ColorCombineMode {
     ColorCombineMode();
@@ -81,6 +95,8 @@ public:
     // tiles
     // RDP tile cache
     struct TileState tiles[MAX_TILE_COUNT];
+    struct TextureState textureState;
+
     // geometry modes
     FlagList geometryModes;
 

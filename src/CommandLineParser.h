@@ -10,6 +10,7 @@
 struct CommandLineArguments {
     std::string mInputFile;
     std::string mOutputFile;
+    std::string mMaterialOutput;
     std::string mPrefix;
     std::vector<std::string> mMaterialFiles;
     float mGraphicsScale;

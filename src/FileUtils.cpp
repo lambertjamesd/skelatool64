@@ -124,8 +124,8 @@ std::string Join(const std::string& a, const std::string& b) {
 
     std::ostringstream result;
 
-    for (int i = normalizedParts.size() -1; i >= 0; --i) {
-        if (i != 0) {
+    for (int i = normalizedParts.size() - 1; i >= 0; --i) {
+        if (i != (int)normalizedParts.size() - 1) {
             result << "/";
         }
 

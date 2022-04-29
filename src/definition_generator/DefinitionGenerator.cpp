@@ -4,6 +4,10 @@ DefinitionGenerator::DefinitionGenerator() {}
 DefinitionGenerator::~DefinitionGenerator() {}
 
 void DefinitionGenerator::TraverseScene(const aiScene* scene) {
+    if (!scene) {
+        return;
+    }
+
     BeforeTraversal(scene);
     TraverseNodes(scene->mRootNode);
 }

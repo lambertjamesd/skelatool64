@@ -1,11 +1,7 @@
 
-Materials:
-  Material Name A:
-    Texture0: 
-      Filename: texture_filename.png
-      Format: IA
-      Size: 4
-
+materials:
+  Test Material A:
+    gDPSetTile: ./image.png
     gDPSetRenderMode: G_RM_AA_ZB_OPA_SURF
     gDPSetCombineMode:
       color: [0, 0, 0, 1]

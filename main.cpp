@@ -8,53 +8,22 @@
 #include "src/CommandLineParser.h"
 #include "src/materials/MaterialParser.h"
 #include "src/SceneLoader.h"
+#include "src/FileUtils.h"
 
 #include "src/definition_generator/MeshDefinitionGenerator.h"
 #include "src/definition_generator/CollisionGenerator.h"
+#include "src/definition_generator/MaterialGenerator.h"
 #include "src/materials/MaterialState.h"
-
-void materialTest(CFileDefinition& fileDef) {
-    MaterialState fromState;
-    MaterialState toState;
-
-    toState.alphaCompare = AlphaCompare::Dither;
-    toState.hasCombineMode = true;
-    toState.cycle1Combine.color[3] = ColorCombineSource::EnvironmentColor;
-    toState.cycle1Combine.alpha[3] = AlphaCombineSource::EnvironmentAlpha;
-    toState.cycle2Combine.color[3] = ColorCombineSource::EnvironmentColor;
-    toState.cycle2Combine.alpha[3] = AlphaCombineSource::EnvironmentAlpha;
-
-    toState.hasRenderMode = true;
-
-    toState.geometryModes.SetFlag((int)GeometryMode::G_LIGHTING, true);
-    toState.geometryModes.SetFlag((int)GeometryMode::G_SHADE, true);
-    toState.geometryModes.SetFlag((int)GeometryMode::G_TEXTURE_ENABLE, false);
-
-    std::unique_ptr<StructureDataChunk> dataChunk(new StructureDataChunk());
-
-    generateMaterial(fromState, toState, *dataChunk);
-
-    dataChunk->Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsSPEndDisplayList")));
-
-    fileDef.AddDefinition(std::unique_ptr<FileDefinition>(
-        new DataFileDefinition(
-            "Gfx", 
-            "materialTest", 
-            true, 
-            "_geo", 
-            std::move(dataChunk)
-        )
-    ));
-}
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
 
-    struct ParseResult parseResult;
+    struct ParseResult parseResult(DirectoryName(filename));
     parseMaterialFile(file, parseResult);
     output.mMaterials.insert(parseResult.mMaterialFile.mMaterials.begin(), parseResult.mMaterialFile.mMaterials.end());
 
     for (auto err : parseResult.mErrors) {
+        std::cerr << "Error parsing file " << filename << std::endl;
         std::cerr << err.mMessage << std::endl;
     }
 
@@ -125,28 +94,45 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    std::cout << "Generating from mesh "  << args.mInputFile << std::endl;
-    const aiScene* scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
+    const aiScene* scene = NULL;
 
-    if (!scene) {
-        return 1;
+    if (args.mInputFile.length()) {
+        std::cout << "Generating from mesh "  << args.mInputFile << std::endl;
+        scene = loadScene(args.mInputFile, args.mIsLevel, settings.mVertexCacheSize);
+
+        if (!scene) {
+            return 1;
+        }
     }
-    std::cout << "Saving to "  << args.mOutputFile << std::endl;
-    // generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
 
-    MeshDefinitionGenerator meshGenerator(settings);
+    if (scene && args.mOutputFile.length()) {    
+        std::cout << "Saving to "  << args.mOutputFile << std::endl;
+        // generateMeshFromSceneToFile(scene, args.mOutputFile, settings);
 
-    meshGenerator.TraverseScene(scene);
-    CFileDefinition fileDef(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
-    meshGenerator.GenerateDefinitions(scene, fileDef);
+        MeshDefinitionGenerator meshGenerator(settings);
 
-    CollisionGenerator colliderGenerator(settings);
-    colliderGenerator.TraverseScene(scene);
-    colliderGenerator.GenerateDefinitions(scene, fileDef);
+        meshGenerator.TraverseScene(scene);
+        CFileDefinition fileDef(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
+        meshGenerator.GenerateDefinitions(scene, fileDef);
 
-    materialTest(fileDef);
+        CollisionGenerator colliderGenerator(settings);
+        colliderGenerator.TraverseScene(scene);
+        colliderGenerator.GenerateDefinitions(scene, fileDef);
 
-    fileDef.GenerateAll(args.mOutputFile);
+        fileDef.GenerateAll(args.mOutputFile);
+    }
+
+    if (args.mMaterialOutput.length()) {
+        std::cout << "Saving materials to "  << args.mMaterialOutput << std::endl;
+
+        MaterialGenerator materialGenerator(settings);
+
+        materialGenerator.TraverseScene(scene);
+        CFileDefinition fileDef(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
+        materialGenerator.GenerateDefinitions(scene, fileDef);
+
+        fileDef.GenerateAll(args.mMaterialOutput);
+    }
     
     return 0;
 }

@@ -49,6 +49,9 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
                 case 'm':
                     output.mMaterialFiles.push_back(curr);
                     break;
+                case 'M':
+                    output.mMaterialOutput = curr;
+                    break;
                 case 'r':
                     parseEulerAngles(curr, output.mEulerAngles);
                     break;
@@ -75,6 +78,10 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
             strcmp(curr, "-m") == 0 || 
             strcmp(curr, "--materials") == 0) {
             lastParameter = 'm';
+        } else if (
+            strcmp(curr, "-M") == 0 || 
+            strcmp(curr, "--material-output") == 0) {
+            lastParameter = 'M';
         } else if (
             strcmp(curr, "-r") == 0 || 
             strcmp(curr, "--rotate") == 0) {
@@ -108,7 +115,7 @@ bool parseCommandLineArguments(int argc, char *argv[], struct CommandLineArgumen
         }
     }
 
-    if (output.mInputFile == "" || (output.mOutputFile == "" && !output.mIsLevelDef)) {
+    if ((output.mInputFile == "" || (output.mOutputFile == "" && !output.mIsLevelDef)) && output.mMaterialOutput == "") {
         std::cerr << "Input and output file are both required" << std::endl;
         hasError = true;
     }

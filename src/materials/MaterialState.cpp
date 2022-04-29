@@ -59,6 +59,13 @@ TileState::TileState():
 
 }
 
+TextureState::TextureState():
+    sc(0xFFFF),
+    tc(0xFFFF),
+    level(0),
+    tile(0),
+    isOn(false) {}
+
 ColorCombineMode::ColorCombineMode() : 
     color{ColorCombineSource::_0, ColorCombineSource::_0, ColorCombineSource::_0, ColorCombineSource::_0},
     alpha{AlphaCombineSource::_0, AlphaCombineSource::_0, AlphaCombineSource::_0, AlphaCombineSource::_0} {}
@@ -328,12 +335,12 @@ void generatePrimitiveColor(const MaterialState& from, const MaterialState& to, 
 
     std::unique_ptr<MacroDataChunk> result(new MacroDataChunk("gsDPSetPrimColor"));
 
-    result->AddPrimitive(to.primitiveM);
-    result->AddPrimitive(to.primitiveL);
-    result->AddPrimitive(to.primitiveColor.r);
-    result->AddPrimitive(to.primitiveColor.g);
-    result->AddPrimitive(to.primitiveColor.b);
-    result->AddPrimitive(to.primitiveColor.a);
+    result->AddPrimitive((int)to.primitiveM);
+    result->AddPrimitive((int)to.primitiveL);
+    result->AddPrimitive((int)to.primitiveColor.r);
+    result->AddPrimitive((int)to.primitiveColor.g);
+    result->AddPrimitive((int)to.primitiveColor.b);
+    result->AddPrimitive((int)to.primitiveColor.a);
 
     output.Add(std::move(result));
 }
@@ -341,10 +348,10 @@ void generatePrimitiveColor(const MaterialState& from, const MaterialState& to, 
 void generateColor(const Coloru8& to, const char* macroName, StructureDataChunk& output) {
     std::unique_ptr<MacroDataChunk> result(new MacroDataChunk(macroName));
 
-    result->AddPrimitive(to.r);
-    result->AddPrimitive(to.g);
-    result->AddPrimitive(to.b);
-    result->AddPrimitive(to.a);
+    result->AddPrimitive((int)to.r);
+    result->AddPrimitive((int)to.g);
+    result->AddPrimitive((int)to.b);
+    result->AddPrimitive((int)to.a);
 
     output.Add(std::move(result));
 }

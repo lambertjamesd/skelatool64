@@ -34,3 +34,14 @@ bool G_IM_SUPPORTED[5][4] = {
 bool isImageFormatSupported(G_IM_FMT format, G_IM_SIZ size) {
     return G_IM_SUPPORTED[(int)format][(int)size];
 }
+
+const int G_IM_SIZ_SIZES[] = {
+    4,
+    8,
+    16,
+    32,
+};
+
+int bitSizeforSiz(G_IM_SIZ input) {
+    return G_IM_SIZ_SIZES[(int)input];
+}

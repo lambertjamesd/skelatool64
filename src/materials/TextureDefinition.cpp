@@ -31,7 +31,7 @@ void DataChunkStream::WriteBits(int from, int bitCount) {
         FlushBuffer();
         WriteBits(from, secondChunkSize);
     } else {
-        int mask = ~0 << bitCount;
+        uint64_t mask = ~(~(uint64_t)0 << bitCount);
         mCurrentBuffer |= (from & mask) << (64 - mCurrentBufferPos - bitCount);
         mCurrentBufferPos += bitCount;
     }
@@ -301,11 +301,28 @@ void TextureDefinition::DetermineIdealFormat(const std::string& filename, G_IM_F
 }
 
 std::unique_ptr<FileDefinition> TextureDefinition::GenerateDefinition(const std::string& name, const std::string& location) const {
-    std::unique_ptr<StructureDataChunk> dataChunk;
+    std::unique_ptr<StructureDataChunk> dataChunk(new StructureDataChunk());
 
-    for (auto data : mData) {
+    int line;
+    int index = 0;
+
+    GetLine(line);
+
+    for (int y = 0; y < mHeight; ++y) {
         std::ostringstream stream;
-        stream << "0x" << std::hex << std::setw(16) << std::setfill('0') << data;
+
+        for (int lineIndex = 0; lineIndex < line; ++lineIndex) {
+            uint64_t data = mData[index];
+
+            if (lineIndex != 0) {
+                stream << ", ";
+            }
+
+            stream << "0x" << std::hex << std::setw(16) << std::setfill('0') << data;
+
+            ++index;
+        }
+
         dataChunk->AddPrimitive(stream.str());
     }
 
@@ -318,6 +335,25 @@ int TextureDefinition::Width() const {
 
 int TextureDefinition::Height() const {
     return mHeight;
+}
+
+G_IM_FMT TextureDefinition::Format() const {
+    return mFmt;
+}
+
+G_IM_SIZ TextureDefinition::Size() const {
+    return mSiz;
+}
+
+bool TextureDefinition::GetLine(int& line) const {
+    int bitLine = bitSizeforSiz(mSiz) * mWidth;
+    line = bitLine / 64;
+
+    if (bitLine % 64 == 0) {
+        return true;
+    }
+
+    return false;
 }
 
 const std::string& TextureDefinition::Name() const {

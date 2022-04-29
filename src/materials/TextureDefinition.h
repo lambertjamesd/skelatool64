@@ -61,6 +61,11 @@ public:
     int Width() const;
     int Height() const;
 
+    G_IM_FMT Format() const;
+    G_IM_SIZ Size() const;
+
+    bool GetLine(int& line) const;
+
     const std::string& Name() const;
 private:
     std::string mName;

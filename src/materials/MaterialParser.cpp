@@ -20,6 +20,8 @@ ParseError::ParseError(const std::string& message) :
     
 }
 
+ParseResult::ParseResult(const std::string& insideFolder) : mInsideFolder(insideFolder) {}
+
 std::string formatError(const std::string& message, const YAML::Mark& mark) {
     std::stringstream output;
     output << "error at line " << mark.line + 1 << ", column "
@@ -204,7 +206,7 @@ G_IM_SIZ gDefaultImageSize[] = {
     G_IM_SIZ::G_IM_SIZ_16b,
 };
 
-std::shared_ptr<TextureDefinition> parseTexture(const YAML::Node& node, ParseResult& output) {
+std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node, ParseResult& output) {
     if (!node.IsDefined()) {
         return NULL;
     }
@@ -218,20 +220,25 @@ std::shared_ptr<TextureDefinition> parseTexture(const YAML::Node& node, ParseRes
 
     if (node.IsScalar()) {
         filename = parseString(node, output);
-    } else {
-        filename = parseString(node["Filename"], output);
+    } else if (node.IsMap()) {
+        filename = parseString(node["filename"], output);
 
-        auto yamlFormat = node["Format"];
+        auto yamlFormat = node["fmt"];
         if (yamlFormat.IsDefined()) {
             requestedFormat = parseTextureFormat(yamlFormat, output);
             hasFormat = true;
         }
 
-        auto yamlSize = node["Size"];
+        auto yamlSize = node["siz"];
         if (yamlSize.IsDefined()) {
             requestedSize = parseTextureSize(yamlSize, output);
         }
+    } else {
+        output.mErrors.push_back(ParseError(formatError(std::string("Tile should be a file name or object") + filename, node.Mark())));
+        return NULL;
     }
+
+    filename = Join(output.mInsideFolder, filename);
 
     if (!FileExists(filename)) {
         output.mErrors.push_back(ParseError(formatError(std::string("Could not open file ") + filename, node.Mark())));
@@ -444,20 +451,141 @@ void parseCombineMode(const YAML::Node& node, MaterialState& state, ParseResult&
 
     output.mErrors.push_back(ParseError(formatError("Combine mode should be a map with a color and alpha", node.Mark())));
 }
+
+void parseGeometryModeSequence(const YAML::Node& node, FlagList& result, bool flagValue, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return;
+    }
+
+    if (!node.IsSequence()) {
+        output.mErrors.push_back(ParseError(formatError("Should be a string array", node.Mark())));
+        return;
+    }
+
+    for (auto it = node.begin(); it != node.end(); ++it) {
+        if (!it->second.IsScalar()) {
+            output.mErrors.push_back(ParseError(formatError("Expected a string", it->second.Mark())));
+            continue;
+        }
+
+        int mask = 1 << parseEnumType(it->second, output, gGeometryModeNames, 0, GEOMETRY_MODE_COUNT);
+
+        result.SetFlag(mask, flagValue);
+    }
+}
+
+FlagList parseGeometryMode(const YAML::Node& node, ParseResult& output) {
+    FlagList result;
+
+    if (!node.IsDefined()) {
+        return result;
+    }
+
+    parseGeometryModeSequence(node["clear"], result, false, output);
+    parseGeometryModeSequence(node["set"], result, true, output);
+
+    return result;
+}
+
+void parseTexture(const YAML::Node& node, TextureState& state, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return;
+    }
+
+    if (!node.IsMap()) {
+        output.mErrors.push_back(ParseError(formatError("gSPTexture should be a map", node.Mark())));
+    }
+
+    state.sc = parseOptionalInteger(node["sc"], output, 0, 0xFFFF, 0xFFFF);
+    state.tc = parseOptionalInteger(node["tc"], output, 0, 0xFFFF, 0xFFFF);
+    state.level = parseOptionalInteger(node["level"], output, 0, 7, 0);
+    state.tile = parseOptionalInteger(node["tile"], output, 0, 7, 0);
+
+    state.isOn = true;
+}
+
+void parseSingleTile(const YAML::Node& node, TileState& state, ParseResult& output) {
+    state.texture = parseTextureDefinition(node, output);
+
+    if (state.texture) {
+        state.format = state.texture->Format();
+        state.size = state.texture->Size();
+        if (!state.texture->GetLine(state.line)) {
+            output.mErrors.push_back(ParseError(formatError("Texture line width should be a multiple of 64 bits", node.Mark())));
+        }
+    }
+
+    if (node.IsMap()) {
+        auto yamlFormat = node["fmt"];
+        if (!state.texture && yamlFormat.IsDefined()) {
+            state.format = parseTextureFormat(yamlFormat, output);
+        }
+
+        auto yamlSize = node["siz"];
+        if (!state.texture && yamlSize.IsDefined()) {
+            state.size = parseTextureSize(yamlSize, output);
+        }
+
+        state.tmem = parseOptionalInteger(node["tmem"], output, 0, 511, 0);
+        state.pallete = parseOptionalInteger(node["pallete"], output, 0, 15, 0);
+    }
+}
+
+void parseTiles(const YAML::Node& node, MaterialState& state, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return;
+    }
+
+    if (node.IsMap() || node.IsScalar()) {
+        parseSingleTile(node, state.tiles[0], output);
+        return;
+    }
+
+    if (node.IsSequence()) {
+        if (node.size() > 8) {
+            output.mErrors.push_back(ParseError(formatError("Only up to 8 tiles are supported", node.Mark())));
+        }
+
+        for (std::size_t i = 0; i < node.size() && i < 8; ++i) {
+            const YAML::Node& element = node[i];
+
+            if (!element.IsNull()) {
+                parseSingleTile(element, state.tiles[i], output);
+            }
+        }
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Expected a tile or array of tiles", node.Mark())));
+}
  
 void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output) {
     parseRenderMode(node["gDPSetRenderMode"], material.mState, output);
     parseCombineMode(node["gDPSetCombineMode"], material.mState, output);
 
+    material.mState.geometryModes = parseGeometryMode(node["gSPGeometryMode"], output);
+
+    material.mState.pipelineMode = parseEnumType(node["gDPPipelineMode"], output, gPipelineModeNames, PipelineMode::Unknown, (int)PipelineMode::Count);
     material.mState.cycleType = parseEnumType(node["gDPSetCycleType"], output, gCycleTypeNames, CycleType::Unknown, (int)CycleType::Count);
+    material.mState.perspectiveMode = parseEnumType(node["gDPSetTexturePersp"], output, gPerspectiveModeNames, PerspectiveMode::Unknown, (int)PerspectiveMode::Count);
+    material.mState.textureDetail = parseEnumType(node["gDPSetTextureDetail"], output, gTextureDetailNames, TextureDetail::Unknown, (int)TextureDetail::Count);
+    material.mState.textureLOD = parseEnumType(node["gDPSetTextureLOD"], output, gTextureLODNames, TextureLOD::Unknown, (int)TextureLOD::Count);
+    material.mState.textureLUT = parseEnumType(node["gDPSetTextureLUT"], output, gTextureLUTNames, TextureLUT::Unknown, (int)TextureLUT::Count);
+    material.mState.textureFilter = parseEnumType(node["gDPSetTextureFilter"], output, gTextureFilterNames, TextureFilter::Unknown, (int)TextureFilter::Count);
+    material.mState.textureConvert = parseEnumType(node["gDPSetTextureConvert"], output, gTextureConvertNames, TextureConvert::Unknown, (int)TextureConvert::Count);
+    material.mState.combineKey = parseEnumType(node["gDPSetCombineKey"], output, gCombineKeyNames, CombineKey::Unknown, (int)CombineKey::Count);
+    material.mState.colorDither = parseEnumType(node["gDPSetColorDither"], output, gCotherDitherNames, ColorDither::Unknown, (int)ColorDither::Count);
+    material.mState.alphaDither = parseEnumType(node["gDPSetAlphaDither"], output, gAlphaDitherNames, AlphaDither::Unknown, (int)AlphaDither::Count);
+    material.mState.alphaCompare = parseEnumType(node["gDPSetAlphaCompare"], output, gAlphaCompareNames, AlphaCompare::Unknown, (int)AlphaCompare::Count);
+    material.mState.depthSource = parseEnumType(node["gDPSetDepthSource"], output, gDepthSourceNames, DepthSource::Unknown, (int)DepthSource::Count);
     
     parsePrimColor(node["gDPSetPrimColor"], material.mState, output);
     material.mState.useEnvColor = parseMaterialColor(node["gDPSetEnvColor"], material.mState.envColor, output);
     material.mState.useFogColor = parseMaterialColor(node["gDPSetFogColor"], material.mState.fogColor, output);
     material.mState.useBlendColor = parseMaterialColor(node["gDPSetBlendColor"], material.mState.blendColor, output);
 
-    // material.mTexture0 = parseTexture(node["Texture0"], output);
-    // material.mTexture1 = parseTexture(node["Texture1"], output);
+    parseTexture(node["gSPTexture"], material.mState.textureState, output);
+
+    parseTiles(node["gDPSetTile"], material.mState, output);
 }
 
 void parseMaterialFile(std::istream& input, ParseResult& output) {
