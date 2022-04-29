@@ -1,47 +1,29 @@
 
-Resources:
-  resourceName:
-    Type: u8
-    IsArray: true
-    Content: |-
-      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
-      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
-      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
-      0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
-
-
 Materials:
-  Raw Material Name:
-    UsedResources: ["resourceName"]
-    Content: |-
-      gSPCommand(foo, bar),
-      gSPCommand(foo, bar),
-      gSPCommand(foo, bar),
-      gSPCommandWithResource(foo, bar, resourceName),
-      gSPCommand(foo, bar),
-      gSPCommand(foo, bar),
-
   Material Name A:
     Texture0: 
       Filename: texture_filename.png
       Format: IA
       Size: 4
 
-    RenderMode: G_RM_AA_ZB_OPA_SURF
-    CycleMode: G_RM_ZB_OPA_SURF
-    PrimColor:
+    gDPSetRenderMode: G_RM_AA_ZB_OPA_SURF
+    gDPSetCombineMode:
+      color: [0, 0, 0, 1]
+      alpha: [0, 0, 0, 1]
+    gDPSetCycleType: G_CYC_1CYCLE
+    gDPSetPrimColor:
       r: 255
       g: 0
       b: 0
-    EnvColor:
+    gDPSetEnvColor:
       r: 128
       g: 128
       b: 128
-    FogColor:
+    gDPSetFogColor:
       r: 200
       g: 100
       b: 50
-    BlendColor:
+    gDPSetBlendColor:
       r: 180
       g: 120
       b: 100

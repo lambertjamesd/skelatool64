@@ -20,7 +20,6 @@ public:
     void GenerateMaterials(DisplayListSettings& settings, CFileDefinition& fileDefinition, const std::string& fileSuffix);
 
     unsigned mSceneCount;
-    std::set<std::shared_ptr<MaterialResource>> mUsedResources;
     std::set<std::shared_ptr<TextureDefinition>> mUsedTextures;
     std::map<std::string, int> mMaterialUseCount;
     std::map<std::string, std::string> mMaterialNameMapping;

@@ -19,10 +19,10 @@ void materialTest(CFileDefinition& fileDef) {
 
     toState.alphaCompare = AlphaCompare::Dither;
     toState.hasCombineMode = true;
-    toState.cycle1Combine.d = ColorCombineSource::EnvironmentColor;
-    toState.cycle1Combine.dAlpha = AlphaCombineSource::EnvironmentAlpha;
-    toState.cycle2Combine.d = ColorCombineSource::EnvironmentColor;
-    toState.cycle2Combine.dAlpha = AlphaCombineSource::EnvironmentAlpha;
+    toState.cycle1Combine.color[3] = ColorCombineSource::EnvironmentColor;
+    toState.cycle1Combine.alpha[3] = AlphaCombineSource::EnvironmentAlpha;
+    toState.cycle2Combine.color[3] = ColorCombineSource::EnvironmentColor;
+    toState.cycle2Combine.alpha[3] = AlphaCombineSource::EnvironmentAlpha;
 
     toState.hasRenderMode = true;
 

@@ -41,8 +41,6 @@ void MaterialCollector::CollectMaterialResources(const aiScene* scene, std::vect
 }
 
 void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDefinition& fileDefinition, const std::string& fileSuffix) {
-    std::vector<std::shared_ptr<MaterialResource>> resources(mUsedResources.begin(), mUsedResources.end());
-
     for (auto image : mUsedTextures) {
         fileDefinition.AddDefinition(std::move(image->GenerateDefinition(fileDefinition.GetUniqueName(image->Name()), fileSuffix)));
     }

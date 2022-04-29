@@ -60,25 +60,19 @@ TileState::TileState():
 }
 
 ColorCombineMode::ColorCombineMode() : 
-    a(ColorCombineSource::_0),
-    b(ColorCombineSource::_0),
-    c(ColorCombineSource::_0),
-    d(ColorCombineSource::_0),
-    aAlpha(AlphaCombineSource::_0),
-    bAlpha(AlphaCombineSource::_0),
-    cAlpha(AlphaCombineSource::_0),
-    dAlpha(AlphaCombineSource::_0) {}
+    color{ColorCombineSource::_0, ColorCombineSource::_0, ColorCombineSource::_0, ColorCombineSource::_0},
+    alpha{AlphaCombineSource::_0, AlphaCombineSource::_0, AlphaCombineSource::_0, AlphaCombineSource::_0} {}
 
 
 bool ColorCombineMode::operator==(const ColorCombineMode& other) const {
-    return a == other.a &&
-        b == other.b &&
-        c == other.c &&
-        d == other.d &&
-        aAlpha == other.aAlpha &&
-        bAlpha == other.bAlpha &&
-        cAlpha == other.cAlpha &&
-        dAlpha == other.dAlpha;
+    return color[0] == other.color[0] &&
+        color[1] == other.color[1] &&
+        color[2] == other.color[2] &&
+        color[3] == other.color[3] &&
+        alpha[0] == other.alpha[0] &&
+        alpha[1] == other.alpha[1] &&
+        alpha[2] == other.alpha[2] &&
+        alpha[3] == other.alpha[3];
 }
 
 RenderModeState::RenderModeState() : data(G_RM_OPA_SURF) {
@@ -248,25 +242,21 @@ std::unique_ptr<DataChunk> generateCombineMode(const MaterialState& from, const 
 
     std::unique_ptr<MacroDataChunk> result(new MacroDataChunk("gsDPSetCombineLERP"));
 
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.a]);
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.b]);
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.c]);
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.d]);
+    for (int i = 0; i < 4; ++i) {
+        result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle1Combine.color[i]]);
+    }
 
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.aAlpha]);
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.bAlpha]);
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.cAlpha]);
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.dAlpha]);
+    for (int i = 0; i < 4; ++i) {
+        result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle1Combine.alpha[i]]);
+    }
 
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.a]);
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.b]);
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.c]);
-    result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.d]);
+    for (int i = 0; i < 4; ++i) {
+        result->AddPrimitive(gColorCombineSourceNames[(int)to.cycle2Combine.color[i]]);
+    }
 
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.aAlpha]);
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.bAlpha]);
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.cAlpha]);
-    result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.dAlpha]);
+    for (int i = 0; i < 4; ++i) {
+        result->AddPrimitive(gAlphaCombineSourceNames[(int)to.cycle2Combine.alpha[i]]);
+    }
 
     return result;
 }

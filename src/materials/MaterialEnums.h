@@ -196,37 +196,4 @@ enum class DepthSource {
 
 extern const char* gDepthSourceNames[];
 
-enum class CVG_DST {
-    CVG_DST_CLAMP,
-    CVG_DST_WRAP,
-    CVG_DST_FULL,
-    CVG_DST_SAVE,
-};
-
-enum class ZMODE {
-    ZMODE_OPA,
-    ZMODE_INTER,
-    ZMODE_XLU,
-    ZMODE_DEC,
-};
-
-enum class BlendSource {
-    G_BL_CLR_IN,
-    G_BL_CLR_MEM,
-    G_BL_CLR_BL,
-    G_BL_CLR_FOG,
-};
-
-enum class AlphaBlendSource {
-    G_BL_1MA,
-    G_BL_A_MEM,
-    G_BL_A_IN,
-    G_BL_A_FOG,
-    G_BL_A_SHADE,
-    G_BL_1,
-    G_BL_0,
-};
-
-bool canUseAlphaBlendSource(int offset, AlphaBlendSource source);
-
 #endif

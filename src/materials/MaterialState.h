@@ -56,15 +56,8 @@ struct ColorCombineMode {
 
     bool operator==(const ColorCombineMode& other) const;
 
-    ColorCombineSource a;
-    ColorCombineSource b;
-    ColorCombineSource c;
-    ColorCombineSource d;
-
-    AlphaCombineSource aAlpha;
-    AlphaCombineSource bAlpha;
-    AlphaCombineSource cAlpha;
-    AlphaCombineSource dAlpha;
+    ColorCombineSource color[4];
+    AlphaCombineSource alpha[4];
 };
 
 struct RenderModeState {

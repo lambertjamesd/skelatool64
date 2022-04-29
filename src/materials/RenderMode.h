@@ -266,6 +266,7 @@
 #define	G_RM_PASS		GBL_c1(G_BL_CLR_IN, G_BL_0, G_BL_CLR_IN, G_BL_1)
 
 void renderModeExtractFlags(int flags, std::vector<std::string>& output);
+bool renderModeGetFlagValue(const std::string& name, int& output);
 bool renderModeGetBlendModeValue(const std::string& name, int index, int& output);
 const std::string& renderModeGetBlendModeName(int blendMode, int index);
 

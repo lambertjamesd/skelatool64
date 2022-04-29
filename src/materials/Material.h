@@ -15,14 +15,6 @@
 
 #include "MaterialEnums.h"
 
-struct MaterialResource {
-public:
-    std::string mName;
-    std::string mContent;
-    std::string mType;
-    bool mIsArray;
-};
-
 class Material {
 public:
     Material();

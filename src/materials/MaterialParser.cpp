@@ -11,6 +11,7 @@
 
 #include "./TextureCache.h"
 #include "../FileUtils.h"
+#include "./RenderMode.h"
 
 TextureCache gTextureCache;
 
@@ -129,13 +130,6 @@ void parsePrimColor(const YAML::Node& node, MaterialState& state, ParseResult& o
         state.primitiveL = parseInteger(l, output, 0, 255);
     }
 } 
-
-void parseMaterialResource(const YAML::Node& node, std::string& name, MaterialResource& resource, ParseResult& output) {
-    resource.mName = name;
-    resource.mContent = parseString(node["Content"], output);
-    resource.mType = parseString(node["Type"], output);
-    resource.mIsArray = node["IsArray"].as<bool>();
-}
 
 VertexType parseMaterialVertexType(const YAML::Node& node) {
     if (node.IsDefined() && node.IsScalar() && node.Scalar() == "Normal") {
@@ -272,9 +266,188 @@ std::shared_ptr<TextureDefinition> parseTexture(const YAML::Node& node, ParseRes
 
     return gTextureCache.GetTexture(filename, format, size);
 }
+
+int parseRenderModeFlags(const YAML::Node& node, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return 0;
+    }
+
+    if (!node.IsSequence()) {
+        output.mErrors.push_back(ParseError(formatError("Render mode flags should be an array of strings", node.Mark())));
+        return 0;
+    }
+
+    int result = 0;
+
+    for (auto it = node.begin(); it != node.end(); ++it) {
+        if (!it->second.IsScalar()) {
+            output.mErrors.push_back(ParseError(formatError("Flags should be a list of strings", it->second.Mark())));
+            continue;
+        }
+
+        std::string asString = it->second.as<std::string>();
+
+        int singleFlag = 0;
+
+        if (!renderModeGetFlagValue(asString, singleFlag)) {    
+            output.mErrors.push_back(ParseError(formatError("Invalid flag", it->second.Mark())));
+            continue;
+        }
+
+        result |= singleFlag;
+    }
+
+    return result;
+}
+
+int parseBlendMode(const YAML::Node& node, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return 0;
+    }
+
+    if (!node.IsSequence() || node.size() != 4) {
+        output.mErrors.push_back(ParseError(formatError("Render blend mode should be an array of 4 strings", node.Mark())));
+        return 0;
+    }
+
+    int params[4];
+
+    for (int i = 0; i < 4; ++i) {
+        const YAML::Node& element = node[i];
+        params[i] = 0;
+
+        if (!element.IsScalar()) {
+            output.mErrors.push_back(ParseError(formatError("Expected a string", node.Mark())));
+            continue;
+        }
+
+        std::string asString = element.as<std::string>();
+
+        if (!renderModeGetBlendModeValue(asString, i, params[i])) {
+            output.mErrors.push_back(ParseError(formatError("Invalid blend mode", node.Mark())));
+        }
+    }
+
+    return GBL_c1(params[0], params[1], params[2], params[3]);
+}
+
+void parseSingleRenderMode(const YAML::Node& node, RenderModeState& renderMode, ParseResult& output) {
+    if (node.IsScalar()) {
+        std::string asString = node.as<std::string>();
+
+        if (!findRenderModeByName(asString, renderMode)) {
+            output.mErrors.push_back(ParseError(formatError("Invalid render mode", node.Mark())));
+            return;
+        }
+        
+        return;
+    }
+
+    if (node.IsMap()) {
+        renderMode.data = 
+            parseRenderModeFlags(node["flags"], output) |
+            parseBlendMode(node["blend"], output);
+        return;
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Invalid render mode", node.Mark())));
+}
+
+void parseRenderMode(const YAML::Node& node, MaterialState& state, ParseResult& output) {
+    if (!node.IsDefined()) {
+        state.hasRenderMode = false;
+        return;
+    }
+    state.hasRenderMode = true;
+
+    if (node.IsScalar() || node.IsMap()) {
+        parseSingleRenderMode(node, state.cycle1RenderMode, output);
+        state.cycle2RenderMode = state.cycle1RenderMode;
+        return;
+    }
+
+    if (node.IsSequence() && node.size() == 2) {
+        parseSingleRenderMode(node[0], state.cycle1RenderMode, output);
+        parseSingleRenderMode(node[1], state.cycle1RenderMode, output);
+        return;
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Invalid render mode", node.Mark())));
+}
+
+void parseColorCombineMode(const YAML::Node& node, ColorCombineMode& combineMode, ParseResult& output) {
+    if (!node.IsDefined()) {
+        combineMode.color[0] = ColorCombineSource::_0;
+        combineMode.color[1] = ColorCombineSource::_0;
+        combineMode.color[2] = ColorCombineSource::_0;
+        combineMode.color[3] = ColorCombineSource::_0;
+        return;
+    }
+
+    if (!node.IsSequence() || node.size() != 4) {
+        output.mErrors.push_back(ParseError(formatError("Blend mode should be an array of strings", node.Mark())));
+        return;
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        combineMode.color[i] = parseEnumType(node[i], output, gColorCombineSourceNames, ColorCombineSource::_0, (int)ColorCombineSource::Count);
+    }
+}
+
+void parseAlphaCombineMode(const YAML::Node& node, ColorCombineMode& combineMode, ParseResult& output) {
+    if (!node.IsDefined()) {
+        combineMode.alpha[0] = AlphaCombineSource::_0;
+        combineMode.alpha[1] = AlphaCombineSource::_0;
+        combineMode.alpha[2] = AlphaCombineSource::_0;
+        combineMode.alpha[3] = AlphaCombineSource::_1;
+        return;
+    }
+
+    if (!node.IsSequence() || node.size() != 4) {
+        output.mErrors.push_back(ParseError(formatError("Blend mode should be an array of strings", node.Mark())));
+        return;
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        combineMode.alpha[i] = parseEnumType(node[i], output, gAlphaCombineSourceNames, AlphaCombineSource::_0, (int)AlphaCombineSource::Count);
+    }
+}
+
+void parseSingleCombineMode(const YAML::Node& node, ColorCombineMode& combineMode, ParseResult& output) {
+    if (!node.IsDefined() || !node.IsMap()) {
+        output.mErrors.push_back(ParseError(formatError("Combine mode should be a map with a color and alpha", node.Mark())));
+        return;
+    }
+    
+    parseColorCombineMode(node["color"], combineMode, output);
+    parseAlphaCombineMode(node["alpha"], combineMode, output);
+}
+
+void parseCombineMode(const YAML::Node& node, MaterialState& state, ParseResult& output) {
+    if (!node.IsDefined()) {
+        state.hasCombineMode = false;
+        return;
+    }
+    state.hasCombineMode = true;
+
+    if (node.IsMap()) {
+        parseSingleCombineMode(node, state.cycle1Combine, output);
+        state.cycle2Combine = state.cycle1Combine;
+        return;
+    }    
+
+    if (node.IsSequence() && node.size() == 2) {
+        parseSingleCombineMode(node[0], state.cycle1Combine, output);
+        parseSingleCombineMode(node[1], state.cycle2Combine, output);
+        return;
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Combine mode should be a map with a color and alpha", node.Mark())));
+}
  
-void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output, std::map<std::string, std::shared_ptr<MaterialResource>>& resources) {
-    // parseRenderMode(node["RenderMode"], material.mRenderMode, output);
+void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output) {
+    parseRenderMode(node["gDPSetRenderMode"], material.mState, output);
+    parseCombineMode(node["gDPSetCombineMode"], material.mState, output);
 
     material.mState.cycleType = parseEnumType(node["gDPSetCycleType"], output, gCycleTypeNames, CycleType::Unknown, (int)CycleType::Count);
     
@@ -291,22 +464,11 @@ void parseMaterialFile(std::istream& input, ParseResult& output) {
     try {
         YAML::Node doc = YAML::Load(input);
 
-        std::map<std::string, std::shared_ptr<MaterialResource>> resources;
-        
-        const YAML::Node& resourceNodes = doc["Resources"];
-
-        for (auto it = resourceNodes.begin(); it != resourceNodes.end(); ++it) {
-            std::shared_ptr<MaterialResource> newResource(new MaterialResource());
-            std::string resourceName = it->first.as<std::string>();
-            parseMaterialResource(it->second, resourceName, *newResource, output);
-            resources[resourceName] = newResource;
-        }
-
-        const YAML::Node& materials = doc["Materials"];
+        const YAML::Node& materials = doc["materials"];
 
         for (auto it = materials.begin(); it != materials.end(); ++it) {
             Material newMaterial;
-            parseMaterial(it->second, newMaterial, output, resources);
+            parseMaterial(it->second, newMaterial, output);
             output.mMaterialFile.mMaterials[it->first.as<std::string>()] = newMaterial;
         }
     } catch (YAML::ParserException& e) {

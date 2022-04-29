@@ -168,7 +168,3 @@ bool gCanUseAlphaBlendSource[2][7] = {
     {false, false, true, true, true, false, true},
     {true, true, false, false, false, true, true},
 };
-
-bool canUseAlphaBlendSource(int offset, AlphaBlendSource source) {
-    return gCanUseAlphaBlendSource[offset][(int)source];
-}
