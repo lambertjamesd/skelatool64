@@ -3,6 +3,7 @@
 #include "MaterialEnums.h"
 
 #include "RenderMode.h"
+#include <iostream>
 
 Coloru8::Coloru8() : r(0), g(0), b(0), a(255) {}
 
@@ -57,6 +58,29 @@ TileState::TileState():
     line(0),
     pallete(0) {
 
+}
+
+bool TileState::IsTileStateEqual(const TileState& other) const {
+    return format == other.format &&
+        size == other.size &&
+        line == other.line &&
+        tmem == other.tmem &&
+        pallete == other.pallete &&
+        sCoord.wrap == other.sCoord.wrap &&
+        sCoord.mirror == other.sCoord.mirror &&
+        sCoord.mask == other.sCoord.mask &&
+        sCoord.shift == other.sCoord.shift &&
+        tCoord.wrap == other.tCoord.wrap &&
+        tCoord.mirror == other.tCoord.mirror &&
+        tCoord.mask == other.tCoord.mask &&
+        tCoord.shift == other.tCoord.shift;
+}
+
+bool TileState::IsTileSizeEqual(const TileState& other) const {
+    return sCoord.offset == other.sCoord.offset &&
+        sCoord.lowerBound == other.sCoord.lowerBound &&
+        tCoord.offset == other.tCoord.offset &&
+        tCoord.lowerBound == other.tCoord.lowerBound;
 }
 
 TextureState::TextureState():
@@ -356,7 +380,94 @@ void generateColor(const Coloru8& to, const char* macroName, StructureDataChunk&
     output.Add(std::move(result));
 }
 
-void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
+std::string buildClampAndWrap(bool wrap, bool mirror) {
+    std::ostringstream result;
+
+    if (wrap) {
+        result << "G_TX_WRAP";
+    } else {
+        result << "G_TX_CLAMP";
+    }
+
+    result << " | ";
+
+    if (mirror) {
+        result << "G_TX_MIRROR";
+    } else {
+        result << "G_TX_NOMIRROR";
+    }
+
+    return result.str();
+}
+
+void generateTile(CFileDefinition& fileDef, const MaterialState& from, const TileState& to, int tileIndex, StructureDataChunk& output) {
+    if (!to.isOn) {
+        return;
+    }
+
+    bool needsToLoadImage = to.texture != nullptr;
+
+    for (int i = 0; i < MAX_TILE_COUNT && needsToLoadImage; ++i) {
+        if (from.tiles[i].texture == to.texture && from.tiles[i].tmem == to.tmem) {
+            needsToLoadImage = false;
+        }
+    }
+
+    if (needsToLoadImage) {
+        std::string imageName;
+        if (!fileDef.GetResourceName(to.texture.get(), imageName)) {
+            std::cerr << "Texture " << to.texture->Name() << " needs to be added to the file definition before being used in a material" << std::endl;
+            return;
+        }
+
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPSetTile")));
+
+        std::unique_ptr<MacroDataChunk> setTextureImage(new MacroDataChunk("gsDPSetTextureImage"));
+        setTextureImage->AddPrimitive(nameForImageFormat(to.format));
+        setTextureImage->AddPrimitive(nameForImageSize(to.size));
+        setTextureImage->AddPrimitive(to.texture->Width());
+        setTextureImage->AddPrimitive(imageName);
+        output.Add(std::move(setTextureImage));
+    }
+
+    if (!from.tiles[tileIndex].IsTileStateEqual(to)) {
+        std::unique_ptr<MacroDataChunk> setTile(new MacroDataChunk("gsDPTileSync"));
+
+        setTile->AddPrimitive(nameForImageFormat(to.format));
+        setTile->AddPrimitive(nameForImageSize(to.size));
+
+        setTile->AddPrimitive(to.line);
+        setTile->AddPrimitive(to.tmem);
+        setTile->AddPrimitive(tileIndex);
+        setTile->AddPrimitive(to.pallete);
+
+        setTile->AddPrimitive(buildClampAndWrap(to.tCoord.wrap, to.tCoord.mirror));
+        setTile->AddPrimitive(to.tCoord.mask);
+        setTile->AddPrimitive(to.tCoord.shift);
+
+        setTile->AddPrimitive(buildClampAndWrap(to.sCoord.wrap, to.sCoord.mirror));
+        setTile->AddPrimitive(to.sCoord.mask);
+        setTile->AddPrimitive(to.sCoord.shift);
+        
+        output.Add(std::move(setTile));
+    }
+
+    if (!from.tiles[tileIndex].IsTileSizeEqual(to)) {
+        std::unique_ptr<MacroDataChunk> setTileSize(new MacroDataChunk("gsDPSetTile"));
+
+        setTileSize->AddPrimitive(tileIndex);
+
+        setTileSize->AddPrimitive(to.sCoord.offset);
+        setTileSize->AddPrimitive(to.tCoord.offset);
+
+        setTileSize->AddPrimitive(to.sCoord.lowerBound);
+        setTileSize->AddPrimitive(to.tCoord.lowerBound);
+
+        output.Add(std::move(setTileSize));
+    }
+}
+
+void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
     output.Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsDPPipeSync")));
 
     generateEnumMacro((int)from.pipelineMode, (int)to.pipelineMode, "gsDPPipelineMode", gPipelineModeNames, output);
@@ -400,6 +511,10 @@ void generateMaterial(const MaterialState& from, const MaterialState& to, Struct
 
     if (to.useBlendColor && (!from.useBlendColor || !(to.blendColor == from.blendColor))) {
         generateColor(to.blendColor, "gsDPSetBlendColor", output);
+    }
+
+    for (int i = 0; i < MAX_TILE_COUNT; ++i) {
+        generateTile(fileDef, from, to.tiles[i], i, output);
     }
 
     // TODO fill color

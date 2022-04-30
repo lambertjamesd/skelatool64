@@ -11,15 +11,16 @@
 #include "./ErrorResult.h"
 #include "./ExtendedMesh.h"
 #include "./definitions/FileDefinition.h"
-#include "./RenderChunk.h"
 
 class VertexBufferDefinition {
 public:
-    VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, Material* material);
+    VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType, int textureWidth, int textureHeight);
 
     ExtendedMesh* mTargetMesh;
     std::string mName;
-    Material* mMaterial;
+    VertexType mVertexType;
+    int mTextureWidth;
+    int mTextureHeight;
 
     ErrorResult Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
 private:
@@ -32,7 +33,7 @@ public:
     void AddDefinition(std::unique_ptr<FileDefinition> definition);
     void AddMacro(const std::string& name, const std::string& value);
 
-    std::string GetVertexBuffer(ExtendedMesh* mesh, Material* material, const std::string& modelSuffix);
+    std::string GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix);
     std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max, const std::string& modelSuffix);
 
     std::string GetUniqueName(std::string requestedName);
@@ -47,6 +48,8 @@ public:
     void GenerateHeader(std::ostream& output, const std::string& headerFileName);
 
     bool HasDefinitions(const std::string& location);
+
+    bool GetResourceName(const void* resource, std::string& result) const;
 private:
     std::string mPrefix;
     float mModelScale;
@@ -55,6 +58,7 @@ private:
     std::map<std::string, VertexBufferDefinition> mVertexBuffers;
     std::vector<std::unique_ptr<FileDefinition>> mDefinitions;
     std::vector<std::string> mMacros;
+    std::map<const void*, std::string> mResourceNames;
 };
 
 #endif

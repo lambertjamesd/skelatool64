@@ -9,6 +9,7 @@
 class FileDefinition {
 public:
     FileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location);
+    FileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location, const void* forResource);
 
     virtual ~FileDefinition();
 
@@ -20,11 +21,15 @@ public:
     void AddTypeHeader(const std::string& typeHeader);
 
     const std::set<std::string>& GetTypeHeaders();
+
+    const void* ForResource() const;
+    const std::string& GetName() const;
 protected:
     std::string mType;
     std::string mName;
     bool mIsArray;
     std::string mLocation;
+    const void* mForResource;
 
     std::set<std::string> mTypeHeaders;
 };
@@ -32,6 +37,7 @@ protected:
 class DataFileDefinition : public FileDefinition {
 public:
     DataFileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location, std::unique_ptr<DataChunk> data);
+    DataFileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location, std::unique_ptr<DataChunk> data, const void* forResource);
 
     virtual void Generate(std::ostream& output);
 private:

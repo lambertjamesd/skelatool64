@@ -5,7 +5,17 @@ FileDefinition::FileDefinition(const std::string& type, const std::string& name,
     mType(type),
     mName(name),
     mIsArray(isArray),
-    mLocation(location) {
+    mLocation(location),
+    mForResource(NULL) {
+
+}
+
+FileDefinition::FileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location, const void* forResource) :
+    mType(type),
+    mName(name),
+    mIsArray(isArray),
+    mLocation(location),
+    mForResource(forResource) {
 
 }
 
@@ -33,8 +43,22 @@ const std::set<std::string>& FileDefinition::GetTypeHeaders() {
     return mTypeHeaders;
 }
 
+const void* FileDefinition::ForResource() const {
+    return mForResource;
+}
+
+const std::string& FileDefinition::GetName() const {
+    return mName;
+}
+
 DataFileDefinition::DataFileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location, std::unique_ptr<DataChunk> data):
     FileDefinition(type, name, isArray, location),
+    mData(std::move(data)) {
+
+}
+
+DataFileDefinition::DataFileDefinition(const std::string& type, const std::string& name, bool isArray, std::string location, std::unique_ptr<DataChunk> data, const void* forResource):
+    FileDefinition(type, name, isArray, location, forResource),
     mData(std::move(data)) {
 
 }

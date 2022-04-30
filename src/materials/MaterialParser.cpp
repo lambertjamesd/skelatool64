@@ -507,6 +507,8 @@ void parseTexture(const YAML::Node& node, TextureState& state, ParseResult& outp
 void parseSingleTile(const YAML::Node& node, TileState& state, ParseResult& output) {
     state.texture = parseTextureDefinition(node, output);
 
+    state.isOn = node.IsDefined();
+
     if (state.texture) {
         state.format = state.texture->Format();
         state.size = state.texture->Size();

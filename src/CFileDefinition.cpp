@@ -6,10 +6,12 @@
 
 #include <fstream>
 
-VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, Material* material):
+VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType, int textureWidth, int textureHeight):
     mTargetMesh(targetMesh),
     mName(name),
-    mMaterial(material) {
+    mVertexType(vertexType),
+    mTextureWidth(textureWidth),
+    mTextureHeight(textureHeight) {
 
 }
 
@@ -95,11 +97,11 @@ unsigned convertByteRange(float value) {
         } else {
             aiVector3D uv = mTargetMesh->mMesh->mTextureCoords[0][i];
 
-            code = convertToShort(uv.x * Material::TextureWidth(mMaterial) * (1 << 5), converted);
+            code = convertToShort(uv.x * mTextureWidth * (1 << 5), converted);
             if (code.HasError()) return ErrorResult(code.GetMessage() + " for texture u coordinate");
             texCoords->AddPrimitive(converted);
 
-            code = convertToShort((1.0f - uv.y) * Material::TextureHeight(mMaterial) * (1 << 5), converted);
+            code = convertToShort((1.0f - uv.y) * mTextureHeight * (1 << 5), converted);
             if (code.HasError()) return ErrorResult(code.GetMessage() + " for texture y coordinate");
             texCoords->AddPrimitive(converted);
         }
@@ -108,7 +110,7 @@ unsigned convertByteRange(float value) {
 
         std::unique_ptr<StructureDataChunk> vertexNormal(new StructureDataChunk());
 
-        switch (Material::GetVertexType(mMaterial)) {
+        switch (mVertexType) {
         case VertexType::PosUVNormal:
             if (mTargetMesh->mMesh->HasNormals()) {
                 aiVector3D normal = mTargetMesh->mMesh->mNormals[i];
@@ -166,6 +168,10 @@ CFileDefinition::CFileDefinition(std::string prefix, float modelScale, aiQuatern
 }
 
 void CFileDefinition::AddDefinition(std::unique_ptr<FileDefinition> definition) {
+    if (definition->ForResource()) {
+        mResourceNames[definition->ForResource()] = definition->GetName();
+    }
+
     mDefinitions.push_back(std::move(definition));
 }
 
@@ -173,9 +179,9 @@ void CFileDefinition::AddMacro(const std::string& name, const std::string& value
     mMacros.push_back(name + " " + value);
 }
 
-std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, Material* material, const std::string& modelSuffix) {
+std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix) {
     for (auto existing = mVertexBuffers.begin(); existing != mVertexBuffers.end(); ++existing) {
-        if (existing->second.mTargetMesh == mesh && existing->second.mMaterial == material) {
+        if (existing->second.mTargetMesh == mesh && existing->second.mVertexType == vertexType) {
             return existing->first;
         }
     }
@@ -188,7 +194,7 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, Material* mater
         requestedName = "_mesh";
     }
 
-    switch (Material::GetVertexType(material)) {
+    switch (vertexType) {
         case VertexType::PosUVColor:
             requestedName += "_color";
             break;
@@ -205,7 +211,9 @@ std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, Material* mater
     mVertexBuffers.insert(std::pair<std::string, VertexBufferDefinition>(name, VertexBufferDefinition(
         mesh, 
         name, 
-        material
+        vertexType,
+        textureWidth,
+        textureHeight
     )));
 
     std::unique_ptr<FileDefinition> vtxDef;
@@ -237,7 +245,7 @@ std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiV
     mesh->mVertices[7] = aiVector3D(max.x, max.y, max.z);
 
     BoneHierarchy boneHierarchy;
-    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), NULL, modelSuffix);
+    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVNormal, 0, 0, modelSuffix);
 }
 
 
@@ -358,6 +366,18 @@ bool CFileDefinition::HasDefinitions(const std::string& location) {
         if ((*it)->GetLocation() == location) {
             return true;
         }
+    }
+
+    return false;
+}
+
+
+bool CFileDefinition::GetResourceName(const void* resource, std::string& result) const {
+    auto it = mResourceNames.find(resource);
+
+    if (it != mResourceNames.end()) {
+        result = it->second;
+        return true;
     }
 
     return false;

@@ -326,7 +326,7 @@ std::unique_ptr<FileDefinition> TextureDefinition::GenerateDefinition(const std:
         dataChunk->AddPrimitive(stream.str());
     }
 
-    return std::unique_ptr<FileDefinition>(new DataFileDefinition("u64", name, true, location, std::move(dataChunk)));
+    return std::unique_ptr<FileDefinition>(new DataFileDefinition("u64", name, true, location, std::move(dataChunk), this));
 }
 
 int TextureDefinition::Width() const {

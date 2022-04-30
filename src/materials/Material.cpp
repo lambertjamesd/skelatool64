@@ -6,8 +6,8 @@
 
 Material::Material() {}
 
-void Material::Write(const MaterialState& from, StructureDataChunk& output) {
-    generateMaterial(from, mState, output);
+void Material::Write(CFileDefinition& fileDef, const MaterialState& from, StructureDataChunk& output) {
+    generateMaterial(fileDef, from, mState, output);
 }
 
 int Material::TextureWidth(Material* material) {

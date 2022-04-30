@@ -12,6 +12,7 @@
 #include "../ExtendedMesh.h"
 #include "MaterialState.h"
 #include "../definitions/DataChunk.h"
+#include "../CFileDefinition.h"
 
 #include "MaterialEnums.h"
 
@@ -20,7 +21,7 @@ public:
     Material();
     MaterialState mState;
 
-    void Write(const MaterialState& from, StructureDataChunk& output);
+    void Write(CFileDefinition& fileDef, const MaterialState& from, StructureDataChunk& output);
 
     static int TextureWidth(Material* material);
     static int TextureHeight(Material* material);

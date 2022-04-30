@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include "TextureDefinition.h"
 #include "MaterialEnums.h"
+#include "../CFileDefinition.h"
 
 struct Coloru8 {
     Coloru8();
@@ -41,6 +42,10 @@ public:
 struct TileState {
 public:
     TileState();
+
+    bool IsTileStateEqual(const TileState& other) const;
+    bool IsTileSizeEqual(const TileState& other) const;
+    
     bool isOn;
     std::shared_ptr<TextureDefinition> texture;
     G_IM_FMT format;
@@ -49,8 +54,8 @@ public:
     int line;
     int tmem;
     int pallete;
-    struct TextureCoordinateState uCoord;
-    struct TextureCoordinateState vCoord;
+    struct TextureCoordinateState sCoord;
+    struct TextureCoordinateState tCoord;
 };
 
 struct TextureState {
@@ -144,6 +149,6 @@ public:
     Coloru8 blendColor;
 };
 
-void generateMaterial(const MaterialState& from, const MaterialState& to, StructureDataChunk& output);
+void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const MaterialState& to, StructureDataChunk& output);
 
 #endif

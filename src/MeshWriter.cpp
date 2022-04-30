@@ -48,7 +48,7 @@ void MaterialCollector::GenerateMaterials(DisplayListSettings& settings, CFileDe
     for (auto useCount = mMaterialUseCount.begin(); useCount != mMaterialUseCount.end(); ++useCount) {
         if (useCount->second > 1 || mSceneCount > 1) {
             DisplayList materialDL(fileDefinition.GetUniqueName(useCount->first));
-            settings.mMaterials.find(useCount->first)->second.Write(settings.mDefaultMaterialState, materialDL.GetDataChunk());
+            settings.mMaterials.find(useCount->first)->second.Write(fileDefinition, settings.mDefaultMaterialState, materialDL.GetDataChunk());
             mMaterialNameMapping[useCount->first] = materialDL.GetName();
             
             auto dl = materialDL.Generate(fileSuffix);
@@ -72,15 +72,20 @@ void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& file
                 auto material = settings.mMaterials.find(materialName);
 
                 if (material != settings.mMaterials.end()) {
-                    material->second.Write(rcpState.GetMaterialState(), displayList.GetDataChunk());
+                    material->second.Write(fileDefinition, rcpState.GetMaterialState(), displayList.GetDataChunk());
                 }
             }
             
             displayList.AddCommand(std::unique_ptr<DisplayListCommand>(new CommentCommand("End Material " + materialName)));
         }
 
-        
-        std::string vertexBuffer = fileDefinition.GetVertexBuffer(chunk->mMesh, chunk->mMaterial, modelSuffix);
+        std::string vertexBuffer = fileDefinition.GetVertexBuffer(
+            chunk->mMesh, 
+            Material::GetVertexType(chunk->mMaterial), 
+            Material::TextureWidth(chunk->mMaterial),
+            Material::TextureHeight(chunk->mMaterial),
+            modelSuffix
+        );
         generateGeometry(*chunk, rcpState, vertexBuffer, displayList, settings.mHasTri2);
     }
     rcpState.TraverseToBone(nullptr, displayList);
