@@ -8,7 +8,7 @@
 
 class TextureCache {
 public:
-    std::shared_ptr<TextureDefinition> GetTexture(const std::string& filename, G_IM_FMT format, G_IM_SIZ size);
+    std::shared_ptr<TextureDefinition> GetTexture(const std::string& filename, G_IM_FMT format, G_IM_SIZ size, TextureDefinitionEffect effects);
 private:
     std::map<std::string, std::shared_ptr<TextureDefinition>> mCache;
 };

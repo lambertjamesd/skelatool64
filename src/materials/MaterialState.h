@@ -6,17 +6,6 @@
 #include "MaterialEnums.h"
 #include "../CFileDefinition.h"
 
-struct Coloru8 {
-    Coloru8();
-
-    bool operator==(const Coloru8& other) const;
-
-    u_int8_t r;
-    u_int8_t g;
-    u_int8_t b;
-    u_int8_t a;
-};
-
 struct FlagList {
     FlagList();
     uint64_t flags;
@@ -36,7 +25,7 @@ public:
     int mask;
     int shift;
     int offset;
-    int lowerBound;
+    int upperBound;
 };
 
 struct TileState {
@@ -132,21 +121,21 @@ public:
 
     // RDP colors
     bool usePrimitiveColor;
-    Coloru8 primitiveColor;
+    PixelRGBAu8 primitiveColor;
     uint8_t primitiveM;
     uint8_t primitiveL;
 
     bool useEnvColor;
-    Coloru8 envColor;
+    PixelRGBAu8 envColor;
 
     bool useFillColor;
-    Coloru8 fillColor;
+    PixelRGBAu8 fillColor;
     
     bool useFogColor;
-    Coloru8 fogColor;
+    PixelRGBAu8 fogColor;
 
     bool useBlendColor;
-    Coloru8 blendColor;
+    PixelRGBAu8 blendColor;
 };
 
 void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const MaterialState& to, StructureDataChunk& output);

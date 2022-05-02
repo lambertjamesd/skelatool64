@@ -27,6 +27,9 @@ private:
 struct PixelRGBAu8 {
     PixelRGBAu8();
     PixelRGBAu8(uint8_t rVal, uint8_t gVal, uint8_t bVal, uint8_t aVal);
+
+    bool operator==(const PixelRGBAu8& other) const;
+    
     uint8_t r;
     uint8_t g;
     uint8_t b;
@@ -50,9 +53,13 @@ struct PixelIAu8 {
     bool WriteToStream(DataChunkStream& output, G_IM_SIZ size);
 };
 
+enum class TextureDefinitionEffect {
+    TwoToneGrayscale = (1 << 0),
+};
+
 class TextureDefinition {
 public:
-    TextureDefinition(const std::string& filename, G_IM_FMT fmt, G_IM_SIZ siz);
+    TextureDefinition(const std::string& filename, G_IM_FMT fmt, G_IM_SIZ siz, TextureDefinitionEffect effects);
 
     static void DetermineIdealFormat(const std::string& filename, G_IM_FMT& fmt, G_IM_SIZ& siz);
 
@@ -65,8 +72,15 @@ public:
     G_IM_SIZ Size() const;
 
     bool GetLine(int& line) const;
+    int LoadBlockSize() const;
+    int DTX() const;
 
     const std::string& Name() const;
+
+    bool HasEffect(TextureDefinitionEffect effect) const;
+
+    PixelRGBAu8 GetTwoToneMin() const;
+    PixelRGBAu8 GetTwoToneMax() const;
 private:
     std::string mName;
     G_IM_FMT mFmt;
@@ -74,6 +88,10 @@ private:
     int mWidth;
     int mHeight;
     std::vector<unsigned long long> mData;
+    TextureDefinitionEffect mEffects;
+
+    PixelRGBAu8 mTwoToneMin;
+    PixelRGBAu8 mTwoToneMax;
 };
 
 #endif

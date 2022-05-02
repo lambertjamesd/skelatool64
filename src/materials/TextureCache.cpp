@@ -2,10 +2,11 @@
 
 #include "../FileUtils.h"
 
-std::shared_ptr<TextureDefinition> TextureCache::GetTexture(const std::string& filename, G_IM_FMT format, G_IM_SIZ size) {
+std::shared_ptr<TextureDefinition> TextureCache::GetTexture(const std::string& filename, G_IM_FMT format, G_IM_SIZ size, TextureDefinitionEffect effects) {
     std::string normalizedPath = NormalizePath(filename) +
         "#" + nameForImageFormat(format) +
-        ":" + nameForImageSize(size);
+        ":" + nameForImageSize(size) +
+        ":" + std::to_string((int)effects);
 
     auto check = mCache.find(normalizedPath);
 
@@ -13,7 +14,7 @@ std::shared_ptr<TextureDefinition> TextureCache::GetTexture(const std::string& f
         return check->second;
     }
 
-    std::shared_ptr<TextureDefinition> result(new TextureDefinition(filename, format, size));
+    std::shared_ptr<TextureDefinition> result(new TextureDefinition(filename, format, size, effects));
     mCache[normalizedPath] = result;
     return result;
 }

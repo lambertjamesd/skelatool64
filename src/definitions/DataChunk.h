@@ -107,6 +107,7 @@ private:
 class MacroDataChunk : public DataChunk {
 public:
     MacroDataChunk(const std::string& macroName);
+    MacroDataChunk(const std::string& macroName, bool singleLine);
 
     void Add(std::unique_ptr<DataChunk> entry);
 
@@ -122,6 +123,7 @@ protected:
 private:
     std::string mMacroName;
     std::vector<std::unique_ptr<DataChunk>> mParameters;
+    bool mSingleLine;
 };
 
 class CommentDataChunk : public DataChunk {

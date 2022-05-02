@@ -5,6 +5,7 @@
 
 #include "TextureDefinition.h"
 #include "../FileUtils.h"
+#include "../math/LeastSquares.h"
 
 #include <iomanip>
 #include <algorithm>
@@ -57,6 +58,9 @@ PixelRGBAu8::PixelRGBAu8() : r(0), g(0), b(0), a(0) {}
 PixelRGBAu8::PixelRGBAu8(uint8_t rVal, uint8_t gVal, uint8_t bVal, uint8_t aVal) : 
     r(rVal), g(gVal), b(bVal), a(aVal) {}
 
+bool PixelRGBAu8::operator==(const PixelRGBAu8& other) const {
+    return r == other.r && g == other.g && b == other.b && a == other.a;
+}
 
 bool PixelRGBAu8::WriteToStream(DataChunkStream& output, G_IM_SIZ size) {
     switch (size) {
@@ -177,6 +181,23 @@ struct PixelIAu8 readIAPixel(cimg_library_suffixed::CImg<unsigned char>& input, 
     return PixelIAu8(0, alpha);
 }
 
+void writeIAPixel(cimg_library_suffixed::CImg<unsigned char>& input, int x, int y, struct PixelIAu8 value) {
+    switch (input.spectrum()) {
+        case 4:
+            input(x, y, 0, 3) = value.a;
+        case 3:
+            input(x, y, 0, 0) = value.i;
+            input(x, y, 0, 1) = value.i;
+            input(x, y, 0, 2) = value.i;
+            break;
+        case 2:
+            input(x, y, 0, 1) = value.a;
+        case 1:
+            input(x, y, 0, 0) = value.i;
+            break;
+    }
+}
+
 bool convertPixel(cimg_library_suffixed::CImg<unsigned char>& input, int x, int y, DataChunkStream& output, G_IM_FMT fmt, G_IM_SIZ siz) {
     switch (fmt) {
         case G_IM_FMT::G_IM_FMT_RGBA: {
@@ -211,12 +232,95 @@ const char* gSizeName[] = {
     "32b",
 };
 
-TextureDefinition::TextureDefinition(const std::string& filename, G_IM_FMT fmt, G_IM_SIZ siz) :
+uint8_t interpolateGrayscale(int min, int max, uint8_t input) {
+    if (input <= min) {
+        return 0;
+    }
+
+    int result = 0x100 * (input - min + 1) / (max - min + 1) - 1;
+
+    if (result > 0xFF) {
+        return 0xFF;
+    }
+
+    return result;
+}
+
+uint8_t floatToByte(float input) {
+    int result = (int)(input + 0.5f);
+
+    if (result < 0) {
+        return 0;
+    }
+
+    if (result > 0xFF) {
+        return 0xFF;
+    }
+
+    return result;
+}
+
+void applyTwoToneEffect(cimg_library_suffixed::CImg<unsigned char>& input, PixelRGBAu8& maxColor, PixelRGBAu8& minColor) {
+    LinearLeastSquares r;
+    LinearLeastSquares g;
+    LinearLeastSquares b;
+    LinearLeastSquares a;
+
+    int minGray = 0xFF;
+    int maxGray = 0;
+
+    int minAlpha = 0xFF;
+    int maxAlpha = 0;
+
+    for (int y = 0; y < input.height(); ++y) {
+        for (int x = 0; x < input.width(); ++x) {
+            PixelRGBAu8 colorValue = readRGBAPixel(input, x, y);
+            PixelIAu8 grayScaleValue = readIAPixel(input, x, y);
+
+            r.AddDataPoint(grayScaleValue.i, colorValue.r);
+            g.AddDataPoint(grayScaleValue.i, colorValue.g);
+            b.AddDataPoint(grayScaleValue.i, colorValue.b);
+            a.AddDataPoint(grayScaleValue.a, colorValue.a);
+
+            minGray = std::min((int)grayScaleValue.i, minGray);
+            maxGray = std::max((int)grayScaleValue.i, maxGray);
+            minAlpha = std::min((int)grayScaleValue.i, minAlpha);
+            maxAlpha = std::max((int)grayScaleValue.i, maxAlpha);
+        }
+    }
+
+
+    for (int y = 0; y < input.height(); ++y) {
+        for (int x = 0; x < input.width(); ++x) {
+            PixelIAu8 grayScaleValue = readIAPixel(input, x, y);
+            grayScaleValue.i = interpolateGrayscale(minGray, maxGray, grayScaleValue.i);
+            grayScaleValue.a = interpolateGrayscale(minAlpha, maxAlpha, grayScaleValue.a);
+            writeIAPixel(input, x, y, grayScaleValue);
+        }
+    }
+
+    maxColor.r = floatToByte(r.PredictY(maxGray));
+    maxColor.g = floatToByte(g.PredictY(maxGray));
+    maxColor.b = floatToByte(b.PredictY(maxGray));
+    maxColor.a = floatToByte(a.PredictY(maxAlpha));
+
+    minColor.r = floatToByte(r.PredictY(minGray));
+    minColor.g = floatToByte(g.PredictY(minGray));
+    minColor.b = floatToByte(b.PredictY(minGray));
+    minColor.a = floatToByte(a.PredictY(minAlpha));
+}
+
+TextureDefinition::TextureDefinition(const std::string& filename, G_IM_FMT fmt, G_IM_SIZ siz, TextureDefinitionEffect effects) :
     mName(getBaseName(replaceExtension(filename, "")) + "_" + gFormatShortName[(int)fmt] + "_" + gSizeName[(int)siz]),
     mFmt(fmt),
-    mSiz(siz) {
+    mSiz(siz),
+    mEffects(effects) {
 
     cimg_library_suffixed::CImg<unsigned char> imageData(filename.c_str());
+
+    if (HasEffect(TextureDefinitionEffect::TwoToneGrayscale)) {
+        applyTwoToneEffect(imageData, mTwoToneMax, mTwoToneMin);
+    }
 
     mWidth = imageData.width();
     mHeight = imageData.height();
@@ -345,17 +449,47 @@ G_IM_SIZ TextureDefinition::Size() const {
     return mSiz;
 }
 
+#define	G_TX_DTX_FRAC	11
+
+int gSizeInc[] = {3, 1, 0, 0};
+int gSizeShift[] = {2, 1, 0, 0};
+
+int TextureDefinition::LoadBlockSize() const {
+    return ((Height() * Width() + gSizeInc[(int)mSiz]) >> gSizeShift[(int)mSiz]) - 1;
+}
+
+int TextureDefinition::DTX() const {
+    int lineSize;
+
+    if (mSiz == G_IM_SIZ::G_IM_SIZ_4b) {
+        lineSize = Width() / 16;
+    } else {
+        GetLine(lineSize);
+    }
+    if (!lineSize) {
+        lineSize = 1;
+    }
+    return ((1 << G_TX_DTX_FRAC) + lineSize - 1) / lineSize;
+}
+
 bool TextureDefinition::GetLine(int& line) const {
     int bitLine = bitSizeforSiz(mSiz) * mWidth;
     line = bitLine / 64;
-
-    if (bitLine % 64 == 0) {
-        return true;
-    }
-
-    return false;
+    return bitLine % 64 == 0;
 }
 
 const std::string& TextureDefinition::Name() const {
     return mName;
+}
+
+bool TextureDefinition::HasEffect(TextureDefinitionEffect effect) const {
+    return (int)mEffects & (int)effect;
+}
+
+PixelRGBAu8 TextureDefinition::GetTwoToneMin() const {
+    return mTwoToneMin;
+}
+
+PixelRGBAu8 TextureDefinition::GetTwoToneMax() const {
+    return mTwoToneMax;
 }

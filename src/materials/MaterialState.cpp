@@ -5,11 +5,6 @@
 #include "RenderMode.h"
 #include <iostream>
 
-Coloru8::Coloru8() : r(0), g(0), b(0), a(255) {}
-
-bool Coloru8::operator==(const Coloru8& other) const {
-    return r == other.r && g == other.g && b == other.b && a == other.a;
-}
 
 FlagList::FlagList() : flags(0), knownFlags(0) {}
 
@@ -49,7 +44,7 @@ TextureCoordinateState::TextureCoordinateState():
     mask(0),
     shift(0),
     offset(0),
-    lowerBound(0) {
+    upperBound(0) {
 
 }
 
@@ -78,9 +73,9 @@ bool TileState::IsTileStateEqual(const TileState& other) const {
 
 bool TileState::IsTileSizeEqual(const TileState& other) const {
     return sCoord.offset == other.sCoord.offset &&
-        sCoord.lowerBound == other.sCoord.lowerBound &&
+        sCoord.upperBound == other.sCoord.upperBound &&
         tCoord.offset == other.tCoord.offset &&
-        tCoord.lowerBound == other.tCoord.lowerBound;
+        tCoord.upperBound == other.tCoord.upperBound;
 }
 
 TextureState::TextureState():
@@ -369,7 +364,7 @@ void generatePrimitiveColor(const MaterialState& from, const MaterialState& to, 
     output.Add(std::move(result));
 }
 
-void generateColor(const Coloru8& to, const char* macroName, StructureDataChunk& output) {
+void generateColor(const PixelRGBAu8& to, const char* macroName, StructureDataChunk& output) {
     std::unique_ptr<MacroDataChunk> result(new MacroDataChunk(macroName));
 
     result->AddPrimitive((int)to.r);
@@ -420,18 +415,55 @@ void generateTile(CFileDefinition& fileDef, const MaterialState& from, const Til
             return;
         }
 
-        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPSetTile")));
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPTileSync")));
 
         std::unique_ptr<MacroDataChunk> setTextureImage(new MacroDataChunk("gsDPSetTextureImage"));
         setTextureImage->AddPrimitive(nameForImageFormat(to.format));
-        setTextureImage->AddPrimitive(nameForImageSize(to.size));
-        setTextureImage->AddPrimitive(to.texture->Width());
+        if (to.size == G_IM_SIZ::G_IM_SIZ_4b) {
+            setTextureImage->AddPrimitive(nameForImageSize(G_IM_SIZ::G_IM_SIZ_16b));
+            setTextureImage->AddPrimitive(1);
+        } else {
+            setTextureImage->AddPrimitive(nameForImageSize(to.size));
+            setTextureImage->AddPrimitive(to.texture->Width());
+        }
         setTextureImage->AddPrimitive(imageName);
         output.Add(std::move(setTextureImage));
+
+        std::unique_ptr<MacroDataChunk> setTile(new MacroDataChunk("gsDPSetTile"));
+        setTile->AddPrimitive(nameForImageFormat(to.format));
+        if (to.size == G_IM_SIZ::G_IM_SIZ_4b) {
+            setTile->AddPrimitive(nameForImageSize(G_IM_SIZ::G_IM_SIZ_16b));
+            setTile->AddPrimitive(0);
+        } else {
+            setTile->AddPrimitive(nameForImageSize(to.size));
+            setTile->AddPrimitive(to.line);
+        }
+        setTile->AddPrimitive(to.tmem);
+        setTile->AddPrimitive<const char*>("G_TX_LOADTILE");
+        setTile->AddPrimitive(to.pallete);
+        setTile->AddPrimitive(buildClampAndWrap(to.tCoord.wrap, to.tCoord.mirror));
+        setTile->AddPrimitive(to.tCoord.mask);
+        setTile->AddPrimitive(to.tCoord.shift);
+        setTile->AddPrimitive(buildClampAndWrap(to.sCoord.wrap, to.sCoord.mirror));
+        setTile->AddPrimitive(to.sCoord.mask);
+        setTile->AddPrimitive(to.sCoord.shift);
+        output.Add(std::move(setTile));
+
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPLoadSync")));
+
+        std::unique_ptr<MacroDataChunk> loadBlock(new MacroDataChunk("gsDPLoadBlock"));
+        loadBlock->AddPrimitive<const char*>("G_TX_LOADTILE");
+        loadBlock->AddPrimitive(0);
+        loadBlock->AddPrimitive(0);
+        loadBlock->AddPrimitive(to.texture->LoadBlockSize());
+        loadBlock->AddPrimitive(to.texture->DTX());
+        output.Add(std::move(loadBlock));
+
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPPipeSync")));
     }
 
     if (!from.tiles[tileIndex].IsTileStateEqual(to)) {
-        std::unique_ptr<MacroDataChunk> setTile(new MacroDataChunk("gsDPTileSync"));
+        std::unique_ptr<MacroDataChunk> setTile(new MacroDataChunk("gsDPSetTile"));
 
         setTile->AddPrimitive(nameForImageFormat(to.format));
         setTile->AddPrimitive(nameForImageSize(to.size));
@@ -453,18 +485,33 @@ void generateTile(CFileDefinition& fileDef, const MaterialState& from, const Til
     }
 
     if (!from.tiles[tileIndex].IsTileSizeEqual(to)) {
-        std::unique_ptr<MacroDataChunk> setTileSize(new MacroDataChunk("gsDPSetTile"));
+        std::unique_ptr<MacroDataChunk> setTileSize(new MacroDataChunk("gsDPSetTileSize"));
 
         setTileSize->AddPrimitive(tileIndex);
 
         setTileSize->AddPrimitive(to.sCoord.offset);
         setTileSize->AddPrimitive(to.tCoord.offset);
 
-        setTileSize->AddPrimitive(to.sCoord.lowerBound);
-        setTileSize->AddPrimitive(to.tCoord.lowerBound);
+        setTileSize->AddPrimitive(to.sCoord.upperBound);
+        setTileSize->AddPrimitive(to.tCoord.upperBound);
 
         output.Add(std::move(setTileSize));
     }
+}
+
+void generateTexture(const TextureState& from, const TextureState& to, StructureDataChunk& output) {
+    if (!to.isOn) {
+        return;
+    }
+
+
+    std::unique_ptr<MacroDataChunk> setTexture(new MacroDataChunk("gsSPTexture"));
+    setTexture->AddPrimitive(to.sc);
+    setTexture->AddPrimitive(to.tc);
+    setTexture->AddPrimitive(to.level);
+    setTexture->AddPrimitive(to.tile);
+    setTexture->AddPrimitive<const char*>("G_ON");
+    output.Add(std::move(setTexture));
 }
 
 void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
@@ -512,6 +559,8 @@ void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const
     if (to.useBlendColor && (!from.useBlendColor || !(to.blendColor == from.blendColor))) {
         generateColor(to.blendColor, "gsDPSetBlendColor", output);
     }
+
+    generateTexture(from.textureState, to.textureState, output);
 
     for (int i = 0; i < MAX_TILE_COUNT; ++i) {
         generateTile(fileDef, from, to.tiles[i], i, output);

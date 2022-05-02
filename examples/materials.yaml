@@ -1,7 +1,9 @@
 
 materials:
   Test Material A:
-    gDPSetTile: ./image.png
+    gDPSetTile: 
+      filename: ./image.png
+      fmt: G_IM_FMT_I
     gDPSetRenderMode: G_RM_AA_ZB_OPA_SURF
     gDPSetCombineMode:
       color: [0, 0, 0, 1]

@@ -114,9 +114,15 @@ std::string Join(const std::string& a, const std::string& b) {
 
     std::vector<std::string> normalizedParts;
 
+    int skipCount = 0;
+
     for (int i = parts.size() - 1; i >= 0; --i) {
         if (parts[i] == "..") {
-            --i;
+            ++skipCount;
+        } else if (parts[i] == ".") {
+            continue;
+        } else if (skipCount) {
+            --skipCount;
         } else if (parts[i] != ".") {
             normalizedParts.push_back(parts[i]);
         }

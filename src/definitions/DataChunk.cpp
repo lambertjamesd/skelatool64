@@ -159,7 +159,9 @@ void StructureDataChunk::OutputChildren(std::vector<std::unique_ptr<DataChunk>>&
     }
 }
 
-MacroDataChunk::MacroDataChunk(const std::string& macroName): DataChunk(), mMacroName(macroName) {}
+MacroDataChunk::MacroDataChunk(const std::string& macroName): DataChunk(), mMacroName(macroName), mSingleLine(true) {}
+
+MacroDataChunk::MacroDataChunk(const std::string& macroName, bool singleLine) : DataChunk(), mMacroName(macroName), mSingleLine(singleLine) {}
 
 void MacroDataChunk::Add(std::unique_ptr<DataChunk> entry) {
     mParameters.push_back(std::move(entry));
@@ -168,7 +170,7 @@ void MacroDataChunk::Add(std::unique_ptr<DataChunk> entry) {
 bool MacroDataChunk::Output(std::ostream& output, int indentLevel, int linePrefix) {
     output << mMacroName << '(';
 
-    StructureDataChunk::OutputChildren(mParameters, output, indentLevel, linePrefix + GetEstimatedLength(), false);
+    StructureDataChunk::OutputChildren(mParameters, output, indentLevel, mSingleLine ? 0 : linePrefix + GetEstimatedLength(), false);
 
     output << ')';
     return true;
