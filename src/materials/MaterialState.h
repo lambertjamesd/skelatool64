@@ -61,6 +61,7 @@ public:
 
 struct ColorCombineMode {
     ColorCombineMode();
+    ColorCombineMode(ColorCombineSource c0, ColorCombineSource c1, ColorCombineSource c2, ColorCombineSource c3, AlphaCombineSource a0, AlphaCombineSource a1, AlphaCombineSource a2, AlphaCombineSource a3);
 
     bool operator==(const ColorCombineMode& other) const;
 

@@ -12,6 +12,7 @@
 #include "./TextureCache.h"
 #include "../FileUtils.h"
 #include "./RenderMode.h"
+#include "CombineMode.h"
 
 TextureCache gTextureCache;
 
@@ -429,13 +430,24 @@ void parseAlphaCombineMode(const YAML::Node& node, ColorCombineMode& combineMode
 }
 
 void parseSingleCombineMode(const YAML::Node& node, ColorCombineMode& combineMode, ParseResult& output) {
-    if (!node.IsDefined() || !node.IsMap()) {
-        output.mErrors.push_back(ParseError(formatError("Combine mode should be a map with a color and alpha", node.Mark())));
+    if (!node.IsDefined()) {
+        output.mErrors.push_back(ParseError(formatError("Combine mode should be an object with a color and alpha", node.Mark())));
         return;
     }
     
-    parseColorCombineMode(node["color"], combineMode, output);
-    parseAlphaCombineMode(node["alpha"], combineMode, output);
+    if (node.IsMap()) {
+        parseColorCombineMode(node["color"], combineMode, output);
+        parseAlphaCombineMode(node["alpha"], combineMode, output);
+    }
+
+    if (node.IsScalar()) {
+        std::string name = node.as<std::string>();
+        if (!combineModeWithName(name, combineMode)) {
+            output.mErrors.push_back(ParseError(formatError(name + " is not a valid name for a combine mode", node.Mark())));
+        }
+    }
+
+    output.mErrors.push_back(ParseError(formatError("Combine mode should be an object with a color and alpha", node.Mark())));
 }
 
 void parseCombineMode(const YAML::Node& node, MaterialState& state, ParseResult& output) {
@@ -445,7 +457,7 @@ void parseCombineMode(const YAML::Node& node, MaterialState& state, ParseResult&
     }
     state.hasCombineMode = true;
 
-    if (node.IsMap()) {
+    if (node.IsMap() || node.IsScalar()) {
         parseSingleCombineMode(node, state.cycle1Combine, output);
         state.cycle2Combine = state.cycle1Combine;
         return;

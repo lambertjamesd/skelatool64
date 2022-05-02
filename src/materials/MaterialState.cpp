@@ -90,6 +90,10 @@ ColorCombineMode::ColorCombineMode() :
     alpha{AlphaCombineSource::_0, AlphaCombineSource::_0, AlphaCombineSource::_0, AlphaCombineSource::_0} {}
 
 
+ColorCombineMode::ColorCombineMode(ColorCombineSource c0, ColorCombineSource c1, ColorCombineSource c2, ColorCombineSource c3, AlphaCombineSource a0, AlphaCombineSource a1, AlphaCombineSource a2, AlphaCombineSource a3) : 
+    color{c0, c1, c2, c3},
+    alpha{a0, a1, a2, a3} {}
+
 bool ColorCombineMode::operator==(const ColorCombineMode& other) const {
     return color[0] == other.color[0] &&
         color[1] == other.color[1] &&
