@@ -28,7 +28,7 @@ public:
 private:
 };
 
-void extractChunks(const aiScene* scene, std::vector<std::unique_ptr<ExtendedMesh>>& meshes, std::vector<RenderChunk>& result, std::map<std::string, Material>& mMaterials);
+void extractChunks(const aiScene* scene, std::vector<std::unique_ptr<ExtendedMesh>>& meshes, std::vector<RenderChunk>& result, std::map<std::string, std::shared_ptr<Material>>& mMaterials);
 
 void orderChunks(std::vector<RenderChunk>& result);
 

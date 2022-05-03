@@ -18,7 +18,8 @@
 
 class Material {
 public:
-    Material();
+    Material(const std::string& name);
+    std::string mName;
     MaterialState mState;
 
     void Write(CFileDefinition& fileDef, const MaterialState& from, StructureDataChunk& output);

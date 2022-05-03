@@ -9,7 +9,7 @@
 
 struct MaterialFile {
 public:
-    std::map<std::string, Material> mMaterials;
+    std::map<std::string, std::shared_ptr<Material>> mMaterials;
 };
 
 struct ParseError {

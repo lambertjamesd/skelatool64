@@ -13,6 +13,7 @@
 #include "src/definition_generator/MeshDefinitionGenerator.h"
 #include "src/definition_generator/CollisionGenerator.h"
 #include "src/definition_generator/MaterialGenerator.h"
+#include "src/definition_generator/StaticGenerator.h"
 #include "src/materials/MaterialState.h"
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
@@ -118,6 +119,10 @@ int main(int argc, char *argv[]) {
         CollisionGenerator colliderGenerator(settings);
         colliderGenerator.TraverseScene(scene);
         colliderGenerator.GenerateDefinitions(scene, fileDef);
+
+        StaticGenerator staticGenerator(settings);
+        staticGenerator.TraverseScene(scene);
+        staticGenerator.GenerateDefinitions(scene, fileDef);
 
         fileDef.GenerateAll(args.mOutputFile);
     }

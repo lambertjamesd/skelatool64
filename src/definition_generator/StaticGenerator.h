@@ -4,6 +4,11 @@
 #include "DefinitionGenerator.h"
 #include "../DisplayListSettings.h"
 
+struct StaticContentElement {
+    std::string meshName;
+    std::string materialName;
+};
+
 class StaticGenerator : public DefinitionGenerator {
 public:
     StaticGenerator(const DisplayListSettings& settings);

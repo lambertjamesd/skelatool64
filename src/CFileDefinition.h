@@ -50,6 +50,8 @@ public:
     bool HasDefinitions(const std::string& location);
 
     bool GetResourceName(const void* resource, std::string& result) const;
+
+    ExtendedMesh* GetExtendedMesh(aiMesh* mesh);
 private:
     std::string mPrefix;
     float mModelScale;
@@ -59,6 +61,8 @@ private:
     std::vector<std::unique_ptr<FileDefinition>> mDefinitions;
     std::vector<std::string> mMacros;
     std::map<const void*, std::string> mResourceNames;
+    std::map<aiMesh*, std::shared_ptr<ExtendedMesh>> mMeshes;
+    BoneHierarchy mBoneHierarchy;
 };
 
 #endif

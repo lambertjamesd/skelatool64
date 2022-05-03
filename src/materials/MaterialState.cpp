@@ -508,7 +508,10 @@ void generateTexture(const TextureState& from, const TextureState& to, Structure
         return;
     }
 
-
+    if (from.isOn && from.sc == to.sc && from.tc == to.tc && from.level == to.level && from.tile == to.tile) {
+        return;
+    }
+    
     std::unique_ptr<MacroDataChunk> setTexture(new MacroDataChunk("gsSPTexture"));
     setTexture->AddPrimitive(to.sc);
     setTexture->AddPrimitive(to.tc);

@@ -241,6 +241,11 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
         auto twoTone = node["twoTone"];
         if (twoTone.as<bool>()) {
             effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::TwoToneGrayscale);
+
+            if (!yamlFormat.IsDefined()) {
+                requestedFormat = G_IM_FMT::G_IM_FMT_I;
+                hasFormat = true;
+            }
         }
     } else {
         output.mErrors.push_back(ParseError(formatError(std::string("Tile should be a file name or object") + filename, node.Mark())));
@@ -452,7 +457,6 @@ void parseSingleCombineMode(const YAML::Node& node, ColorCombineMode& combineMod
 
 void parseCombineMode(const YAML::Node& node, MaterialState& state, ParseResult& output) {
     if (!node.IsDefined()) {
-        state.hasCombineMode = false;
         return;
     }
     state.hasCombineMode = true;
@@ -606,44 +610,66 @@ void parseTiles(const YAML::Node& node, MaterialState& state, ParseResult& outpu
 
     output.mErrors.push_back(ParseError(formatError("Expected a tile or array of tiles", node.Mark())));
 }
+
+ColorCombineMode gBlendCombineMode(
+    ColorCombineSource::EnvironmentColor, 
+    ColorCombineSource::PrimitiveColor, 
+    ColorCombineSource::Texel0, 
+    ColorCombineSource::EnvironmentColor,
+
+    AlphaCombineSource::_0,
+    AlphaCombineSource::_0,
+    AlphaCombineSource::_0,
+    AlphaCombineSource::Texture0Alpha
+);
  
-void parseMaterial(const YAML::Node& node, Material& material, ParseResult& output) {
-    parseRenderMode(node["gDPSetRenderMode"], material.mState, output);
-    parseCombineMode(node["gDPSetCombineMode"], material.mState, output);
+std::shared_ptr<Material> parseMaterial(const std::string& name, const YAML::Node& node, ParseResult& output) {
+    std::shared_ptr<Material> material(new Material(name));
 
-    material.mState.geometryModes = parseGeometryMode(node["gSPGeometryMode"], output);
+    parseTexture(node["gSPTexture"], material->mState.textureState, output);
 
-    parseTexture(node["gSPTexture"], material.mState.textureState, output);
-
-    parseTiles(node["gDPSetTile"], material.mState, output);
+    parseTiles(node["gDPSetTile"], material->mState, output);
 
     for (int i = 0; i < MAX_TILE_COUNT; ++i) {
-        if (material.mState.tiles[i].texture && material.mState.tiles[i].texture->HasEffect(TextureDefinitionEffect::TwoToneGrayscale)) {
-            material.mState.envColor = material.mState.tiles[i].texture->GetTwoToneMin();
-            material.mState.useEnvColor = true;
-            material.mState.primitiveColor = material.mState.tiles[i].texture->GetTwoToneMax();
-            material.mState.usePrimitiveColor = true;
+        if (material->mState.tiles[i].texture && material->mState.tiles[i].texture->HasEffect(TextureDefinitionEffect::TwoToneGrayscale)) {
+            material->mState.envColor = material->mState.tiles[i].texture->GetTwoToneMin();
+            material->mState.useEnvColor = true;
+            material->mState.primitiveColor = material->mState.tiles[i].texture->GetTwoToneMax();
+            material->mState.usePrimitiveColor = true;
+
+            material->mState.cycle1Combine = gBlendCombineMode;
+            material->mState.cycle2Combine = gBlendCombineMode;
+            material->mState.hasCombineMode = true;
+
+            break;
         }
     }
 
-    material.mState.pipelineMode = parseEnumType(node["gDPPipelineMode"], output, gPipelineModeNames, PipelineMode::Unknown, (int)PipelineMode::Count);
-    material.mState.cycleType = parseEnumType(node["gDPSetCycleType"], output, gCycleTypeNames, CycleType::Unknown, (int)CycleType::Count);
-    material.mState.perspectiveMode = parseEnumType(node["gDPSetTexturePersp"], output, gPerspectiveModeNames, PerspectiveMode::Unknown, (int)PerspectiveMode::Count);
-    material.mState.textureDetail = parseEnumType(node["gDPSetTextureDetail"], output, gTextureDetailNames, TextureDetail::Unknown, (int)TextureDetail::Count);
-    material.mState.textureLOD = parseEnumType(node["gDPSetTextureLOD"], output, gTextureLODNames, TextureLOD::Unknown, (int)TextureLOD::Count);
-    material.mState.textureLUT = parseEnumType(node["gDPSetTextureLUT"], output, gTextureLUTNames, TextureLUT::Unknown, (int)TextureLUT::Count);
-    material.mState.textureFilter = parseEnumType(node["gDPSetTextureFilter"], output, gTextureFilterNames, TextureFilter::Unknown, (int)TextureFilter::Count);
-    material.mState.textureConvert = parseEnumType(node["gDPSetTextureConvert"], output, gTextureConvertNames, TextureConvert::Unknown, (int)TextureConvert::Count);
-    material.mState.combineKey = parseEnumType(node["gDPSetCombineKey"], output, gCombineKeyNames, CombineKey::Unknown, (int)CombineKey::Count);
-    material.mState.colorDither = parseEnumType(node["gDPSetColorDither"], output, gCotherDitherNames, ColorDither::Unknown, (int)ColorDither::Count);
-    material.mState.alphaDither = parseEnumType(node["gDPSetAlphaDither"], output, gAlphaDitherNames, AlphaDither::Unknown, (int)AlphaDither::Count);
-    material.mState.alphaCompare = parseEnumType(node["gDPSetAlphaCompare"], output, gAlphaCompareNames, AlphaCompare::Unknown, (int)AlphaCompare::Count);
-    material.mState.depthSource = parseEnumType(node["gDPSetDepthSource"], output, gDepthSourceNames, DepthSource::Unknown, (int)DepthSource::Count);
+    parseRenderMode(node["gDPSetRenderMode"], material->mState, output);
+    parseCombineMode(node["gDPSetCombineMode"], material->mState, output);
+
+    material->mState.geometryModes = parseGeometryMode(node["gSPGeometryMode"], output);
+
+    material->mState.pipelineMode = parseEnumType(node["gDPPipelineMode"], output, gPipelineModeNames, PipelineMode::Unknown, (int)PipelineMode::Count);
+    material->mState.cycleType = parseEnumType(node["gDPSetCycleType"], output, gCycleTypeNames, CycleType::Unknown, (int)CycleType::Count);
+    material->mState.perspectiveMode = parseEnumType(node["gDPSetTexturePersp"], output, gPerspectiveModeNames, PerspectiveMode::Unknown, (int)PerspectiveMode::Count);
+    material->mState.textureDetail = parseEnumType(node["gDPSetTextureDetail"], output, gTextureDetailNames, TextureDetail::Unknown, (int)TextureDetail::Count);
+    material->mState.textureLOD = parseEnumType(node["gDPSetTextureLOD"], output, gTextureLODNames, TextureLOD::Unknown, (int)TextureLOD::Count);
+    material->mState.textureLUT = parseEnumType(node["gDPSetTextureLUT"], output, gTextureLUTNames, TextureLUT::Unknown, (int)TextureLUT::Count);
+    material->mState.textureFilter = parseEnumType(node["gDPSetTextureFilter"], output, gTextureFilterNames, TextureFilter::Unknown, (int)TextureFilter::Count);
+    material->mState.textureConvert = parseEnumType(node["gDPSetTextureConvert"], output, gTextureConvertNames, TextureConvert::Unknown, (int)TextureConvert::Count);
+    material->mState.combineKey = parseEnumType(node["gDPSetCombineKey"], output, gCombineKeyNames, CombineKey::Unknown, (int)CombineKey::Count);
+    material->mState.colorDither = parseEnumType(node["gDPSetColorDither"], output, gCotherDitherNames, ColorDither::Unknown, (int)ColorDither::Count);
+    material->mState.alphaDither = parseEnumType(node["gDPSetAlphaDither"], output, gAlphaDitherNames, AlphaDither::Unknown, (int)AlphaDither::Count);
+    material->mState.alphaCompare = parseEnumType(node["gDPSetAlphaCompare"], output, gAlphaCompareNames, AlphaCompare::Unknown, (int)AlphaCompare::Count);
+    material->mState.depthSource = parseEnumType(node["gDPSetDepthSource"], output, gDepthSourceNames, DepthSource::Unknown, (int)DepthSource::Count);
     
-    parsePrimColor(node["gDPSetPrimColor"], material.mState, output);
-    material.mState.useEnvColor = parseMaterialColor(node["gDPSetEnvColor"], material.mState.envColor, output) || material.mState.useEnvColor;
-    material.mState.useFogColor = parseMaterialColor(node["gDPSetFogColor"], material.mState.fogColor, output) || material.mState.useFogColor;
-    material.mState.useBlendColor = parseMaterialColor(node["gDPSetBlendColor"], material.mState.blendColor, output) || material.mState.useBlendColor;
+    parsePrimColor(node["gDPSetPrimColor"], material->mState, output);
+    material->mState.useEnvColor = parseMaterialColor(node["gDPSetEnvColor"], material->mState.envColor, output) || material->mState.useEnvColor;
+    material->mState.useFogColor = parseMaterialColor(node["gDPSetFogColor"], material->mState.fogColor, output) || material->mState.useFogColor;
+    material->mState.useBlendColor = parseMaterialColor(node["gDPSetBlendColor"], material->mState.blendColor, output) || material->mState.useBlendColor;
+
+    return material;
 
 }
 
@@ -654,9 +680,8 @@ void parseMaterialFile(std::istream& input, ParseResult& output) {
         const YAML::Node& materials = doc["materials"];
 
         for (auto it = materials.begin(); it != materials.end(); ++it) {
-            Material newMaterial;
-            parseMaterial(it->second, newMaterial, output);
-            output.mMaterialFile.mMaterials[it->first.as<std::string>()] = newMaterial;
+            std::string name = it->first.as<std::string>();
+            output.mMaterialFile.mMaterials[name] = parseMaterial(name, it->second, output);
         }
     } catch (YAML::ParserException& e) {
         output.mErrors.push_back(ParseError(e.what()));

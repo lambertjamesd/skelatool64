@@ -12,8 +12,8 @@ void MaterialGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinitio
 
     for (auto& entry : mSettings.mMaterials) {
         for (int i = 0; i < 8; ++i) {
-            if (entry.second.mState.tiles[i].texture) {
-                textures.insert(entry.second.mState.tiles[i].texture);
+            if (entry.second->mState.tiles[i].texture) {
+                textures.insert(entry.second->mState.tiles[i].texture);
             }
         }
     }
@@ -26,7 +26,7 @@ void MaterialGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinitio
         std::string name = fileDefinition.GetUniqueName(entry.first);
 
         DisplayList dl(name);
-        entry.second.Write(fileDefinition, mSettings.mDefaultMaterialState, dl.GetDataChunk());
+        entry.second->Write(fileDefinition, mSettings.mDefaultMaterialState, dl.GetDataChunk());
         fileDefinition.AddDefinition(std::move(dl.Generate("_mat")));
     }
 }

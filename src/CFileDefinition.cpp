@@ -382,3 +382,17 @@ bool CFileDefinition::GetResourceName(const void* resource, std::string& result)
 
     return false;
 }
+
+ExtendedMesh* CFileDefinition::GetExtendedMesh(aiMesh* mesh) {
+    auto it = mMeshes.find(mesh);
+
+    if (it != mMeshes.end()) {
+        return it->second.get();
+    }
+
+    std::shared_ptr<ExtendedMesh> result(new ExtendedMesh(mesh, mBoneHierarchy));
+
+    mMeshes[mesh] = result;
+
+    return result.get();
+}

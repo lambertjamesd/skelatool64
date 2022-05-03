@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <assimp/scene.h>
+#include <memory>
 #include "./materials/Material.h"
 #include "./materials/MaterialState.h"
 
@@ -17,7 +18,7 @@ struct DisplayListSettings {
     int mMaxMatrixDepth;
     bool mCanPopMultipleMatrices;
     unsigned short mTicksPerSecond;
-    std::map<std::string, Material> mMaterials;
+    std::map<std::string, std::shared_ptr<Material>> mMaterials;
     MaterialState mDefaultMaterialState;
     aiQuaternion mRotateModel;
     bool mExportAnimation;
