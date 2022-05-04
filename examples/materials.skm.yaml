@@ -6,9 +6,11 @@ materials:
       fmt: G_IM_FMT_I
     gDPSetRenderMode: G_RM_AA_ZB_OPA_SURF
     gDPSetCombineMode:
-      color: [0, 0, 0, 1]
-      alpha: [0, 0, 0, 1]
+      color: ["0", "0", "0", "1"]
+      alpha: ["0", "0", "0", "1"]
     gDPSetCycleType: G_CYC_1CYCLE
+    gDPSetTextureLOD: G_TL_TILE
+    gDPSetAlphaDither: G_AD_DISABLE
     gDPSetPrimColor:
       r: 255
       g: 0

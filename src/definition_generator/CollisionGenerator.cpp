@@ -195,4 +195,11 @@ void CollisionGenerator::GenerateDefinitions(const aiScene* scene, CFileDefiniti
     )));
 
     fileDefinition.AddMacro(fileDefinition.GetMacroName("QUAD_COLLIDERS_COUNT"), std::to_string(meshCount));
+
+    mOutput.quadCount = meshCount;
+    mOutput.quadsName = collisionObjectsName;
+}
+
+const CollisionGeneratorOutput& CollisionGenerator::GetOutput() const {
+    return mOutput;
 }

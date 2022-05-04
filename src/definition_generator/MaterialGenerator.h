@@ -10,6 +10,8 @@ public:
 
     virtual bool ShouldIncludeNode(aiNode* node);
     virtual void GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition);
+
+    static std::string MaterialIndexMacroName(const std::string& materialName);
 private:
     DisplayListSettings mSettings;
 };

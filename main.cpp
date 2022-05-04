@@ -14,6 +14,7 @@
 #include "src/definition_generator/CollisionGenerator.h"
 #include "src/definition_generator/MaterialGenerator.h"
 #include "src/definition_generator/StaticGenerator.h"
+#include "src/definition_generator/LevelGenerator.h"
 #include "src/materials/MaterialState.h"
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
@@ -116,13 +117,19 @@ int main(int argc, char *argv[]) {
         CFileDefinition fileDef(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
         meshGenerator.GenerateDefinitions(scene, fileDef);
 
-        CollisionGenerator colliderGenerator(settings);
-        colliderGenerator.TraverseScene(scene);
-        colliderGenerator.GenerateDefinitions(scene, fileDef);
 
-        StaticGenerator staticGenerator(settings);
-        staticGenerator.TraverseScene(scene);
-        staticGenerator.GenerateDefinitions(scene, fileDef);
+        if (args.mIsLevel) {
+            CollisionGenerator colliderGenerator(settings);
+            colliderGenerator.TraverseScene(scene);
+            colliderGenerator.GenerateDefinitions(scene, fileDef);
+
+            StaticGenerator staticGenerator(settings);
+            staticGenerator.TraverseScene(scene);
+            staticGenerator.GenerateDefinitions(scene, fileDef);
+
+            LevelGenerator levelGenerator(staticGenerator.GetOutput(), colliderGenerator.GetOutput());
+            levelGenerator.GenerateDefinitions(scene, fileDef);
+        }
 
         fileDef.GenerateAll(args.mOutputFile);
     }

@@ -4,6 +4,11 @@
 #include "DefinitionGenerator.h"
 #include "../DisplayListSettings.h"
 
+struct CollisionGeneratorOutput {
+    std::string quadsName;
+    int quadCount;
+};
+
 struct CollisionQuad {
     CollisionQuad(aiMesh* mesh, const aiMatrix4x4& transform);
 
@@ -23,8 +28,12 @@ public:
 
     virtual bool ShouldIncludeNode(aiNode* node);
     virtual void GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition);
+
+    const CollisionGeneratorOutput& GetOutput() const;
 private:
     DisplayListSettings mSettings;
+
+    CollisionGeneratorOutput mOutput;
 };
 
 #endif

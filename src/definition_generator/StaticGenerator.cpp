@@ -3,6 +3,7 @@
 #include "../StringUtils.h"
 #include "../MeshWriter.h"
 #include "MeshDefinitionGenerator.h"
+#include "MaterialGenerator.h"
 #include "../RenderChunk.h"
 
 StaticGenerator::StaticGenerator(const DisplayListSettings& settings) : DefinitionGenerator(), mSettings(settings) {
@@ -15,6 +16,7 @@ bool StaticGenerator::ShouldIncludeNode(aiNode* node) {
 
 void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition) {
     DisplayListSettings settings = mSettings;
+    settings.mMaterials.clear();
 
     std::vector<StaticContentElement> elements;
 
@@ -27,7 +29,9 @@ void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition&
 
             if (renderChunks[0].mMaterial) {
                 settings.mDefaultMaterialState = renderChunks[0].mMaterial->mState;
-                element.materialName = renderChunks[0].mMaterial->mName;
+                element.materialName = MaterialGenerator::MaterialIndexMacroName(renderChunks[0].mMaterial->mName);
+            } else {
+                element.materialName = "0";
             }
             element.meshName = generateMesh(scene, fileDefinition, renderChunks, settings, "_geo");
 
@@ -37,6 +41,8 @@ void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition&
 
     std::unique_ptr<StructureDataChunk> staticContentList(new StructureDataChunk());
 
+    mOutput.staticContentCount = 0;
+
     for (auto& it : elements) {
         std::unique_ptr<StructureDataChunk> element(new StructureDataChunk());
 
@@ -44,7 +50,18 @@ void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition&
         element->AddPrimitive(it.materialName);
 
         staticContentList->Add(std::move(element));
+
+        ++mOutput.staticContentCount;
     }
 
-    fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("struct StaticContentElement", fileDefinition.GetUniqueName("static"), true, "_geo", std::move(staticContentList))));
+    mOutput.staticContentName = fileDefinition.GetUniqueName("static");
+
+    std::unique_ptr<FileDefinition> fileDef(new DataFileDefinition("struct StaticContentElement", mOutput.staticContentName, true, "_geo", std::move(staticContentList)));
+    fileDef->AddTypeHeader("\"levels/level_def_gen.h\"");
+    fileDefinition.AddDefinition(std::move(fileDef));
+
+}
+
+const StaticGeneratorOutput& StaticGenerator::GetOutput() const {
+    return mOutput;
 }
