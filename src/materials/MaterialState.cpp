@@ -423,25 +423,15 @@ void generateTile(CFileDefinition& fileDef, const MaterialState& from, const Til
 
         std::unique_ptr<MacroDataChunk> setTextureImage(new MacroDataChunk("gsDPSetTextureImage"));
         setTextureImage->AddPrimitive(nameForImageFormat(to.format));
-        if (to.size == G_IM_SIZ::G_IM_SIZ_4b) {
-            setTextureImage->AddPrimitive(nameForImageSize(G_IM_SIZ::G_IM_SIZ_16b));
-            setTextureImage->AddPrimitive(1);
-        } else {
-            setTextureImage->AddPrimitive(nameForImageSize(to.size));
-            setTextureImage->AddPrimitive(to.texture->Width());
-        }
+        setTextureImage->AddPrimitive(std::string(nameForImageSize(to.size)) + "_LOAD_BLOCK");
+        setTextureImage->AddPrimitive(1);
         setTextureImage->AddPrimitive(imageName);
         output.Add(std::move(setTextureImage));
 
         std::unique_ptr<MacroDataChunk> setTile(new MacroDataChunk("gsDPSetTile"));
         setTile->AddPrimitive(nameForImageFormat(to.format));
-        if (to.size == G_IM_SIZ::G_IM_SIZ_4b) {
-            setTile->AddPrimitive(nameForImageSize(G_IM_SIZ::G_IM_SIZ_16b));
-            setTile->AddPrimitive(0);
-        } else {
-            setTile->AddPrimitive(nameForImageSize(to.size));
-            setTile->AddPrimitive(to.line);
-        }
+        setTile->AddPrimitive(std::string(nameForImageSize(to.size)) + "_LOAD_BLOCK");
+        setTile->AddPrimitive(0);
         setTile->AddPrimitive(to.tmem);
         setTile->AddPrimitive<const char*>("G_TX_LOADTILE");
         setTile->AddPrimitive(to.pallete);

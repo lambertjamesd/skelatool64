@@ -14,6 +14,7 @@ enum class VertexType {
 
 class ExtendedMesh {
 public:
+    ExtendedMesh(const ExtendedMesh& other);
     ExtendedMesh(aiMesh* mesh, BoneHierarchy& boneHierarchy);
     ~ExtendedMesh();
     aiMesh* mMesh;
@@ -28,8 +29,9 @@ public:
 
     void RecalcBB();
 
-    void Transform(const aiMatrix4x4& transform);
+    std::shared_ptr<ExtendedMesh> Transform(const aiMatrix4x4& transform) const;
     void ReplaceColor(const aiColor4D& color);
+    void CubeProjectTex(double sTile, double tTile);
 
     bool isFaceOneBone(aiFace* face);
     std::pair<Bone*, Bone*> findTransitionPairForFace(aiFace* face);

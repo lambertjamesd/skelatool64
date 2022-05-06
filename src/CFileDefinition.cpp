@@ -6,7 +6,7 @@
 
 #include <fstream>
 
-VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType, int textureWidth, int textureHeight):
+VertexBufferDefinition::VertexBufferDefinition(std::shared_ptr<ExtendedMesh> targetMesh, std::string name, VertexType vertexType, int textureWidth, int textureHeight):
     mTargetMesh(targetMesh),
     mName(name),
     mVertexType(vertexType),
@@ -16,7 +16,7 @@ VertexBufferDefinition::VertexBufferDefinition(ExtendedMesh* targetMesh, std::st
 }
 
 ErrorResult convertToShort(float value, short& output) {
-    int result = (int)(value);
+    int result = (int)floor(value + 0.5);
 
     if (result < (int)std::numeric_limits<short>::min() || result > (int)std::numeric_limits<short>::max()) {
         return ErrorResult("The value " + std::to_string(result) + " is too big to fit into a short");
@@ -179,7 +179,7 @@ void CFileDefinition::AddMacro(const std::string& name, const std::string& value
     mMacros.push_back(name + " " + value);
 }
 
-std::string CFileDefinition::GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix) {
+std::string CFileDefinition::GetVertexBuffer(std::shared_ptr<ExtendedMesh> mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix) {
     for (auto existing = mVertexBuffers.begin(); existing != mVertexBuffers.end(); ++existing) {
         if (existing->second.mTargetMesh == mesh && existing->second.mVertexType == vertexType) {
             return existing->first;
@@ -245,7 +245,7 @@ std::string CFileDefinition::GetCullingBuffer(const std::string& name, const aiV
     mesh->mVertices[7] = aiVector3D(max.x, max.y, max.z);
 
     BoneHierarchy boneHierarchy;
-    return GetVertexBuffer(new ExtendedMesh(mesh, boneHierarchy), VertexType::PosUVNormal, 0, 0, modelSuffix);
+    return GetVertexBuffer(std::shared_ptr<ExtendedMesh>(new ExtendedMesh(mesh, boneHierarchy)), VertexType::PosUVNormal, 0, 0, modelSuffix);
 }
 
 
@@ -383,16 +383,16 @@ bool CFileDefinition::GetResourceName(const void* resource, std::string& result)
     return false;
 }
 
-ExtendedMesh* CFileDefinition::GetExtendedMesh(aiMesh* mesh) {
+std::shared_ptr<ExtendedMesh> CFileDefinition::GetExtendedMesh(aiMesh* mesh) {
     auto it = mMeshes.find(mesh);
 
     if (it != mMeshes.end()) {
-        return it->second.get();
+        return it->second;
     }
 
     std::shared_ptr<ExtendedMesh> result(new ExtendedMesh(mesh, mBoneHierarchy));
 
     mMeshes[mesh] = result;
 
-    return result.get();
+    return result;
 }

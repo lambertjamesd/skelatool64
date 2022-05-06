@@ -49,10 +49,10 @@ void generateMeshFromScene(const aiScene* scene, CFileDefinition& fileDefinition
         shouldExportAnimations = false;
     }
 
-    std::vector<std::unique_ptr<ExtendedMesh>> extendedMeshes;
+    std::vector<std::shared_ptr<ExtendedMesh>> extendedMeshes;
 
     for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
-        extendedMeshes.push_back(std::unique_ptr<ExtendedMesh>(new ExtendedMesh(scene->mMeshes[i], bones)));
+        extendedMeshes.push_back(std::shared_ptr<ExtendedMesh>(new ExtendedMesh(scene->mMeshes[i], bones)));
     }
 
     std::vector<RenderChunk> renderChunks;

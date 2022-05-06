@@ -14,9 +14,9 @@
 
 class VertexBufferDefinition {
 public:
-    VertexBufferDefinition(ExtendedMesh* targetMesh, std::string name, VertexType vertexType, int textureWidth, int textureHeight);
+    VertexBufferDefinition(std::shared_ptr<ExtendedMesh> targetMesh, std::string name, VertexType vertexType, int textureWidth, int textureHeight);
 
-    ExtendedMesh* mTargetMesh;
+    std::shared_ptr<ExtendedMesh> mTargetMesh;
     std::string mName;
     VertexType mVertexType;
     int mTextureWidth;
@@ -33,7 +33,7 @@ public:
     void AddDefinition(std::unique_ptr<FileDefinition> definition);
     void AddMacro(const std::string& name, const std::string& value);
 
-    std::string GetVertexBuffer(ExtendedMesh* mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix);
+    std::string GetVertexBuffer(std::shared_ptr<ExtendedMesh> mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix);
     std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max, const std::string& modelSuffix);
 
     std::string GetUniqueName(std::string requestedName);
@@ -51,7 +51,7 @@ public:
 
     bool GetResourceName(const void* resource, std::string& result) const;
 
-    ExtendedMesh* GetExtendedMesh(aiMesh* mesh);
+    std::shared_ptr<ExtendedMesh> GetExtendedMesh(aiMesh* mesh);
 private:
     std::string mPrefix;
     float mModelScale;

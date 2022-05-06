@@ -2,7 +2,7 @@
 #include "RenderChunk.h"
 #include <algorithm>
 
-RenderChunk::RenderChunk(std::pair<Bone*, Bone*> bonePair, ExtendedMesh* mesh, Material* material): 
+RenderChunk::RenderChunk(std::pair<Bone*, Bone*> bonePair, std::shared_ptr<ExtendedMesh> mesh, Material* material): 
     mBonePair(bonePair),
     mMesh(mesh),
     mMaterial(material) {
@@ -31,7 +31,7 @@ const std::vector<aiFace*>& RenderChunk::GetFaces() {
     }
 }
 
-void extractChunks(const aiScene* scene, std::vector<std::unique_ptr<ExtendedMesh>>& meshes, std::vector<RenderChunk>& result, std::map<std::string, std::shared_ptr<Material>>& materials) {
+void extractChunks(const aiScene* scene, std::vector<std::shared_ptr<ExtendedMesh>>& meshes, std::vector<RenderChunk>& result, std::map<std::string, std::shared_ptr<Material>>& materials) {
     for (auto it = meshes.begin(); it != meshes.end(); ++it) {
         Material* materialPtr = NULL;
 
@@ -44,13 +44,13 @@ void extractChunks(const aiScene* scene, std::vector<std::unique_ptr<ExtendedMes
         for (auto boneSegment = (*it)->mFacesForBone.begin(); boneSegment != (*it)->mFacesForBone.end(); ++boneSegment) {
             result.push_back(RenderChunk(
                 std::make_pair(boneSegment->first, boneSegment->first),
-                it->get(),
+                *it,
                 materialPtr
             ));
         }
 
         for (auto pairSegment = (*it)->mBoneSpanningFaces.begin(); pairSegment != (*it)->mBoneSpanningFaces.end(); ++pairSegment) {
-            result.push_back(RenderChunk(pairSegment->first, it->get(), materialPtr));
+            result.push_back(RenderChunk(pairSegment->first, *it, materialPtr));
         }
     }
 }

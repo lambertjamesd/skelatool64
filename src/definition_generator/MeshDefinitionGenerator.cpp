@@ -3,6 +3,23 @@
 #include "../RenderChunk.h"
 #include "../MeshWriter.h"
 
+bool extractMaterialAutoTileParameters(Material* material, double& sTile, double& tTile) {
+    if (!material) {
+        return false;
+    }
+
+    auto sTileEntry = material->mProperties.find("tileSizeS");
+    auto tTileEntry = material->mProperties.find("tileSizeT");
+
+    if (sTileEntry != material->mProperties.end()) {
+        sTile = std::atof(sTileEntry->second.c_str());
+        tTile = tTileEntry == material->mProperties.end() ? sTile : std::atof(tTileEntry->second.c_str());
+        return true;
+    }
+
+    return false;
+}
+
 MeshDefinitionGenerator::MeshDefinitionGenerator(const DisplayListSettings& settings) :
     DefinitionGenerator(),
     mSettings(settings) {
@@ -15,9 +32,9 @@ bool MeshDefinitionGenerator::ShouldIncludeNode(aiNode* node) {
 
 void MeshDefinitionGenerator::AppendRenderChunks(const aiScene* scene, aiNode* node, CFileDefinition& fileDefinition, DisplayListSettings& settings, std::vector<RenderChunk>& renderChunks) {
     for (unsigned meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {
-        ExtendedMesh* mesh = fileDefinition.GetExtendedMesh(scene->mMeshes[node->mMeshes[meshIndex]]);
+        std::shared_ptr<ExtendedMesh> mesh = fileDefinition.GetExtendedMesh(scene->mMeshes[node->mMeshes[meshIndex]]);
 
-        mesh->Transform(node->mTransformation);
+        mesh = mesh->Transform(node->mTransformation);
 
         std::string materialName = scene->mMaterials[mesh->mMesh->mMaterialIndex]->GetName().C_Str();
 
@@ -27,6 +44,16 @@ void MeshDefinitionGenerator::AppendRenderChunks(const aiScene* scene, aiNode* n
 
         if (material != settings.mMaterials.end()) {
             materialPtr = material->second.get();
+        }
+
+        double sTile;
+        double tTile;
+
+        if (extractMaterialAutoTileParameters(materialPtr, sTile, tTile)) {
+            mesh->CubeProjectTex(
+                settings.mCollisionScale / (double)sTile,
+                settings.mCollisionScale / (double)tTile
+            );
         }
 
         renderChunks.push_back(RenderChunk(

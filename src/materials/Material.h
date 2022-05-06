@@ -21,6 +21,7 @@ public:
     Material(const std::string& name);
     std::string mName;
     MaterialState mState;
+    std::map<std::string, std::string> mProperties;
 
     void Write(CFileDefinition& fileDef, const MaterialState& from, StructureDataChunk& output);
 

@@ -27,6 +27,7 @@ void MaterialGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinitio
     int index = 0;
 
     std::unique_ptr<StructureDataChunk> materialList(new StructureDataChunk());
+    std::unique_ptr<StructureDataChunk> revertList(new StructureDataChunk());
 
     for (auto& entry : mSettings.mMaterials) {
         std::string name = fileDefinition.GetUniqueName(entry.first);
@@ -37,10 +38,22 @@ void MaterialGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinitio
         materialList->AddPrimitive(material->GetName());
         fileDefinition.AddDefinition(std::move(material));
 
+        std::string revertName = fileDefinition.GetUniqueName(entry.first + "_revert");
+        DisplayList revertDL(revertName);
+        generateMaterial(fileDefinition, entry.second->mState, mSettings.mDefaultMaterialState, revertDL.GetDataChunk());
+        std::unique_ptr<FileDefinition> materialRevert = revertDL.Generate("_mat");
+        revertList->AddPrimitive(materialRevert->GetName());
+        fileDefinition.AddDefinition(std::move(materialRevert));
+
         fileDefinition.AddMacro(MaterialIndexMacroName(entry.second->mName), std::to_string(index));
+
+        ++index;
     }
 
-    fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("Gfx", fileDefinition.GetUniqueName("material_list"), true, "_mat", std::move(materialList))));
+    fileDefinition.AddMacro(fileDefinition.GetMacroName("MATERIAL_COUNT"), std::to_string(index));
+
+    fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("Gfx*", fileDefinition.GetUniqueName("material_list"), true, "_mat", std::move(materialList))));
+    fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("Gfx*", fileDefinition.GetUniqueName("material_revert_list"), true, "_mat", std::move(revertList))));
 }
 
 std::string MaterialGenerator::MaterialIndexMacroName(const std::string& materialName) {

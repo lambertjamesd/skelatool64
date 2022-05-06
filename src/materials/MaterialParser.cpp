@@ -239,7 +239,7 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
         }
 
         auto twoTone = node["twoTone"];
-        if (twoTone.as<bool>()) {
+        if (twoTone.IsDefined() && twoTone.as<bool>()) {
             effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::TwoToneGrayscale);
 
             if (!yamlFormat.IsDefined()) {
@@ -443,6 +443,7 @@ void parseSingleCombineMode(const YAML::Node& node, ColorCombineMode& combineMod
     if (node.IsMap()) {
         parseColorCombineMode(node["color"], combineMode, output);
         parseAlphaCombineMode(node["alpha"], combineMode, output);
+        return;
     }
 
     if (node.IsScalar()) {
@@ -450,6 +451,7 @@ void parseSingleCombineMode(const YAML::Node& node, ColorCombineMode& combineMod
         if (!combineModeWithName(name, combineMode)) {
             output.mErrors.push_back(ParseError(formatError(name + " is not a valid name for a combine mode", node.Mark())));
         }
+        return;
     }
 
     output.mErrors.push_back(ParseError(formatError("Combine mode should be an object with a color and alpha", node.Mark())));
@@ -486,13 +488,15 @@ void parseGeometryModeSequence(const YAML::Node& node, FlagList& result, bool fl
         return;
     }
 
-    for (auto it = node.begin(); it != node.end(); ++it) {
-        if (!it->second.IsScalar()) {
-            output.mErrors.push_back(ParseError(formatError("Expected a string", it->second.Mark())));
+    for (std::size_t i = 0; i < node.size(); ++i) {
+        const YAML::Node& element = node[i];
+
+        if (!element.IsScalar()) {
+            output.mErrors.push_back(ParseError(formatError("Expected a string", element.Mark())));
             continue;
         }
 
-        int mask = 1 << parseEnumType(it->second, output, gGeometryModeNames, 0, GEOMETRY_MODE_COUNT);
+        int mask = 1 << parseEnumType(element, output, gGeometryModeNames, 0, GEOMETRY_MODE_COUNT);
 
         result.SetFlag(mask, flagValue);
     }
@@ -611,9 +615,9 @@ void parseTiles(const YAML::Node& node, MaterialState& state, ParseResult& outpu
     output.mErrors.push_back(ParseError(formatError("Expected a tile or array of tiles", node.Mark())));
 }
 
-ColorCombineMode gBlendCombineMode(
-    ColorCombineSource::EnvironmentColor, 
+ColorCombineMode gTwoToneCombineMode(
     ColorCombineSource::PrimitiveColor, 
+    ColorCombineSource::EnvironmentColor, 
     ColorCombineSource::Texel0, 
     ColorCombineSource::EnvironmentColor,
 
@@ -637,8 +641,8 @@ std::shared_ptr<Material> parseMaterial(const std::string& name, const YAML::Nod
             material->mState.primitiveColor = material->mState.tiles[i].texture->GetTwoToneMax();
             material->mState.usePrimitiveColor = true;
 
-            material->mState.cycle1Combine = gBlendCombineMode;
-            material->mState.cycle2Combine = gBlendCombineMode;
+            material->mState.cycle1Combine = gTwoToneCombineMode;
+            material->mState.cycle2Combine = gTwoToneCombineMode;
             material->mState.hasCombineMode = true;
 
             break;
@@ -668,6 +672,14 @@ std::shared_ptr<Material> parseMaterial(const std::string& name, const YAML::Nod
     material->mState.useEnvColor = parseMaterialColor(node["gDPSetEnvColor"], material->mState.envColor, output) || material->mState.useEnvColor;
     material->mState.useFogColor = parseMaterialColor(node["gDPSetFogColor"], material->mState.fogColor, output) || material->mState.useFogColor;
     material->mState.useBlendColor = parseMaterialColor(node["gDPSetBlendColor"], material->mState.blendColor, output) || material->mState.useBlendColor;
+
+    auto properties = node["properties"];
+
+    if (properties.IsDefined() && properties.IsMap()) {
+        for (auto it = properties.begin(); it != properties.end(); ++it) {
+            material->mProperties[it->first.as<std::string>()] = it->second.as<std::string>();
+        }
+    }
 
     return material;
 
