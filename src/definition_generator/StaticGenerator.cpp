@@ -36,12 +36,12 @@ void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition&
             element.meshName = generateMesh(scene, fileDefinition, renderChunks, settings, "_geo");
 
             elements.push_back(element);
+
+            mOutput.staticMeshes.push_back(renderChunks[0].mMesh);
         }
     }
 
     std::unique_ptr<StructureDataChunk> staticContentList(new StructureDataChunk());
-
-    mOutput.staticContentCount = 0;
 
     for (auto& it : elements) {
         std::unique_ptr<StructureDataChunk> element(new StructureDataChunk());
@@ -50,8 +50,6 @@ void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition&
         element->AddPrimitive(it.materialName);
 
         staticContentList->Add(std::move(element));
-
-        ++mOutput.staticContentCount;
     }
 
     mOutput.staticContentName = fileDefinition.GetUniqueName("static");

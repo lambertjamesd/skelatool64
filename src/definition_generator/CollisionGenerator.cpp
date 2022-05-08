@@ -114,6 +114,44 @@ std::unique_ptr<DataChunk> CollisionQuad::Generate() {
     return result;
 }
 
+#define FIXED_POINT_PRECISION   8
+#define FIXED_POINT_SCALAR      (1 << FIXED_POINT_PRECISION)
+
+void CollisionQuad::ToLocalCoords(const aiVector3D& input, short& outX, short& outY) {
+    aiVector3D relative = input - corner;
+
+    outX = (short)(relative * edgeA * FIXED_POINT_SCALAR + 0.5f);
+    outY = (short)(relative * edgeB * FIXED_POINT_SCALAR + 0.5f);
+}
+
+#define INSIDE_NORMAL_TOLERANCE 0.1f
+
+bool CollisionQuad::IsCoplanar(ExtendedMesh& mesh, float relativeScale) const {
+    for (unsigned i = 0; i < mesh.mMesh->mNumVertices; ++i) {
+        aiVector3D offset = mesh.mMesh->mVertices[i] * relativeScale - corner;
+        
+        float z = offset * normal;
+
+        if (fabs(z) >= INSIDE_NORMAL_TOLERANCE) {
+            return false;
+        }
+
+        float x = offset * edgeA;
+
+        if (x < -INSIDE_NORMAL_TOLERANCE || x > edgeALength + INSIDE_NORMAL_TOLERANCE) {
+            return false;
+        }
+
+        float y = offset * edgeB;
+
+        if (y < -INSIDE_NORMAL_TOLERANCE || y > edgeBLength + INSIDE_NORMAL_TOLERANCE) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 CollisionGenerator::CollisionGenerator(const DisplayListSettings& settings) : 
     DefinitionGenerator(), 
     mSettings(settings) {}
@@ -160,6 +198,8 @@ void CollisionGenerator::GenerateDefinitions(const aiScene* scene, CFileDefiniti
             collisionObject->AddPrimitive<const char*>("NULL");
             collisionObjectChunk->Add(std::move(collisionObject));
 
+            mOutput.quads.push_back(collider);
+
             ++meshCount;
         }
     }
@@ -196,7 +236,6 @@ void CollisionGenerator::GenerateDefinitions(const aiScene* scene, CFileDefiniti
 
     fileDefinition.AddMacro(fileDefinition.GetMacroName("QUAD_COLLIDERS_COUNT"), std::to_string(meshCount));
 
-    mOutput.quadCount = meshCount;
     mOutput.quadsName = collisionObjectsName;
 }
 

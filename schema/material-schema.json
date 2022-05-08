@@ -640,6 +640,16 @@
                 },
                 "gDPSetBlendColor": {
                     "$ref": "#/definitions/color"
+                },
+                "properties": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "oneOf": [{
+                            "type": "number"
+                        }, {
+                            "type": "string"
+                        }]
+                    }
                 }
             }
         }

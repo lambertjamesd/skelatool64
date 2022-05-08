@@ -11,7 +11,7 @@ struct StaticContentElement {
 
 struct StaticGeneratorOutput {
     std::string staticContentName;
-    int staticContentCount;
+    std::vector<std::shared_ptr<ExtendedMesh>> staticMeshes;
 };
 
 class StaticGenerator : public DefinitionGenerator {

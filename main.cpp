@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
             staticGenerator.TraverseScene(scene);
             staticGenerator.GenerateDefinitions(scene, fileDef);
 
-            LevelGenerator levelGenerator(staticGenerator.GetOutput(), colliderGenerator.GetOutput());
+            LevelGenerator levelGenerator(settings, staticGenerator.GetOutput(), colliderGenerator.GetOutput());
             levelGenerator.GenerateDefinitions(scene, fileDef);
         }
 

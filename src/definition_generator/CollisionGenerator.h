@@ -4,11 +4,6 @@
 #include "DefinitionGenerator.h"
 #include "../DisplayListSettings.h"
 
-struct CollisionGeneratorOutput {
-    std::string quadsName;
-    int quadCount;
-};
-
 struct CollisionQuad {
     CollisionQuad(aiMesh* mesh, const aiMatrix4x4& transform);
 
@@ -20,6 +15,15 @@ struct CollisionQuad {
     aiVector3D normal;
 
     std::unique_ptr<DataChunk> Generate();
+
+    void ToLocalCoords(const aiVector3D& input, short& outX, short& outY);
+
+    bool IsCoplanar(ExtendedMesh& mesh, float relativeScale) const;
+};
+
+struct CollisionGeneratorOutput {
+    std::string quadsName;
+    std::vector<CollisionQuad> quads;
 };
 
 class CollisionGenerator : public DefinitionGenerator {
