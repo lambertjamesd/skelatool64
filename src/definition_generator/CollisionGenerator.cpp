@@ -66,6 +66,17 @@ CollisionQuad::CollisionQuad(aiMesh* mesh, const aiMatrix4x4& transform) {
 
         normal.Normalize();
 
+        if ((edgeA ^ edgeB) * normal < 0.0f) {
+            aiVector3D tmpEdge = edgeA;
+            float tmpLength = edgeALength;
+
+            edgeA = edgeB;
+            edgeALength = edgeBLength;
+
+            edgeB = tmpEdge;
+            edgeBLength = tmpLength;
+        }
+
         corner.x = 0.001f * round(1000.0f * corner.x);
         corner.y = 0.001f * round(1000.0f * corner.y);
         corner.z = 0.001f * round(1000.0f * corner.z);
