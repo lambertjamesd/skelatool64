@@ -549,6 +549,42 @@ int log2(int size) {
     return result;
 }
 
+void parseTextureCoordinate(const YAML::Node& node, TextureCoordinateState& state, ParseResult& output) {
+    if (!node.IsDefined()) {
+        return;
+    }
+
+    auto wrap = node["wrap"];
+    if (wrap.IsDefined()) {
+        state.wrap = wrap.as<bool>();
+    }
+
+    auto mirror = node["mirror"];
+    if (mirror.IsDefined()) {
+        state.mirror = mirror.as<bool>();
+    }
+
+    auto mask = node["mask"];
+    if (mask.IsDefined()) {
+        state.mask = mask.as<int>();
+    }
+
+    auto shift = node["shift"];
+    if (shift.IsDefined()) {
+        state.shift = shift.as<int>();
+    }
+
+    auto offset = node["offset"];
+    if (offset.IsDefined()) {
+        state.offset = offset.as<int>();
+    }
+
+    auto limit = node["limit"];
+    if (limit.IsDefined()) {
+        state.limit = limit.as<int>();
+    }
+}
+
 bool parseSingleTile(const YAML::Node& node, TileState& state, ParseResult& output) {
     state.texture = parseTextureDefinition(node, output);
 
@@ -564,8 +600,8 @@ bool parseSingleTile(const YAML::Node& node, TileState& state, ParseResult& outp
         state.sCoord.mask = log2(state.texture->Width());
         state.tCoord.mask = log2(state.texture->Height());
 
-        state.sCoord.upperBound = (state.texture->Width() - 1) * 4;
-        state.tCoord.upperBound = (state.texture->Height() - 1) * 4;
+        state.sCoord.limit = (state.texture->Width() - 1) * 4;
+        state.tCoord.limit = (state.texture->Height() - 1) * 4;
     }
 
     if (node.IsMap()) {
@@ -582,6 +618,9 @@ bool parseSingleTile(const YAML::Node& node, TileState& state, ParseResult& outp
         state.tmem = parseOptionalInteger(node["tmem"], output, 0, 511, 0);
         state.pallete = parseOptionalInteger(node["pallete"], output, 0, 15, 0);
     }
+    
+    parseTextureCoordinate(node["s"], state.sCoord, output);
+    parseTextureCoordinate(node["t"], state.tCoord, output);
 
     return state.isOn;
 }

@@ -311,6 +311,29 @@
                 "b"
             ]
         },
+        "textureCoordinateSettings": {
+            "type": "object",
+            "properties": {
+                "wrap": {
+                    "type": "boolean"
+                },
+                "mirror": {
+                    "type": "boolean"
+                },
+                "mask": {
+                    "type": "integer"
+                },
+                "shift": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                }
+            }
+        },
         "textureSettings": {
             "type": "object",
             "properties": {
@@ -333,6 +356,12 @@
                     "type": "number",
                     "minimum": 0,
                     "maximum": 7
+                },
+                "s": {
+                    "$ref": "#/definitions/textureCoordinateSettings"
+                },
+                "t": {
+                    "$ref": "#/definitions/textureCoordinateSettings"
                 }
             }
         },
@@ -387,14 +416,14 @@
         "material": {
             "type": "object",
             "properties": {
-                "gsDPPipelineMode": {
+                "gDPPipelineMode": {
                     "enum": [
                         "Unknown",
                         "G_PM_1PRIMITIVE",
                         "G_PM_NPRIMITIVE"
                     ]
                 },
-                "gsDPSetCycleType": {
+                "gDPSetCycleType": {
                     "enum": [
                         "Unknown",
                         "G_CYC_1CYCLE",
@@ -403,7 +432,7 @@
                         "G_CYC_FILL"
                     ]
                 },
-                "gsDPSetTexturePersp": {
+                "gDPSetTexturePersp": {
                     "enum": [
                         "Unknown",
                         "G_TP_NONE",
@@ -489,7 +518,7 @@
                         "G_ZS_PRIM"
                     ]
                 },
-                "gsDPSetRenderMode": {
+                "gDPSetRenderMode": {
                     "anyOf": [
                         {
                             "enum": [

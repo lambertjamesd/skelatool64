@@ -44,7 +44,7 @@ TextureCoordinateState::TextureCoordinateState():
     mask(0),
     shift(0),
     offset(0),
-    upperBound(0) {
+    limit(0) {
 
 }
 
@@ -73,9 +73,9 @@ bool TileState::IsTileStateEqual(const TileState& other) const {
 
 bool TileState::IsTileSizeEqual(const TileState& other) const {
     return sCoord.offset == other.sCoord.offset &&
-        sCoord.upperBound == other.sCoord.upperBound &&
+        sCoord.limit == other.sCoord.limit &&
         tCoord.offset == other.tCoord.offset &&
-        tCoord.upperBound == other.tCoord.upperBound;
+        tCoord.limit == other.tCoord.limit;
 }
 
 TextureState::TextureState():
@@ -486,8 +486,8 @@ void generateTile(CFileDefinition& fileDef, const MaterialState& from, const Til
         setTileSize->AddPrimitive(to.sCoord.offset);
         setTileSize->AddPrimitive(to.tCoord.offset);
 
-        setTileSize->AddPrimitive(to.sCoord.upperBound);
-        setTileSize->AddPrimitive(to.tCoord.upperBound);
+        setTileSize->AddPrimitive(to.sCoord.limit);
+        setTileSize->AddPrimitive(to.tCoord.limit);
 
         output.Add(std::move(setTileSize));
     }

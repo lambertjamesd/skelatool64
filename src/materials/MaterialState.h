@@ -25,7 +25,7 @@ public:
     int mask;
     int shift;
     int offset;
-    int upperBound;
+    int limit;
 };
 
 struct TileState {
