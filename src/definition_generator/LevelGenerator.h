@@ -23,6 +23,7 @@ private:
 
     std::unique_ptr<StructureDataChunk> CalculatePortalSingleSurface(CFileDefinition& fileDefinition, CollisionQuad& quad, ExtendedMesh& mesh, float scale);
     int CalculatePortalSurfaces(const aiScene* scene, CFileDefinition& fileDefinition, std::string& surfacesName, std::string& surfaceMappingName);
+    void CalculateBoundingSpheres(const aiScene* scene, CFileDefinition& fileDefinition, std::string& boundingSpheresName);
 };
 
 #endif

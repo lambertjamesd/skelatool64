@@ -2,6 +2,7 @@
 
 #include <set>
 #include <string>
+#include "../math/MES.h"
 
 std::set<std::string> gPortalableSurfaces = {
     "concrete_modular_wall001d",
@@ -152,15 +153,42 @@ int LevelGenerator::CalculatePortalSurfaces(const aiScene* scene, CFileDefinitio
     return surfaceCount;
 }
 
+void LevelGenerator::CalculateBoundingSpheres(const aiScene* scene, CFileDefinition& fileDefinition, std::string& boundingSpheresName) {
+    std::unique_ptr<StructureDataChunk> boundingSpheres(new StructureDataChunk());
+
+    for (auto& mesh : mStaticOutput.staticMeshes) {
+        std::unique_ptr<StructureDataChunk> sphere(new StructureDataChunk());
+
+        std::vector<aiMesh*> meshArray;
+        meshArray.push_back(mesh->mMesh);
+        Sphere boundingSphere = minimumEnclosingSphereForMeshes(meshArray);
+
+        sphere->AddPrimitive((short)(boundingSphere.center.x * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(boundingSphere.center.y * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(boundingSphere.center.z * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(boundingSphere.radius * mSettings.mGraphicsScale + 0.5f));
+
+        boundingSpheres->Add(std::move(sphere));
+    }
+
+    boundingSpheresName = fileDefinition.GetUniqueName("bounding_spheres");
+    std::unique_ptr<FileDefinition> portalSurfacesDef(new DataFileDefinition("struct BoundingSphere", boundingSpheresName, true, "_geo", std::move(boundingSpheres)));
+    fileDefinition.AddDefinition(std::move(portalSurfacesDef));
+}
+
 void LevelGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition) {
     std::string portalSurfaces;
     std::string portalSurfaceMapping;
     int portalSurfacesCount = CalculatePortalSurfaces(scene, fileDefinition, portalSurfaces, portalSurfaceMapping);
+
+    std::string boundingSpheres;
+    CalculateBoundingSpheres(scene, fileDefinition, boundingSpheres);
     
     std::unique_ptr<StructureDataChunk> levelDef(new StructureDataChunk());
 
     levelDef->AddPrimitive(mCollisionOutput.quadsName);
     levelDef->AddPrimitive(mStaticOutput.staticContentName);
+    levelDef->AddPrimitive(boundingSpheres);
     levelDef->AddPrimitive(portalSurfaces);
     levelDef->AddPrimitive(portalSurfaceMapping);
     levelDef->AddPrimitive(mCollisionOutput.quads.size());
