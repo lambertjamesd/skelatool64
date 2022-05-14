@@ -153,27 +153,26 @@ int LevelGenerator::CalculatePortalSurfaces(const aiScene* scene, CFileDefinitio
     return surfaceCount;
 }
 
-void LevelGenerator::CalculateBoundingSpheres(const aiScene* scene, CFileDefinition& fileDefinition, std::string& boundingSpheresName) {
-    std::unique_ptr<StructureDataChunk> boundingSpheres(new StructureDataChunk());
+void LevelGenerator::CalculateBoundingBoxes(const aiScene* scene, CFileDefinition& fileDefinition, std::string& boundingBoxesName) {
+    std::unique_ptr<StructureDataChunk> boundingBoxes(new StructureDataChunk());
 
     for (auto& mesh : mStaticOutput.staticMeshes) {
         std::unique_ptr<StructureDataChunk> sphere(new StructureDataChunk());
 
-        std::vector<aiMesh*> meshArray;
-        meshArray.push_back(mesh->mMesh);
-        Sphere boundingSphere = minimumEnclosingSphereForMeshes(meshArray);
+        sphere->AddPrimitive((short)(mesh->bbMin.x * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(mesh->bbMin.y * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(mesh->bbMin.z * mSettings.mGraphicsScale + 0.5f));
+        
+        sphere->AddPrimitive((short)(mesh->bbMax.x * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(mesh->bbMax.y * mSettings.mGraphicsScale + 0.5f));
+        sphere->AddPrimitive((short)(mesh->bbMax.z * mSettings.mGraphicsScale + 0.5f));
 
-        sphere->AddPrimitive((short)(boundingSphere.center.x * mSettings.mGraphicsScale + 0.5f));
-        sphere->AddPrimitive((short)(boundingSphere.center.y * mSettings.mGraphicsScale + 0.5f));
-        sphere->AddPrimitive((short)(boundingSphere.center.z * mSettings.mGraphicsScale + 0.5f));
-        sphere->AddPrimitive((short)(boundingSphere.radius * mSettings.mGraphicsScale + 0.5f));
-
-        boundingSpheres->Add(std::move(sphere));
+        boundingBoxes->Add(std::move(sphere));
     }
 
-    boundingSpheresName = fileDefinition.GetUniqueName("bounding_spheres");
-    std::unique_ptr<FileDefinition> portalSurfacesDef(new DataFileDefinition("struct BoundingSphere", boundingSpheresName, true, "_geo", std::move(boundingSpheres)));
-    fileDefinition.AddDefinition(std::move(portalSurfacesDef));
+    boundingBoxesName = fileDefinition.GetUniqueName("bounding_boxes");
+    std::unique_ptr<FileDefinition> boundingBoxDef(new DataFileDefinition("struct BoundingBoxs16", boundingBoxesName, true, "_geo", std::move(boundingBoxes)));
+    fileDefinition.AddDefinition(std::move(boundingBoxDef));
 }
 
 void LevelGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition) {
@@ -181,14 +180,14 @@ void LevelGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition& 
     std::string portalSurfaceMapping;
     int portalSurfacesCount = CalculatePortalSurfaces(scene, fileDefinition, portalSurfaces, portalSurfaceMapping);
 
-    std::string boundingSpheres;
-    CalculateBoundingSpheres(scene, fileDefinition, boundingSpheres);
+    std::string boundingBoxes;
+    CalculateBoundingBoxes(scene, fileDefinition, boundingBoxes);
     
     std::unique_ptr<StructureDataChunk> levelDef(new StructureDataChunk());
 
     levelDef->AddPrimitive(mCollisionOutput.quadsName);
     levelDef->AddPrimitive(mStaticOutput.staticContentName);
-    levelDef->AddPrimitive(boundingSpheres);
+    levelDef->AddPrimitive(boundingBoxes);
     levelDef->AddPrimitive(portalSurfaces);
     levelDef->AddPrimitive(portalSurfaceMapping);
     levelDef->AddPrimitive(mCollisionOutput.quads.size());
