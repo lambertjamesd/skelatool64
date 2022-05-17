@@ -36,7 +36,7 @@ void MeshDefinitionGenerator::AppendRenderChunks(const aiScene* scene, aiNode* n
 
         mesh = mesh->Transform(node->mTransformation);
 
-        std::string materialName = scene->mMaterials[mesh->mMesh->mMaterialIndex]->GetName().C_Str();
+        std::string materialName = ExtendedMesh::GetMaterialName(scene->mMaterials[mesh->mMesh->mMaterialIndex]);
 
         auto material = settings.mMaterials.find(materialName);
 

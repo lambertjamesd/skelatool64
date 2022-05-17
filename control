@@ -1,0 +1,7 @@
+Package: skeletool64
+Version: 0.3
+Architecture: amd64
+Depends: libassimp5
+Maintainer: James Lambert lambertjamesd@gmail.com
+Description: skeletool64
+ Converts various 3d formats to a N64 display list

@@ -35,7 +35,7 @@ void extractChunks(const aiScene* scene, std::vector<std::shared_ptr<ExtendedMes
     for (auto it = meshes.begin(); it != meshes.end(); ++it) {
         Material* materialPtr = NULL;
 
-        auto material = materials.find(scene->mMaterials[(*it)->mMesh->mMaterialIndex]->GetName().C_Str());
+        auto material = materials.find(ExtendedMesh::GetMaterialName(scene->mMaterials[(*it)->mMesh->mMaterialIndex]));
 
         if (material != materials.end()) {
             materialPtr = material->second.get();

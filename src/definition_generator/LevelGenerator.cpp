@@ -126,7 +126,7 @@ int LevelGenerator::CalculatePortalSurfaces(const aiScene* scene, CFileDefinitio
         for (auto mesh : mStaticOutput.staticMeshes) {
             aiMaterial* material = scene->mMaterials[mesh->mMesh->mMaterialIndex];
 
-            if (gPortalableSurfaces.find(material->GetName().C_Str()) == gPortalableSurfaces.end()) {
+            if (gPortalableSurfaces.find(ExtendedMesh::GetMaterialName(material)) == gPortalableSurfaces.end()) {
                 continue;;
             }
 

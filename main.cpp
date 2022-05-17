@@ -3,6 +3,11 @@
 
 #include <iostream>
 #include <fstream>
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #include "src/SceneWriter.h"
 #include "src/CommandLineParser.h"
@@ -16,6 +21,20 @@
 #include "src/definition_generator/StaticGenerator.h"
 #include "src/definition_generator/LevelGenerator.h"
 #include "src/materials/MaterialState.h"
+
+void handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
+
 
 bool parseMaterials(const std::string& filename, DisplayListSettings& output) {
     std::fstream file(filename, std::ios::in);
@@ -69,6 +88,7 @@ aiQuaternion getUpRotation(const aiVector3D& euler) {
  */
 
 int main(int argc, char *argv[]) {
+    signal(SIGSEGV, handler);
     CommandLineArguments args;
 
     if (!parseCommandLineArguments(argc, argv, args)) {
@@ -113,24 +133,29 @@ int main(int argc, char *argv[]) {
 
         MeshDefinitionGenerator meshGenerator(settings);
 
+        std::cout << "Generating mesh definitions" << std::endl;
         meshGenerator.TraverseScene(scene);
         CFileDefinition fileDef(settings.mPrefix, settings.mGraphicsScale, settings.mRotateModel);
         meshGenerator.GenerateDefinitions(scene, fileDef);
 
 
         if (args.mIsLevel) {
+            std::cout << "Generating collider definitions" << std::endl;
             CollisionGenerator colliderGenerator(settings);
             colliderGenerator.TraverseScene(scene);
             colliderGenerator.GenerateDefinitions(scene, fileDef);
 
+            std::cout << "Generating static definitions" << std::endl;
             StaticGenerator staticGenerator(settings);
             staticGenerator.TraverseScene(scene);
             staticGenerator.GenerateDefinitions(scene, fileDef);
 
+            std::cout << "Generating level definitions" << std::endl;
             LevelGenerator levelGenerator(settings, staticGenerator.GetOutput(), colliderGenerator.GetOutput());
             levelGenerator.GenerateDefinitions(scene, fileDef);
         }
 
+        std::cout << "Writing output" << std::endl;
         fileDef.GenerateAll(args.mOutputFile);
     }
 
