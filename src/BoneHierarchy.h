@@ -25,7 +25,7 @@ public:
     const std::string& GetName();
     Bone* GetParent();
 
-    std::unique_ptr<DataChunk> GenerateRestPosiitonData(float scale, const aiQuaternion& rotation);
+    std::unique_ptr<DataChunk> GenerateRestPosiitonData(float scale, aiQuaternion rotation);
 
     static Bone* FindCommonAncestor(Bone* a, Bone* b);
     /**

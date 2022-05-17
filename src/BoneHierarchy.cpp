@@ -27,7 +27,7 @@ Bone* Bone::GetParent() {
     return mParent;
 }
 
-std::unique_ptr<DataChunk> Bone::GenerateRestPosiitonData(float scale, const aiQuaternion& rotation) {
+std::unique_ptr<DataChunk> Bone::GenerateRestPosiitonData(float scale, aiQuaternion rotation) {
     aiVector3D restPosition = rotation.Rotate(mRestPosition);
     aiQuaternion restRotation = rotation * mRestRotation;
 
