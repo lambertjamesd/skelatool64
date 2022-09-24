@@ -5,25 +5,20 @@
 #include "StaticGenerator.h"
 #include "CollisionGenerator.h"
 #include "../DisplayListSettings.h"
+#include "TriggerGenerator.h"
+#include "RoomGenerator.h"
 
-class LevelGenerator {
-public:
-    LevelGenerator(
+void generateLevel(
+        const aiScene* scene, 
+        CFileDefinition& fileDefinition,
         const DisplayListSettings& settings,
         const StaticGeneratorOutput& staticOutput,
-        const CollisionGeneratorOutput& collisionOutput
-    );
-
-    void GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition);
-
-private:
-    DisplayListSettings mSettings;
-    StaticGeneratorOutput mStaticOutput;
-    CollisionGeneratorOutput mCollisionOutput;
-
-    std::unique_ptr<StructureDataChunk> CalculatePortalSingleSurface(CFileDefinition& fileDefinition, CollisionQuad& quad, ExtendedMesh& mesh, float scale);
-    int CalculatePortalSurfaces(const aiScene* scene, CFileDefinition& fileDefinition, std::string& surfacesName, std::string& surfaceMappingName);
-    void CalculateBoundingBoxes(const aiScene* scene, CFileDefinition& fileDefinition, std::string& boundingBoxesName);
-};
+        const CollisionGeneratorOutput& collisionOutput,
+        const TriggerGeneratorOutput& triggerOutput,
+        const RoomGeneratorOutput& roomOutput,
+        const SignalsOutput& signalsOutput,
+        Signals& signals,
+        NodeGroups& nodeGroups
+);
 
 #endif

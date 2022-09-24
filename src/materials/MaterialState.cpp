@@ -38,6 +38,11 @@ struct FlagList FlagList::GetDeltaFrom(struct FlagList& other) {
     return result;
 }
 
+void FlagList::ApplyFrom(const FlagList& other) {
+    knownFlags |= other.knownFlags;
+    flags = (other.flags & other.knownFlags) | (flags & ~other.knownFlags);   
+}
+
 TextureCoordinateState::TextureCoordinateState():
     wrap(true),
     mirror(false),
@@ -50,7 +55,10 @@ TextureCoordinateState::TextureCoordinateState():
 
 TileState::TileState():
     isOn(false),
+    format(G_IM_FMT::G_IM_FMT_RGBA),
+    size(G_IM_SIZ::G_IM_SIZ_16b),
     line(0),
+    tmem(0),
     pallete(0) {
 
 }
@@ -113,6 +121,10 @@ RenderModeState::RenderModeState(int data) : data(data) {};
 
 bool RenderModeState::operator==(const RenderModeState& other) const {
     return data == other.data;
+}
+
+int RenderModeState::GetZMode() const {
+    return data & ZMODE_MASK;
 }
 
 #define DEFINE_RENDER_MODE_ENTRY(name)  std::make_pair(std::string(#name), RenderModeState(name))
@@ -204,6 +216,17 @@ MaterialState::MaterialState() :
     useFogColor(false),
     useBlendColor(false)
      {}
+
+
+bool MaterialState::IsTextureLoaded(std::shared_ptr<TextureDefinition> texture, int tmem) const {
+    for (int i = 0; i < MAX_TILE_COUNT; ++i) {
+        if (tiles[i].texture == texture && tiles[i].tmem == tmem) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 void appendToFlags(std::ostringstream& flags, const std::string& value) {
     if (flags.tellp() != 0) {
@@ -298,10 +321,8 @@ std::string generateSingleRenderMode(int renderMode, int cycleNumber) {
     renderModeExtractFlags(renderMode, flags);
 
     for (auto& flag : flags) {
-        if (result.tellp()) {
-            result << " | ";
-        }
         result << flag;
+        result << " | ";
     }
 
     result << "GBL_c" << cycleNumber << "(";
@@ -399,17 +420,67 @@ std::string buildClampAndWrap(bool wrap, bool mirror) {
     return result.str();
 }
 
-void generateTile(CFileDefinition& fileDef, const MaterialState& from, const TileState& to, int tileIndex, StructureDataChunk& output) {
+void generateTile(CFileDefinition& fileDef, const MaterialState& from, const TileState& to, int tileIndex, StructureDataChunk& output, bool targetCIBuffer) {
     if (!to.isOn) {
         return;
     }
 
     bool needsToLoadImage = to.texture != nullptr;
 
+    std::shared_ptr<PalleteDefinition> palleteToLoad = (to.texture && !targetCIBuffer) ? to.texture->GetPallete() : nullptr;
+
     for (int i = 0; i < MAX_TILE_COUNT && needsToLoadImage; ++i) {
         if (from.tiles[i].texture == to.texture && from.tiles[i].tmem == to.tmem) {
             needsToLoadImage = false;
         }
+
+        if (from.tiles[i].texture && from.tiles[i].texture->GetPallete() == palleteToLoad) {
+            palleteToLoad = nullptr;
+        }
+    }
+
+    if (palleteToLoad) {
+        std::string palleteName;
+        if (!fileDef.GetResourceName(palleteToLoad.get(), palleteName)) {
+            std::cerr << "Texture " << palleteToLoad->Name() << " needs to be added to the file definition before being used in a material" << std::endl;
+            return;
+        }
+
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPTileSync")));
+
+        std::unique_ptr<MacroDataChunk> setTextureImage(new MacroDataChunk("gsDPSetTextureImage"));
+        setTextureImage->AddPrimitive(nameForImageFormat(G_IM_FMT::G_IM_FMT_RGBA));
+        setTextureImage->AddPrimitive(std::string(nameForImageSize(G_IM_SIZ::G_IM_SIZ_16b)) + "_LOAD_BLOCK");
+        setTextureImage->AddPrimitive(1);
+        setTextureImage->AddPrimitive(palleteName);
+        output.Add(std::move(setTextureImage));
+
+        std::unique_ptr<MacroDataChunk> setTile(new MacroDataChunk("gsDPSetTile"));
+        setTile->AddPrimitive(nameForImageFormat(G_IM_FMT::G_IM_FMT_RGBA));
+        setTile->AddPrimitive(std::string(nameForImageSize(G_IM_SIZ::G_IM_SIZ_16b)) + "_LOAD_BLOCK");
+        setTile->AddPrimitive(0);
+        setTile->AddPrimitive(256);
+        setTile->AddPrimitive<const char*>("G_TX_LOADTILE");
+        setTile->AddPrimitive(0);
+        setTile->AddPrimitive(buildClampAndWrap(false, false));
+        setTile->AddPrimitive(0);
+        setTile->AddPrimitive(0);
+        setTile->AddPrimitive(buildClampAndWrap(false, false));
+        setTile->AddPrimitive(0);
+        setTile->AddPrimitive(0);
+        output.Add(std::move(setTile));
+
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPLoadSync")));
+
+        std::unique_ptr<MacroDataChunk> loadBlock(new MacroDataChunk("gsDPLoadBlock"));
+        loadBlock->AddPrimitive<const char*>("G_TX_LOADTILE");
+        loadBlock->AddPrimitive(0);
+        loadBlock->AddPrimitive(0);
+        loadBlock->AddPrimitive(palleteToLoad->LoadBlockSize());
+        loadBlock->AddPrimitive(palleteToLoad->DTX());
+        output.Add(std::move(loadBlock));
+
+        output.Add(std::unique_ptr<MacroDataChunk>(new MacroDataChunk("gsDPPipeSync")));
     }
 
     if (needsToLoadImage) {
@@ -511,7 +582,7 @@ void generateTexture(const TextureState& from, const TextureState& to, Structure
     output.Add(std::move(setTexture));
 }
 
-void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const MaterialState& to, StructureDataChunk& output) {
+void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const MaterialState& to, StructureDataChunk& output, bool targetCIBuffer) {
     output.Add(std::unique_ptr<DataChunk>(new MacroDataChunk("gsDPPipeSync")));
 
     generateEnumMacro((int)from.pipelineMode, (int)to.pipelineMode, "gsDPPipelineMode", gPipelineModeNames, output);
@@ -560,8 +631,113 @@ void generateMaterial(CFileDefinition& fileDef, const MaterialState& from, const
     generateTexture(from.textureState, to.textureState, output);
 
     for (int i = 0; i < MAX_TILE_COUNT; ++i) {
-        generateTile(fileDef, from, to.tiles[i], i, output);
+        generateTile(fileDef, from, to.tiles[i], i, output, targetCIBuffer);
     }
 
     // TODO fill color
 }
+
+void applyMaterial(const MaterialState& from, MaterialState& to) {
+    for (int i = 0; i < MAX_TILE_COUNT; ++i) {
+        if (from.tiles[i].isOn) {
+            to.tiles[i] = from.tiles[i];
+        }
+    }
+
+    if (from.textureState.isOn) {
+        to.textureState = from.textureState;
+    }
+
+    to.geometryModes.ApplyFrom(from.geometryModes);
+
+    if (from.pipelineMode != PipelineMode::Unknown) {
+        to.pipelineMode = from.pipelineMode;
+    }
+
+    if (from.cycleType != CycleType::Unknown) {
+        to.cycleType = from.cycleType;
+    }
+
+    if (from.perspectiveMode != PerspectiveMode::Unknown) {
+        to.perspectiveMode = from.perspectiveMode;
+    }
+
+    if (from.textureDetail != TextureDetail::Unknown) {
+        to.textureDetail = from.textureDetail;
+    }
+
+    if (from.textureLOD != TextureLOD::Unknown) {
+        to.textureLOD = from.textureLOD;
+    }
+
+    if (from.textureLUT != TextureLUT::Unknown) {
+        to.textureLUT = from.textureLUT;
+    }
+
+    if (from.textureFilter != TextureFilter::Unknown) {
+        to.textureFilter = from.textureFilter;
+    }
+
+    if (from.textureConvert != TextureConvert::Unknown) {
+        to.textureConvert = from.textureConvert;
+    }
+
+    if (from.combineKey != CombineKey::Unknown) {
+        to.combineKey = from.combineKey;
+    }
+
+    if (from.colorDither != ColorDither::Unknown) {
+        to.colorDither = from.colorDither;
+    }
+
+    if (from.alphaDither != AlphaDither::Unknown) {
+        to.alphaDither = from.alphaDither;
+    }
+
+    if (from.alphaCompare != AlphaCompare::Unknown) {
+        to.alphaCompare = from.alphaCompare;
+    }
+
+    if (from.depthSource != DepthSource::Unknown) {
+        to.depthSource = from.depthSource;
+    }
+
+    if (from.hasCombineMode) {
+        to.hasCombineMode = true;
+        to.cycle1Combine = from.cycle1Combine;
+        to.cycle2Combine = from.cycle2Combine;
+    }
+
+    if (from.hasRenderMode) {
+        to.hasRenderMode = true;
+        to.cycle1RenderMode = from.cycle1RenderMode;
+        to.cycle2RenderMode = from.cycle2RenderMode;
+    }
+
+    if (from.usePrimitiveColor) {
+        to.usePrimitiveColor = true;
+        to.primitiveColor = from.primitiveColor;
+        to.primitiveM = from.primitiveM;
+        to.primitiveL = from.primitiveL;
+    }
+
+    if (from.useEnvColor) {
+        to.useEnvColor = true;
+        to.envColor = from.envColor;
+    }
+
+    if (from.useFillColor) {
+        to.useFillColor = true;
+        to.fillColor = from.fillColor;
+    }
+
+    if (from.useFogColor) {
+        to.useFogColor = true;
+        to.fogColor = from.fogColor;
+    }
+
+    if (from.useBlendColor) {
+        to.useBlendColor = true;
+        to.blendColor = from.blendColor;
+    }
+} 

@@ -21,9 +21,12 @@ public:
 
     unsigned mSceneCount;
     std::set<std::shared_ptr<TextureDefinition>> mUsedTextures;
+    std::set<std::shared_ptr<PalleteDefinition>> mUsedPalletes;
     std::map<std::string, int> mMaterialUseCount;
     std::map<std::string, std::string> mMaterialNameMapping;
     std::map<std::string, std::string> mResourceNameMapping;
+
+private:
 };
 
 void generateMeshIntoDLWithMaterials(const aiScene* scene, CFileDefinition& fileDefinition, MaterialCollector* materials, std::vector<RenderChunk>& renderChunks, DisplayListSettings& settings, DisplayList &displayList, const std::string& modelSuffix);

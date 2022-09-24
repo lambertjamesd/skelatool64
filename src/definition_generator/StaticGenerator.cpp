@@ -6,38 +6,46 @@
 #include "MaterialGenerator.h"
 #include "../RenderChunk.h"
 
-StaticGenerator::StaticGenerator(const DisplayListSettings& settings) : DefinitionGenerator(), mSettings(settings) {
+std::shared_ptr<StaticGeneratorOutput> generateStatic(const aiScene* scene, CFileDefinition& fileDefinition, const DisplayListSettings& settings, RoomGeneratorOutput& roomMapping, NodeGroups& nodeGroups) {
+    DisplayListSettings settingsCopy = settings;
+    settingsCopy.mMaterials.clear();
 
-}
-
-bool StaticGenerator::ShouldIncludeNode(aiNode* node) {
-    return StartsWith(node->mName.C_Str(), "@static") && node->mNumMeshes > 0;
-}
-
-void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition) {
-    DisplayListSettings settings = mSettings;
-    settings.mMaterials.clear();
+    std::shared_ptr<StaticGeneratorOutput> output(new StaticGeneratorOutput());
 
     std::vector<StaticContentElement> elements;
 
-    for (auto node = mIncludedNodes.begin(); node != mIncludedNodes.end(); ++node) {
+    BoneHierarchy unusedBones;
+
+    std::vector<NodeWithArguments> nodes = nodeGroups.NodesForType("@static");
+
+    sortNodesWithArgsByRoom(nodes, roomMapping);
+
+    for (auto& nodeInfo : nodes) {
         std::vector<RenderChunk> renderChunks;
-        MeshDefinitionGenerator::AppendRenderChunks(scene, *node, fileDefinition, mSettings, renderChunks);
-        
-        if (renderChunks.size()) {
+        MeshDefinitionGenerator::AppendRenderChunks(scene, nodeInfo.node, fileDefinition, settings, renderChunks);
+
+        for (auto& chunk : renderChunks) {
             StaticContentElement element;
 
-            if (renderChunks[0].mMaterial) {
-                settings.mDefaultMaterialState = renderChunks[0].mMaterial->mState;
-                element.materialName = MaterialGenerator::MaterialIndexMacroName(renderChunks[0].mMaterial->mName);
+            if (chunk.mMaterial) {
+                settingsCopy.mDefaultMaterialState = chunk.mMaterial->mState;
+                element.materialName = MaterialGenerator::MaterialIndexMacroName(chunk.mMaterial->mName);
             } else {
                 element.materialName = "0";
             }
-            element.meshName = generateMesh(scene, fileDefinition, renderChunks, settings, "_geo");
+            std::vector<RenderChunk> singleChunk;
+            singleChunk.push_back(chunk);
+            element.meshName = generateMesh(scene, fileDefinition, singleChunk, settingsCopy, "_geo");
 
             elements.push_back(element);
 
-            mOutput.staticMeshes.push_back(renderChunks[0].mMesh);
+            StaticMeshInfo meshInfo;
+            meshInfo.staticMesh = chunk.mMesh;
+            meshInfo.gfxName = element.meshName;
+            meshInfo.material = chunk.mMaterial;
+
+            output->staticMeshes.push_back(meshInfo);
+            output->staticRooms.push_back(roomMapping.RoomForNode(nodeInfo.node));
         }
     }
 
@@ -52,14 +60,33 @@ void StaticGenerator::GenerateDefinitions(const aiScene* scene, CFileDefinition&
         staticContentList->Add(std::move(element));
     }
 
-    mOutput.staticContentName = fileDefinition.GetUniqueName("static");
+    output->staticContentName = fileDefinition.GetUniqueName("static");
 
-    std::unique_ptr<FileDefinition> fileDef(new DataFileDefinition("struct StaticContentElement", mOutput.staticContentName, true, "_geo", std::move(staticContentList)));
+    std::unique_ptr<FileDefinition> fileDef(new DataFileDefinition("struct StaticContentElement", output->staticContentName, true, "_geo", std::move(staticContentList)));
     fileDef->AddTypeHeader("\"levels/level_def_gen.h\"");
+
     fileDefinition.AddDefinition(std::move(fileDef));
 
-}
+    std::unique_ptr<StructureDataChunk> roomToStaticMapping(new StructureDataChunk());
+    int prevIndex = 0;
+    for (int roomIndex = 0; roomIndex < roomMapping.roomCount; ++roomIndex) {
+        std::unique_ptr<StructureDataChunk> singleMapping(new StructureDataChunk());
 
-const StaticGeneratorOutput& StaticGenerator::GetOutput() const {
-    return mOutput;
+        int currentIndex = prevIndex;
+        while (currentIndex < (int)output->staticRooms.size() && output->staticRooms[currentIndex] <= roomIndex) {
+            ++currentIndex;
+        }
+
+        singleMapping->AddPrimitive(prevIndex);
+        singleMapping->AddPrimitive(currentIndex);
+
+        prevIndex = currentIndex;
+
+        roomToStaticMapping->Add(std::move(singleMapping));
+    }
+
+    output->roomMappingName = fileDefinition.GetUniqueName("static_room_mapping");
+    fileDefinition.AddDefinition(std::unique_ptr<FileDefinition>(new DataFileDefinition("struct Rangeu16", output->roomMappingName, true, "_geo", std::move(roomToStaticMapping))));
+
+    return output;
 }

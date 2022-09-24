@@ -22,16 +22,19 @@ public:
     int mTextureWidth;
     int mTextureHeight;
 
-    ErrorResult Generate(float scale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
+    ErrorResult Generate(float fixedPointScale, float modelScale, aiQuaternion rotate, std::unique_ptr<FileDefinition>& output, const std::string& fileSuffix);
 private:
 };
 
 class CFileDefinition {
 public:
-    CFileDefinition(std::string prefix, float modelScale, aiQuaternion modelRotate);
+    CFileDefinition(std::string prefix, float fixedPointScale, float modelScale, aiQuaternion modelRotate);
 
     void AddDefinition(std::unique_ptr<FileDefinition> definition);
+    std::string AddDataDefinition(const std::string& nameHint, const std::string& dataType, bool isArray, const std::string& location, std::unique_ptr<DataChunk> data);
     void AddMacro(const std::string& name, const std::string& value);
+
+    void AddHeader(const std::string& name);
 
     std::string GetVertexBuffer(std::shared_ptr<ExtendedMesh> mesh, VertexType vertexType, int textureWidth, int textureHeight, const std::string& modelSuffix);
     std::string GetCullingBuffer(const std::string& name, const aiVector3D& min, const aiVector3D& max, const std::string& modelSuffix);
@@ -52,10 +55,14 @@ public:
     bool GetResourceName(const void* resource, std::string& result) const;
 
     std::shared_ptr<ExtendedMesh> GetExtendedMesh(aiMesh* mesh);
+
+    BoneHierarchy& GetBoneHierarchy();
 private:
     std::string mPrefix;
+    float mFixedPointScale;
     float mModelScale;
     aiQuaternion mModelRotate;
+    std::set<std::string> mHeaders;
     std::set<std::string> mUsedNames;
     std::map<std::string, VertexBufferDefinition> mVertexBuffers;
     std::vector<std::unique_ptr<FileDefinition>> mDefinitions;

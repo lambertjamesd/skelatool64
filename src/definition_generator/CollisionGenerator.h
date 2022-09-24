@@ -3,41 +3,32 @@
 
 #include "DefinitionGenerator.h"
 #include "../DisplayListSettings.h"
+#include "CollisionQuad.h"
+#include "RoomGenerator.h"
 
-struct CollisionQuad {
-    CollisionQuad(aiMesh* mesh, const aiMatrix4x4& transform);
+#define COLLISION_GRID_CELL_SIZE    4
 
-    aiVector3D corner;
-    aiVector3D edgeA;
-    float edgeALength;
-    aiVector3D edgeB;
-    float edgeBLength;
-    aiVector3D normal;
+struct CollisionGrid {
+    CollisionGrid(const aiAABB& boundaries);
 
-    std::unique_ptr<DataChunk> Generate();
+    short x;
+    short z;
+    short spanX;
+    short spanZ;
 
-    void ToLocalCoords(const aiVector3D& input, short& outX, short& outY);
+    std::vector<std::vector<std::vector<short>>> cells;
 
-    bool IsCoplanar(ExtendedMesh& mesh, float relativeScale) const;
+    void AddToCells(const aiAABB& box, short value);
 };
 
 struct CollisionGeneratorOutput {
     std::string quadsName;
     std::vector<CollisionQuad> quads;
+    std::vector<CollisionGrid> roomGrids;
 };
 
-class CollisionGenerator : public DefinitionGenerator {
-public:
-    CollisionGenerator(const DisplayListSettings& settings);
+std::shared_ptr<CollisionGeneratorOutput> generateCollision(const aiScene* scene, CFileDefinition& fileDefinition, const DisplayListSettings& settings, RoomGeneratorOutput* roomOutput, NodeGroups& nodeGroups);
 
-    virtual bool ShouldIncludeNode(aiNode* node);
-    virtual void GenerateDefinitions(const aiScene* scene, CFileDefinition& fileDefinition);
-
-    const CollisionGeneratorOutput& GetOutput() const;
-private:
-    DisplayListSettings mSettings;
-
-    CollisionGeneratorOutput mOutput;
-};
+void generateMeshCollider(CFileDefinition& fileDefinition, CollisionGeneratorOutput& collisionOutput);
 
 #endif

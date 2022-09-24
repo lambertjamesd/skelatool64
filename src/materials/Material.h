@@ -16,14 +16,24 @@
 
 #include "MaterialEnums.h"
 
+enum class NormalSource {
+    Normal,
+    Tangent,
+    MinusTangent,
+    Bitangent,
+    MinusCotangent,
+};
+
 class Material {
 public:
     Material(const std::string& name);
     std::string mName;
     MaterialState mState;
     std::map<std::string, std::string> mProperties;
+    NormalSource mNormalSource;
+    bool mExcludeFromOutut;
 
-    void Write(CFileDefinition& fileDef, const MaterialState& from, StructureDataChunk& output);
+    void Write(CFileDefinition& fileDef, const MaterialState& from, StructureDataChunk& output, bool targetCIBuffer);
 
     static int TextureWidth(Material* material);
     static int TextureHeight(Material* material);

@@ -45,7 +45,7 @@ std::string StringDataChunk::EscapeAndWrapString(const std::string& string) {
         if (escapeChar) {
             result << '\\' << escapeChar;
         } else {
-            result << escapeChar;
+            result << currChar;
         }
     }
 
@@ -86,6 +86,12 @@ StructureDataChunk::StructureDataChunk(const aiQuaternion& quat) : StructureData
     AddPrimitive(quat.z);
     AddPrimitive(quat.w);
 
+}
+
+
+StructureDataChunk::StructureDataChunk(const aiAABB& bb) : StructureDataChunk() {
+    Add(std::unique_ptr<StructureDataChunk>(new StructureDataChunk(bb.mMin)));
+    Add(std::unique_ptr<StructureDataChunk>(new StructureDataChunk(bb.mMax)));
 }
 
 

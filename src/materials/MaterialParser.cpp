@@ -14,8 +14,6 @@
 #include "./RenderMode.h"
 #include "CombineMode.h"
 
-TextureCache gTextureCache;
-
 ParseError::ParseError(const std::string& message) :
     mMessage(message) {
     
@@ -111,6 +109,20 @@ bool parseMaterialColor(const YAML::Node& node, PixelRGBAu8& color, ParseResult&
     color.b = parseInteger(node["b"], output, 0, 255);
     color.a = parseOptionalInteger(node["a"], output, 0, 255, 255);
 
+    auto bypassNode = node["bypassEffects"];
+    
+    bool bypass = bypassNode.IsDefined() && bypassNode.as<bool>();
+
+    if (!bypass && output.mForcePallete.length() && output.mTargetCIBuffer) {
+        std::shared_ptr<PalleteDefinition> pallete = gTextureCache.GetPallete(output.mForcePallete);
+
+        PixelIu8 colorindex = pallete->FindIndex(color);
+
+        color.r = colorindex.i;
+        color.g = colorindex.i;
+        color.b = colorindex.i;
+    }
+
     return true;
 }
 
@@ -134,12 +146,28 @@ void parsePrimColor(const YAML::Node& node, MaterialState& state, ParseResult& o
     }
 } 
 
-VertexType parseMaterialVertexType(const YAML::Node& node) {
-    if (node.IsDefined() && node.IsScalar() && node.Scalar() == "Normal") {
-        return VertexType::PosUVNormal;
+NormalSource parseMaterialNormalSource(const YAML::Node& node) {
+    if (node.IsDefined() && node.IsScalar()) {
+        std::string name = node.Scalar();
+
+        if (name == "normal") {
+            return NormalSource::Normal;
+        }
+        if (name == "tangent") {
+            return NormalSource::Tangent;
+        }
+        if (name == "-tangent") {
+            return NormalSource::MinusTangent;
+        }
+        if (name == "bitangent") {
+            return NormalSource::Bitangent;
+        }
+        if (name == "-bitangent") {
+            return NormalSource::MinusCotangent;
+        }
     }
 
-    return VertexType::PosUVColor;
+    return NormalSource::Normal;
 }
 
 G_IM_FMT parseTextureFormat(const YAML::Node& node, ParseResult& output) {
@@ -213,6 +241,7 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
     }
 
     std::string filename;
+    std::string palleteFilename = output.mForcePallete;
 
     bool hasFormat = false;
     G_IM_FMT requestedFormat;
@@ -245,6 +274,39 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
             if (!yamlFormat.IsDefined()) {
                 requestedFormat = G_IM_FMT::G_IM_FMT_I;
                 hasFormat = true;
+            }
+        }
+
+        auto normalMap = node["normalMap"];
+        if (normalMap.IsDefined() && normalMap.as<bool>()) {
+            effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::NormalMap);
+        }
+
+        auto invert = node["invert"];
+        if (invert.IsDefined() && invert.as<bool>()) {
+            effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::Invert);
+        }
+
+        auto selectChannel = node["selectChannel"];
+        if (selectChannel.IsDefined()) {
+            auto channel = selectChannel.as<std::string>();
+
+            if (channel == "r") {
+                effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::SelectR);
+            } else if (channel == "g") {
+                effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::SelectG);
+            } else if (channel == "b") {
+                effects = (TextureDefinitionEffect)((int)effects | (int)TextureDefinitionEffect::SelectB);
+            }
+        }
+
+        auto usePallete = node["usePallete"];
+
+        if (usePallete.IsDefined()) {
+            if (usePallete.IsScalar()) {
+                palleteFilename = usePallete.as<std::string>();
+            } else {
+                output.mErrors.push_back(ParseError(formatError(std::string("usePallete should be a file path to a pallete") + filename, usePallete.Mark())));
             }
         }
     } else {
@@ -285,7 +347,7 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
         return NULL;
     }
 
-    return gTextureCache.GetTexture(filename, format, size, effects);
+    return gTextureCache.GetTexture(filename, format, size, effects, palleteFilename);
 }
 
 int parseRenderModeFlags(const YAML::Node& node, ParseResult& output) {
@@ -300,18 +362,20 @@ int parseRenderModeFlags(const YAML::Node& node, ParseResult& output) {
 
     int result = 0;
 
-    for (auto it = node.begin(); it != node.end(); ++it) {
-        if (!it->second.IsScalar()) {
-            output.mErrors.push_back(ParseError(formatError("Flags should be a list of strings", it->second.Mark())));
+    for (unsigned i = 0; i < node.size(); ++i) {
+        const YAML::Node& element = node[i];
+
+        if (!element.IsScalar()) {
+            output.mErrors.push_back(ParseError(formatError("Flags should be a list of strings", element.Mark())));
             continue;
         }
 
-        std::string asString = it->second.as<std::string>();
+        std::string asString = element.as<std::string>();
 
         int singleFlag = 0;
 
         if (!renderModeGetFlagValue(asString, singleFlag)) {    
-            output.mErrors.push_back(ParseError(formatError("Invalid flag", it->second.Mark())));
+            output.mErrors.push_back(ParseError(formatError("Invalid flag", element.Mark())));
             continue;
         }
 
@@ -345,7 +409,7 @@ int parseBlendMode(const YAML::Node& node, ParseResult& output) {
         std::string asString = element.as<std::string>();
 
         if (!renderModeGetBlendModeValue(asString, i, params[i])) {
-            output.mErrors.push_back(ParseError(formatError("Invalid blend mode", node.Mark())));
+            output.mErrors.push_back(ParseError(formatError(std::string("Invalid blend mode ") + asString, node.Mark())));
         }
     }
 
@@ -389,7 +453,7 @@ void parseRenderMode(const YAML::Node& node, MaterialState& state, ParseResult& 
 
     if (node.IsSequence() && node.size() == 2) {
         parseSingleRenderMode(node[0], state.cycle1RenderMode, output);
-        parseSingleRenderMode(node[1], state.cycle1RenderMode, output);
+        parseSingleRenderMode(node[1], state.cycle2RenderMode, output);
         return;
     }
 
@@ -649,6 +713,7 @@ void parseTiles(const YAML::Node& node, MaterialState& state, ParseResult& outpu
                 state.textureState.isOn = true;
             }
         }
+        return;
     }
 
     output.mErrors.push_back(ParseError(formatError("Expected a tile or array of tiles", node.Mark())));
@@ -711,6 +776,12 @@ std::shared_ptr<Material> parseMaterial(const std::string& name, const YAML::Nod
     material->mState.useEnvColor = parseMaterialColor(node["gDPSetEnvColor"], material->mState.envColor, output) || material->mState.useEnvColor;
     material->mState.useFogColor = parseMaterialColor(node["gDPSetFogColor"], material->mState.fogColor, output) || material->mState.useFogColor;
     material->mState.useBlendColor = parseMaterialColor(node["gDPSetBlendColor"], material->mState.blendColor, output) || material->mState.useBlendColor;
+
+    material->mNormalSource = parseMaterialNormalSource(node["normalSource"]);
+
+    auto excludeFromOutput = node["excludeFromOutput"];
+
+    material->mExcludeFromOutut = excludeFromOutput.IsDefined() && excludeFromOutput.as<bool>();
 
     auto properties = node["properties"];
 
