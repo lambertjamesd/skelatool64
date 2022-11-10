@@ -1,5 +1,9 @@
 
 materials:
+  default:
+    gDPSetRenderMode: G_RM_AA_ZB_OPA_SURF
+    gDPSetCycleType: G_CYC_1CYCLE
+
   Test Material A:
     gDPSetTile: 
       filename: ./image.png

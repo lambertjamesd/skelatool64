@@ -300,13 +300,13 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
             }
         }
 
-        auto usePallete = node["usePallete"];
+        auto usePalette = node["usePalette"];
 
-        if (usePallete.IsDefined()) {
-            if (usePallete.IsScalar()) {
-                palleteFilename = usePallete.as<std::string>();
+        if (usePalette.IsDefined()) {
+            if (usePalette.IsScalar()) {
+                palleteFilename = usePalette.as<std::string>();
             } else {
-                output.mErrors.push_back(ParseError(formatError(std::string("usePallete should be a file path to a pallete") + filename, usePallete.Mark())));
+                output.mErrors.push_back(ParseError(formatError(std::string("usePalette should be a file path to a pallete") + filename, usePalette.Mark())));
             }
         }
 

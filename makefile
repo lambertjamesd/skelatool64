@@ -49,3 +49,8 @@ build/skeletool.deb: skeletool64 control
 
 docs:
 	ldoc .
+
+schema_docs/index.html: schema/material-schema.json
+	generate-schema-doc schema/ schema_docs/index.html
+
+

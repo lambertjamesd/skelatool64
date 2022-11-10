@@ -29,7 +29,7 @@ Here some command line arguments
 | --name   | string | The name to prefix all c definitions with |
 | --fixed-point-scale | number | Scales all geometry by the given number when converting from floating point to fixed point geometry defaults to 256 |
 | --model-scale | number | used to scale all geometry defaults to 1 |
-| --m | filename | used to add a materials yaml or json file more details about how materials works below. You can add mulitple material files. You can also specify a 3d model as a material source and all materials from the file will be included. |
+| -m | filename | used to add a materials yaml or json file more details about how materials works below. You can add mulitple material files. You can also specify a 3d model as a material source and all materials from the file will be included. |
 | --material-output | | if present only materials are generated instead of geometry |
 | -r | number,number,number | a set of euler angles used to rotate the model |
 | --default-material | string | the name of the material that is expected to be active when rendering this model. This is useful to reduce needed state changes between default state and the state needed to render the model defaults to `default` | 
@@ -117,3 +117,9 @@ materials:
 ```
 
 there are 4 reserved material names `texture_lit`, `texture_unlit`, `solid_lit`, and `solid_unlit`. If you specify a material with one of these names then materials generated from 3d model files will use one of these 4 materials as a base.
+
+If you use the `--material-output` flag you can generate a list of materials with no geometry. Each material generated will only output the required state change to transition from the default material.
+
+## examples
+
+See [./build_cube.sh](./build_cube.sh) and [./build_materials.sh](./build_materials.sh) as an example

@@ -9,5 +9,3 @@ skeletool64
 dna.txt
 build/
 images/
-examples/*.h
-examples/*.c

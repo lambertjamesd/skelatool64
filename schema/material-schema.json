@@ -3,6 +3,8 @@
     "title": "Schema for an N64 material",
     "definitions": {
         "renderBlendModes": {
+            "title": "Render Blend Modes",
+            "description": "A list of 4 render mode blend parameters",
             "type": "array",
             "items": [
                 {
@@ -40,8 +42,11 @@
             ]
         },
         "renderMode": {
+            "title": "Render Mode",
+            "description": "Configures the render mode for the material",
             "anyOf": [
                 {
+                    "description": "A list of pre defined render modes",
                     "enum": [
                         "G_RM_AA_ZB_OPA_SURF",
                         "G_RM_RA_ZB_OPA_SURF",
@@ -94,9 +99,11 @@
                     ]
                 },
                 {
+                    "description": "A custom render mode",
                     "type": "object",
                     "properties": {
                         "flags": {
+                            "$comment": "Additional render mode flags",
                             "type": "array",
                             "items": {
                                 "enum": [
@@ -128,6 +135,7 @@
             ]
         },
         "geometryModeArray": {
+            "description": "The list of geometry modes",
             "type": "array",
             "items": {
                 "enum": [
@@ -151,8 +159,10 @@
             "oneOf": [
                 {
                     "type": "object",
+                    "description": "A custom combine mode",
                     "properties": {
                         "color": {
+                            "description": "Combine mode list for color",
                             "type": "array",
                             "items": [
                                 {
@@ -217,6 +227,7 @@
                             ]
                         },
                         "alpha": {
+                            "description": "Combine mode list for alpha",
                             "type": "array",
                             "items": [
                                 {
@@ -272,6 +283,7 @@
                     }
                 },
                 {
+                    "description": "A predefined list of combine modes",
                     "enum": [
                         "G_CC_PRIMITIVE",
                         "G_CC_SHADE",
@@ -335,6 +347,7 @@
             ]
         },
         "color": {
+            "description": "Represents a color",
             "type": "object",
             "properties": {
                 "r": {
@@ -358,6 +371,7 @@
                     "maximum": 255
                 },
                 "bypassEffects": {
+                    "description": "if true then any image processing effects are not applied to input color",
                     "type": "boolean"
                 }
             },
@@ -371,15 +385,19 @@
             "type": "object",
             "properties": {
                 "wrap": {
+                    "description": "If true the given texture coordinate will wrap",
                     "type": "boolean"
                 },
                 "mirror": {
+                    "description": "If true the given texture coordinate will mirror",
                     "type": "boolean"
                 },
                 "mask": {
+                    "description": "Wraps the image at 2^mask pixels",
                     "type": "integer"
                 },
                 "shift": {
+                    "description": "Controls level of detail shift",
                     "type": "integer"
                 },
                 "offset": {
@@ -394,21 +412,25 @@
             "type": "object",
             "properties": {
                 "sc": {
+                    "description": "Fixed point texture coordinate scaling parameter 16 bits in .16 format",
                     "type": "number",
                     "minimum": 0,
                     "maximum": 65535
                 },
                 "tc": {
+                    "description": "Fixed point texture coordinate scaling parameter 16 bits in .16 format",
                     "type": "number",
                     "minimum": 0,
                     "maximum": 65535
                 },
                 "level": {
+                    "description": "Maximum number of mip-map levels - 1",
                     "type": "number",
                     "minimum": 0,
                     "maximum": 7
                 },
                 "tile": {
+                    "description": "Specifies which tile descriptor is to use",
                     "type": "number",
                     "minimum": 0,
                     "maximum": 7
@@ -418,15 +440,19 @@
         "tileSettings": {
             "oneOf": [
                 {
+                    "description": "A filename to an image",
                     "type": "string"
                 },
                 {
+                    "description": "Describes a texture",
                     "type": "object",
                     "properties": {
                         "filename": {
+                            "description": "A filename to an image",
                             "type": "string"
                         },
                         "fmt": {
+                            "description": "The image format to convert to",
                             "enum": [
                                 "G_IM_FMT_RGBA",
                                 "G_IM_FMT_YUV",
@@ -436,6 +462,7 @@
                             ]
                         },
                         "siz": {
+                            "description": "The size of the image format to convert to",
                             "enum": [
                                 "G_IM_SIZ_4b",
                                 "G_IM_SIZ_8b",
@@ -444,37 +471,47 @@
                             ]
                         },
                         "tmem": {
+                            "description": "Where in RDP memory the texture is copied to in 8 byte words",
                             "type": "number",
                             "minimum": 0,
                             "maximum": 511
                         },
                         "pallete": {
+                            "description": "Which pallete for 4 bit CI textures to use",
                             "type": "number",
                             "minimum": 0,
                             "maximum": 15
                         },
                         "s": {
+                            "description": "Texture coordnate settings for the S axis",
                             "$ref": "#/definitions/textureCoordinateSettings"
                         },
                         "t": {
+                            "description": "Texture coordnate settings for the T axis",
                             "$ref": "#/definitions/textureCoordinateSettings"
                         },
                         "twoTone": {
+                            "description": "If true the color is converted to a grayscale image where black and white are mapped to two different colors",
                             "type": "boolean"
                         },
                         "normalMap": {
+                            "description": "Converts a night map to a normal map",
                             "type": "boolean"
                         },
                         "invert": {
+                            "description": "Inverts the image",
                             "type": "boolean"
                         },
                         "selectChannel": {
+                            "description": "Converts an RGB image to a grayscale image by extracting a channel",
                             "enum": ["r", "g", "b"]
                         },
-                        "usePallete": {
+                        "usePalette": {
+                            "description": "A filepath to an image to act as a palette. A palette image starts in the top left corner of the image then scans horizontally to the right then vertically downward.",
                             "type": "string"
                         },
                         "bypassEffects": {
+                            "description": "If true no image effects are applied to this image",
                             "type": "boolean"
                         }
                     },
@@ -485,6 +522,8 @@
             ]
         },
         "material": {
+            "title": "Material",
+            "description": "Describes the state of the RDP and RCP needed to draw a certian material",
             "type": "object",
             "properties": {
                 "gDPPipelineMode": {
@@ -722,6 +761,7 @@
     "type": "object",
     "properties": {
         "materials": {
+            "description": "A map of named materials",
             "type": "object",
             "additionalProperties": {
                 "$ref": "#/definitions/material"
