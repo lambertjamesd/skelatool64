@@ -1,7 +1,7 @@
 
 GCC_FLAGS = -Wall -Werror -g -rdynamic -I./yaml-cpp/include 
 
-LINKER_FLAGS = -L./yaml-cpp -lassimp -lyaml-cpp -lpng -ltiff -llua -ldl
+LINKER_FLAGS = -L./yaml-cpp -lassimp -lyaml-cpp -lpng -ltiff -llua5.4 -ldl
 
 SRC_FILES = main.cpp $(shell find src/ -type f -name '*.cpp')
 
@@ -52,5 +52,4 @@ docs:
 
 schema_docs/index.html: schema/material-schema.json
 	generate-schema-doc schema/ schema_docs/index.html
-
-
+	

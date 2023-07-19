@@ -300,13 +300,13 @@ std::shared_ptr<TextureDefinition> parseTextureDefinition(const YAML::Node& node
             }
         }
 
-        auto usePalette = node["usePalette"];
+        auto usePallete = node["usePallete"];
 
-        if (usePalette.IsDefined()) {
-            if (usePalette.IsScalar()) {
-                palleteFilename = usePalette.as<std::string>();
+        if (usePallete.IsDefined()) {
+            if (usePallete.IsScalar()) {
+                palleteFilename = usePallete.as<std::string>();
             } else {
-                output.mErrors.push_back(ParseError(formatError(std::string("usePalette should be a file path to a pallete") + filename, usePalette.Mark())));
+                output.mErrors.push_back(ParseError(formatError(std::string("usePallete should be a file path to a pallete") + filename, usePallete.Mark())));
             }
         }
 
@@ -663,7 +663,7 @@ bool parseSingleTile(const YAML::Node& node, TileState& state, ParseResult& outp
     if (state.texture) {
         state.format = state.texture->Format();
         state.size = state.texture->Size();
-        if (!state.texture->GetLine(state.line)) {
+        if (!state.texture->GetLineForTile(state.line)) {
             output.mErrors.push_back(ParseError(formatError("Texture line width should be a multiple of 64 bits", node.Mark())));
         }
 
@@ -798,6 +798,10 @@ std::shared_ptr<Material> parseMaterial(const std::string& name, const YAML::Nod
     }
     
     material->mSortOrder = parseOptionalInteger(node["sortOrder"], output, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), 0);
+
+    if (!parseMaterialColor(node["defaultVertexColor"], material->mDefaultVertexColor, output)) {
+        material->mDefaultVertexColor = PixelRGBAu8(255, 255, 255, 255);
+    }
 
     return material;
 

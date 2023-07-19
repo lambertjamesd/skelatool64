@@ -3,6 +3,7 @@
 #include "LuaGenerator.h"
 #include "../StringUtils.h"
 #include "LuaMesh.h"
+#include "LuaUtils.h"
 
 std::unique_ptr<DataChunk> buildDataChunk(lua_State* L);
 
@@ -87,7 +88,14 @@ std::unique_ptr<DataChunk> buildDataChunk(lua_State* L) {
     }
 
     if (type == LUA_TTABLE) {
-        lua_getglobal(L, "is_raw");
+        lua_getglobal(L, "require");
+        lua_pushstring(L, "sk_definition_writer");
+        lua_call(L, 1, 1);
+
+        lua_getfield(L, -1, "is_raw");
+        // remove sk_definition_writer module
+        lua_remove(L, -2);
+
         lua_pushnil(L);
         lua_copy(L, -3, -1);
         lua_call(L, 1, 1);
@@ -101,7 +109,14 @@ std::unique_ptr<DataChunk> buildDataChunk(lua_State* L) {
         }
         lua_pop(L, 1);
 
-        lua_getglobal(L, "is_macro");
+        lua_getglobal(L, "require");
+        lua_pushstring(L, "sk_definition_writer");
+        lua_call(L, 1, 1);
+
+        lua_getfield(L, -1, "is_macro");
+        // remove sk_definition_writer module
+        lua_remove(L, -2);
+
         lua_pushnil(L);
         lua_copy(L, -3, -1);
         lua_call(L, 1, 1);
@@ -116,8 +131,8 @@ std::unique_ptr<DataChunk> buildDataChunk(lua_State* L) {
     }
 
     if (type == LUA_TUSERDATA) {
-        if (luaIsLazyVector3DArray(L, -1)) {
-            struct aiVector3DArray* array = (struct aiVector3DArray*)lua_touserdata(L, -1);
+        if (luaIsLazyVector3DArray<aiVector3D>(L, -1)) {
+            struct LazyVectorWithLength<aiVector3D>* array = (struct LazyVectorWithLength<aiVector3D>*)lua_touserdata(L, -1);
 
             std::unique_ptr<StructureDataChunk> result(new StructureDataChunk());
 
@@ -172,8 +187,20 @@ int luaAddHeader(lua_State* L) {
 bool dumpDefinitions(lua_State* L, CFileDefinition& fileDef, const char* filename) {
     int topStart = lua_gettop(L);
 
-    lua_getglobal(L, "consume_pending_definitions");
-    int errcode = lua_pcall(L, 0, 1, 0);
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "sk_definition_writer");
+
+    int errcode = lua_pcall(L, 1, 1, 0);
+
+    int skDefinitionWriter = lua_gettop(L);
+
+    if (checkLuaError(L, errcode, filename)) {
+        lua_settop(L, topStart);
+        return false;
+    }
+
+    lua_getfield(L, skDefinitionWriter, "consume_pending_definitions");
+    errcode = lua_pcall(L, 0, 1, 0);
 
     if (checkLuaError(L, errcode, filename)) {
         lua_settop(L, topStart);
@@ -197,7 +224,7 @@ bool dumpDefinitions(lua_State* L, CFileDefinition& fileDef, const char* filenam
         lua_pop(L, 1);
     }
 
-    lua_getglobal(L, "process_definitions");
+    lua_getfield(L, skDefinitionWriter, "process_definitions");
     lua_pushnil(L);
 
     lua_copy(L, definitionArray, -1);
@@ -212,7 +239,7 @@ bool dumpDefinitions(lua_State* L, CFileDefinition& fileDef, const char* filenam
     lua_settop(L, definitionArray);
 
     lua_pushnil(L);  /* first key */
-    while (lua_next(L, topStart + 1) != 0) {
+    while (lua_next(L, definitionArray) != 0) {
         processCFileDefinition(L, fileDef, filename);
         lua_pop(L, 1);
     }
@@ -222,8 +249,30 @@ bool dumpDefinitions(lua_State* L, CFileDefinition& fileDef, const char* filenam
     return true;
 }
 
+int luaAddMacro(lua_State* L) {
+    CFileDefinition* fileDef = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(1));
+    std::string name = fileDef->GetMacroName(luaL_checkstring(L, 1));
+    fileDef->AddMacro(name, luaL_checkstring(L, 2));
+    lua_pushstring(L, name.c_str());
+    return 1;
+}
+
+int luaDefinitonWriterAppend(lua_State* L) {
+    int moduleIndex = luaGetPrevModuleLoader(L);
+    CFileDefinition* fileDef = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(2));
+    
+    lua_pushlightuserdata(L, fileDef);
+    lua_pushcclosure(L, luaAddHeader, 1);
+    lua_setfield(L, moduleIndex, "add_header");
+
+    lua_pushlightuserdata(L, fileDef);
+    lua_pushcclosure(L, luaAddMacro, 1);
+    lua_setfield(L, moduleIndex, "add_macro");
+
+    return 1;
+}
+
 void populateLuaDefinitionWrite(lua_State* L, CFileDefinition& fileDef) {
     lua_pushlightuserdata(L, &fileDef);
-    lua_pushcclosure(L, luaAddHeader, 1);
-    lua_setglobal(L, "add_header");
+    luaChainModuleLoader(L, "sk_definition_writer", luaDefinitonWriterAppend, 1);
 }

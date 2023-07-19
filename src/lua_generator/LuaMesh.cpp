@@ -1,3 +1,5 @@
+/// @module sk_mesh
+
 #include "LuaMesh.h"
 
 #include "../definition_generator/MeshDefinitionGenerator.h"
@@ -9,9 +11,11 @@
 
 #include "./LuaGeometry.h"
 #include "./LuaTransform.h"
+#include "./LuaUtils.h"
 
+template <typename T>
 int luaGetVector3ArrayElement(lua_State* L) {
-    struct aiVector3DArray* array = (struct aiVector3DArray*)luaL_checkudata(L, 1, "aiVector3DArray");
+    struct LazyVectorWithLength<T>* array = (struct LazyVectorWithLength<T>*)luaL_checkudata(L, 1, luaGetVectorName<T>().c_str());
     int index = luaL_checkinteger(L, 2);
 
     if (index <= 0 || index > array->length) {
@@ -24,13 +28,14 @@ int luaGetVector3ArrayElement(lua_State* L) {
     return 1;
 }
 
+template <typename T>
 int luaSetVector3ArrayElement(lua_State* L) {
     lua_settop(L, 3);
     
-    aiVector3D value;
+    T value;
     fromLua(L, value);
 
-    struct aiVector3DArray* array = (struct aiVector3DArray*)luaL_checkudata(L, 1, "aiVector3DArray");
+    struct LazyVectorWithLength<T>* array = (struct LazyVectorWithLength<T>*)luaL_checkudata(L, 1, luaGetVectorName<T>().c_str());
     int index = luaL_checkinteger(L, 2);
 
     if (index <= 0 || index > array->length) {
@@ -42,36 +47,83 @@ int luaSetVector3ArrayElement(lua_State* L) {
     return 0;
 }
 
+template <typename T>
 int luaGetVector3ArrayLength(lua_State* L) {
-    struct aiVector3DArray* array = (struct aiVector3DArray*)luaL_checkudata(L, 1, "aiVector3DArray");
+    struct LazyVectorWithLength<T>* array = (struct LazyVectorWithLength<T>*)luaL_checkudata(L, 1, luaGetVectorName<T>().c_str());
     lua_pushinteger(L, array->length);
     return 1;
 }
 
-void toLuaLazyArray(lua_State* L, aiVector3D* vertices, unsigned count) {
-    struct aiVector3DArray* result = (struct aiVector3DArray*)lua_newuserdata(L, sizeof(struct aiVector3DArray));
+template <typename T>
+int luaVector3ArrayNext(lua_State* L) {
+    struct LazyVectorWithLength<T>* array = (struct LazyVectorWithLength<T>*)luaL_checkudata(L, 1, luaGetVectorName<T>().c_str());
+
+    if (lua_isnil(L, 2)) {
+        if (array->length) {
+            lua_pushinteger(L, 1);
+            toLua(L, array->vertices[0]);
+            return 2;
+        }
+
+        lua_pushnil(L);
+        return 1;
+    }
+
+    if (lua_isinteger(L, 2)) {
+        int current = lua_tointeger(L, 2);
+
+        if (array->length <= current) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        lua_pushinteger(L, current + 1);
+        toLua(L, array->vertices[current]);
+        return 2;
+    }
+
+    lua_pushnil(L);
+    return 1;
+}
+
+template <typename T>
+int luaVector3ArrayPairs(lua_State* L) {
+    lua_pushcfunction(L, luaVector3ArrayNext<T>);
+    lua_pushnil(L);
+    lua_copy(L, 1, -1);
+    lua_pushnil(L);
+    return 3;
+}
+
+template <typename T>
+void toLuaLazyArray(lua_State* L, T* vertices, unsigned count) {
+    struct LazyVectorWithLength<T>* result = (struct LazyVectorWithLength<T>*)lua_newuserdata(L, sizeof(struct LazyVectorWithLength<T>));
 
     result->vertices = vertices;
     result->length = count;
 
-    if(luaL_newmetatable(L, "aiVector3DArray")) {
-        lua_pushcfunction(L, luaGetVector3ArrayElement);
+    if(luaL_newmetatable(L, luaGetVectorName<T>().c_str())) {
+        lua_pushcfunction(L, luaGetVector3ArrayElement<T>);
         lua_setfield(L, -2, "__index");
 
-        lua_pushcfunction(L, luaSetVector3ArrayElement);
+        lua_pushcfunction(L, luaSetVector3ArrayElement<T>);
         lua_setfield(L, -2, "__newindex");
 
-        lua_pushcfunction(L, luaGetVector3ArrayLength);
+        lua_pushcfunction(L, luaGetVector3ArrayLength<T>);
         lua_setfield(L, -2, "__len");
+
+        lua_pushcfunction(L, luaVector3ArrayPairs<T>);
+        lua_setfield(L, -2, "__pairs");
     }
 
     lua_setmetatable(L, -2);
 }
 
-bool luaIsLazyVector3DArray(lua_State* L, int index) {
-    return luaL_testudata(L, index, "aiVector3DArray");
-}
-
+/***
+ @table Material
+ @tfield string name
+ @tfield string macro_name
+ */
 void toLua(lua_State* L, Material* material) {
     if (!material) {
         lua_pushnil(L);
@@ -80,7 +132,7 @@ void toLua(lua_State* L, Material* material) {
 
     lua_createtable(L, 1, 0);
 
-    lua_getglobal(L, "Material");
+    luaLoadModuleFunction(L, "sk_mesh", "Material");
     lua_setmetatable(L, -2);
 
     toLua(L, material->mName);
@@ -88,6 +140,13 @@ void toLua(lua_State* L, Material* material) {
 
     toLua(L, MaterialGenerator::MaterialIndexMacroName(material->mName));
     lua_setfield(L, -2, "macro_name");
+
+    lua_createtable(L, 0, material->mProperties.size());
+    for (auto it : material->mProperties) {
+        toLua(L, it.second);
+        lua_setfield(L, -2, it.first.c_str());
+    }
+    lua_setfield(L, -2, "properties");
 
     lua_pushlightuserdata(L, material);
     lua_setfield(L, -2, "ptr");
@@ -129,10 +188,21 @@ int luaTransformMesh(lua_State* L) {
     return 1;
 }
 
+/***
+ @table Mesh
+ @tfield string name
+ @tfield bb sk_math.Box3
+ @tfield sk_transform.Transform transform
+ @tfield {sk_math.Vector3,...} vertices
+ @tfield {sk_math.Vector3,...} normals
+ @tfield {{number,number,number},...} faces
+ @tfield Material material
+ */
+
 void meshToLua(lua_State* L, std::shared_ptr<ExtendedMesh> mesh) {
     lua_createtable(L, 0, 1);
     
-    lua_getglobal(L, "Mesh");
+    luaLoadModuleFunction(L, "sk_mesh", "Mesh");
     lua_setmetatable(L, -2);
 
     toLua(L, mesh);
@@ -141,23 +211,44 @@ void meshToLua(lua_State* L, std::shared_ptr<ExtendedMesh> mesh) {
     toLua(L, mesh->mMesh->mName.C_Str());
     lua_setfield(L, -2, "name");
 
-    toLua(L, mesh->bbMin);
-    lua_setfield(L, -2, "bbMin");
-
-    toLua(L, mesh->bbMax);
-    lua_setfield(L, -2, "bbMax");
+    toLua(L, aiAABB(mesh->bbMin, mesh->bbMax));
+    lua_setfield(L, -2, "bb");
 
     lua_pushcfunction(L, luaTransformMesh);
     lua_setfield(L, -2, "transform");
 
-    toLuaLazyArray(L, mesh->mMesh->mVertices, mesh->mMesh->mNumVertices);
+    toLuaLazyArray<aiVector3D>(L, mesh->mMesh->mVertices, mesh->mMesh->mNumVertices);
     lua_setfield(L, -2, "vertices");
 
-    toLuaLazyArray(L, mesh->mMesh->mNormals, mesh->mMesh->mNumVertices);
+    toLuaLazyArray<aiVector3D>(L, mesh->mMesh->mNormals, mesh->mMesh->mNumVertices);
     lua_setfield(L, -2, "normals");
 
     toLua(L, mesh->mMesh->mFaces, mesh->mMesh->mNumFaces);
     lua_setfield(L, -2, "faces");
+
+    lua_createtable(L, AI_MAX_NUMBER_OF_COLOR_SETS, 0);
+    for (int i = 0; i < AI_MAX_NUMBER_OF_COLOR_SETS; ++i) {
+        if (!mesh->mMesh->mColors[i]) {
+            mesh->mMesh->mColors[i] = new aiColor4D[mesh->mMesh->mNumVertices];
+
+            for (unsigned vertexIndex = 0; vertexIndex < mesh->mMesh->mNumVertices; ++vertexIndex) {
+                mesh->mMesh->mColors[i][vertexIndex] = aiColor4D(1.0, 1.0, 1.0, 1.0);
+            }
+        }
+        toLuaLazyArray<aiColor4D>(L, mesh->mMesh->mColors[i], mesh->mMesh->mNumVertices);
+        lua_seti(L, -2, i + 1);
+    }
+    lua_setfield(L, -2, "colors");
+
+    if (mesh->mMesh->mMaterialIndex >= 0 && mesh->mMesh->mMaterialIndex < gLuaCurrentScene->mNumMaterials) {
+        auto material = gLuaCurrentSettings->mMaterials.find(gLuaCurrentScene->mMaterials[mesh->mMesh->mMaterialIndex]->GetName().C_Str());
+
+        if (material != gLuaCurrentSettings->mMaterials.end()) {
+            toLua(L, material->second.get());
+            lua_setfield(L, -2, "material");
+        }
+    }
+
 }
 
 void meshFromLua(lua_State* L, std::shared_ptr<ExtendedMesh>& mesh) {
@@ -175,6 +266,15 @@ void fromLua(lua_State*L, Bone *& bone) {
     bone = (Bone*)lua_touserdata(L, -1);
     lua_pop(L, 1);
 }
+
+/***
+ @table RenderChunk
+ @tfield {Bone,Bone} bone_pair
+ @tfield Mesh mesh
+ @tfield sk_scene.Node meshRoot
+ @tfield number attached_dl_index
+ @tfield Material material
+ */
 
 void toLua(lua_State* L, const RenderChunk& renderChunk) {
     lua_createtable(L, 0, 5);
@@ -216,6 +316,13 @@ void fromLua(lua_State* L, RenderChunk& result) {
     lua_pop(L, 1);
 }
 
+/***
+ generate runder chunks for a node
+ @function generate_render_chunks
+ @tparam sk_scene.Node node
+ @treturn {RenderChunk,...} result
+ */
+
 int luaBuildRenderChunks(lua_State* L) {
     const aiScene* scene = (const aiScene*)lua_touserdata(L, lua_upvalueindex(1));
     CFileDefinition* fileDefinition = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(2));
@@ -237,6 +344,13 @@ int luaBuildRenderChunks(lua_State* L) {
     return 1;
 }
 
+/*** 
+Generates a mesh
+@function generate_mesh
+@tparam {RenderChunk,...} renderChunks
+@tparam string file suffix where the mesh definition is written to
+@tparam[opt] DisplayListOverrides changes to the display list
+ */
 int luaGenerateMesh(lua_State* L) {
     const aiScene* scene = (const aiScene*)lua_touserdata(L, lua_upvalueindex(1));
     CFileDefinition* fileDefinition = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(2));
@@ -267,22 +381,97 @@ int luaGenerateMesh(lua_State* L) {
     return 1;
 }
 
-void populateLuaMesh(lua_State* L, const aiScene* scene, CFileDefinition& fileDefinition, const DisplayListSettings& settings) {
-    lua_newtable(L);
-    lua_setglobal(L, "Material");
+/***
+ Generates a vertex buffer for a given mesh and material pair
+ Materials are important since it will determine if the vertex
+ buffer uses normals or colors and the size of the texture
+ used for calculated uv coordinates
+ @function generate_vertex_buffer
+ @tparam Mesh mesh
+ @tparam[opt] Material material
+ @tparam[opt] string file_suffix defaults to "_geo"
+ */
+int luaGetMeshVertexBuffer(lua_State* L) {
+    CFileDefinition* fileDefinition = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(1));
+
+    int nArgs = lua_gettop(L);
+
+    if (nArgs > 3) {
+        lua_settop(L, 3);
+        nArgs = 3;
+    }
+
+    std::string suffix;
+
+    if (nArgs == 3) {
+        fromLua(L, suffix);
+        --nArgs;
+    } else {
+        suffix = "_geo";
+    }
+
+    Material* material = nullptr;
+
+    if (nArgs == 2) {
+        fromLua(L, material);
+    }
+
+    std::shared_ptr<ExtendedMesh> mesh;
+    meshFromLua(L, mesh);
+
+
+    std::string result = fileDefinition->GetVertexBuffer(
+        mesh, 
+        Material::GetVertexType(material), 
+        Material::TextureWidth(material), 
+        Material::TextureHeight(material), 
+        suffix,
+        material->mDefaultVertexColor
+    );
+
+    luaLoadModuleFunction(L, "sk_definition_writer", "raw");
+    toLua(L, result);
+    lua_call(L, 1, 1);
+
+    return 1;
+}
+
+int buildMeshModule(lua_State* L) {
+    aiScene* scene = (aiScene*)lua_touserdata(L, lua_upvalueindex(1));
+    CFileDefinition* fileDefinition = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(2));
+    DisplayListSettings* settings = (DisplayListSettings*)lua_touserdata(L, lua_upvalueindex(3));
 
     lua_newtable(L);
-    lua_setglobal(L, "Mesh");
 
-    lua_pushlightuserdata(L, const_cast<aiScene*>(scene));
-    lua_pushlightuserdata(L, &fileDefinition);
-    lua_pushlightuserdata(L, const_cast<DisplayListSettings*>(&settings));
+    lua_newtable(L);
+    lua_setfield(L, -2, "Material");
+
+    lua_newtable(L);
+    lua_setfield(L, -2, "Mesh");
+
+    lua_pushlightuserdata(L, scene);
+    lua_pushlightuserdata(L, fileDefinition);
+    lua_pushlightuserdata(L, settings);
     lua_pushcclosure(L, luaBuildRenderChunks, 3);
-    lua_setglobal(L, "generate_render_chunks");
+    lua_setfield(L, -2, "generate_render_chunks");
 
+    lua_pushlightuserdata(L, scene);
+    lua_pushlightuserdata(L, fileDefinition);
+    lua_pushlightuserdata(L, settings);
+    lua_pushcclosure(L, luaGenerateMesh, 3);
+    lua_setfield(L, -2, "generate_mesh");
+
+    lua_pushlightuserdata(L, fileDefinition);
+    lua_pushcclosure(L, luaGetMeshVertexBuffer, 1);
+    lua_setfield(L, -2, "generate_vertex_buffer");
+
+    return 1;
+}
+
+void populateLuaMesh(lua_State* L, const aiScene* scene, CFileDefinition& fileDefinition, const DisplayListSettings& settings) {
     lua_pushlightuserdata(L, const_cast<aiScene*>(scene));
     lua_pushlightuserdata(L, &fileDefinition);
     lua_pushlightuserdata(L, const_cast<DisplayListSettings*>(&settings));
-    lua_pushcclosure(L, luaGenerateMesh, 3);
-    lua_setglobal(L, "generate_mesh");
+    lua_pushcclosure(L, buildMeshModule, 3);
+    luaSetModuleLoader(L, "sk_mesh");
 }

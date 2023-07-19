@@ -1,10 +1,11 @@
-/// Scene functions
+// docs for this file are located in sk_scene.lua
 
 #include "LuaScene.h"
 
 #include "LuaBasicTypes.h"
 #include "LuaTransform.h"
 #include "LuaMesh.h"
+#include "LuaUtils.h"
 #include <iostream>
 
 #include "../definition_generator/MeshDefinitionGenerator.h"
@@ -22,18 +23,91 @@ aiMatrix4x4 nodeFullTrasformation(lua_State* L, const aiNode* node) {
         node = node->mParent;
     }
 
-    lua_getglobal(L, "settings");
-    lua_getfield(L, -1, "model_transform");
-
-    aiMatrix4x4* modelTransform = (aiMatrix4x4*)lua_touserdata(L, -1);
-
-    lua_pop(L, 2);
-
-    return (*modelTransform) * result;
+    return (gLuaCurrentSettings->CreateCollisionTransform()) * result;
 }
 
 void luaGetMeshByIndex(lua_State* L, int indexAt0) {
     meshToLua(L, gLuaCurrentFileDefinition->GetExtendedMesh(gLuaCurrentScene->mMeshes[indexAt0]));
+}
+
+int luaNodeToString(lua_State* L) {
+    lua_getfield(L, 1, "ptr");
+
+    aiNode* node = (aiNode*)lua_touserdata(L, -1);
+
+    std::ostringstream result;
+    result << "aiNode: name=" << node->mName.C_Str();
+
+    lua_pop(L, 1);
+    lua_pushstring(L, result.str().c_str());
+
+    return 1;
+}
+
+void toLua(lua_State* L, const aiVectorKey& positionKey) {
+    lua_newtable(L);
+    int tableIndex = lua_gettop(L);
+
+    toLua(L, positionKey.mTime);
+    lua_setfield(L, tableIndex, "time");
+
+    toLua(L, positionKey.mValue);
+    lua_setfield(L, tableIndex, "value");
+}
+
+void toLua(lua_State* L, const aiQuatKey& quatKey) {
+    lua_newtable(L);
+    int tableIndex = lua_gettop(L);
+
+    toLua(L, quatKey.mTime);
+    lua_setfield(L, tableIndex, "time");
+
+    toLua(L, quatKey.mValue);
+    lua_setfield(L, tableIndex, "value");
+}
+
+void toLua(lua_State* L, const aiNodeAnim* channel) {
+    if (!channel) {
+        lua_pushnil(L);
+        return;
+    }
+
+    lua_newtable(L);
+    int tableIndex = lua_gettop(L);
+
+    toLua(L, channel->mNodeName.C_Str());
+    lua_setfield(L, tableIndex, "node_name");
+
+    toLua(L, channel->mPositionKeys, channel->mNumPositionKeys);
+    lua_setfield(L, tableIndex, "position_keys");
+
+    toLua(L, channel->mRotationKeys, channel->mNumRotationKeys);
+    lua_setfield(L, tableIndex, "rotation_keys");
+
+    toLua(L, channel->mScalingKeys, channel->mNumScalingKeys);
+    lua_setfield(L, tableIndex, "scaling_keys");
+}
+
+void toLua(lua_State* L, const aiAnimation* animation) {
+    if (!animation) {
+        lua_pushnil(L);
+        return;
+    }
+
+    lua_newtable(L);
+    int tableIndex = lua_gettop(L);
+
+    toLua(L, animation->mName.C_Str());
+    lua_setfield(L, tableIndex, "name");
+
+    toLua(L, animation->mDuration);
+    lua_setfield(L, tableIndex, "duration");
+
+    toLua(L, animation->mTicksPerSecond);
+    lua_setfield(L, tableIndex, "ticks_per_second");
+
+    toLua(L, animation->mChannels, animation->mNumChannels);
+    lua_setfield(L, tableIndex, "channels");
 }
 
 void toLua(lua_State* L, const aiNode* node) {
@@ -43,7 +117,7 @@ void toLua(lua_State* L, const aiNode* node) {
     }
 
     // check if node ia already built in the cache
-    lua_getglobal(L, "node_cache");
+    lua_getglobal(L, "__sk_scene_node_cache__");
     int nodeCache = lua_gettop(L);
     lua_pushlightuserdata(L, const_cast<aiNode*>(node));
     lua_gettable(L, nodeCache);
@@ -56,7 +130,12 @@ void toLua(lua_State* L, const aiNode* node) {
 
     lua_createtable(L, 0, 1);
     int tableIndex = lua_gettop(L);
-    luaL_getmetatable(L, "aiNode");
+    
+    if (luaL_newmetatable(L, "aiNode")) {
+        lua_pushcfunction(L, luaNodeToString);
+        lua_setfield(L, -2, "__tostring");
+    }
+
     lua_setmetatable(L, tableIndex);
 
     lua_pushlightuserdata(L, const_cast<aiNode*>(node));
@@ -165,12 +244,11 @@ void toLua(lua_State* L, const aiScene* scene, CFileDefinition& fileDefinition) 
         lua_seti(L, -2, i + 1);
     }
     lua_setfield(L, tableIndex, "meshes");
+
+    toLua(L, scene->mAnimations, scene->mNumAnimations);
+    lua_setfield(L, tableIndex, "animations");
 }
 
-/***
-Generates mesh and animation data from the current scene
-@function export_default_mesh
- */
 int luaExportDefaultMesh(lua_State* L) {
     const aiScene* scene = (const aiScene*)lua_touserdata(L, lua_upvalueindex(1));
     CFileDefinition* fileDefinition = (CFileDefinition*)lua_touserdata(L, lua_upvalueindex(2));
@@ -178,19 +256,31 @@ int luaExportDefaultMesh(lua_State* L) {
 
     std::cout << "Generating mesh definitions" << std::endl;
     MeshDefinitionResults results = (*meshGenerator)->GenerateDefinitionsWithResults(scene, *fileDefinition);
-    
 
-    lua_createtable(L, 0, 2);
-
-    lua_getglobal(L, "raw");
     toLua(L, results.modelName);
-    lua_call(L, 1, 1);
-    lua_setfield(L, -2, "model");
-
-    lua_getglobal(L, "raw");
     toLua(L, results.materialMacro);
-    lua_call(L, 1, 1);
-    lua_setfield(L, -2, "material");
+
+    return 2;
+}
+
+int luaSceneAppendModule(lua_State* L) {
+    int moduleIndex = luaGetPrevModuleLoader(L);
+
+    std::shared_ptr<MeshDefinitionGenerator> meshGenerator(new MeshDefinitionGenerator(*gLuaCurrentSettings));
+    meshGenerator->TraverseScene(gLuaCurrentScene);
+    meshGenerator->PopulateBones(gLuaCurrentScene, *gLuaCurrentFileDefinition);
+
+    lua_newtable(L);
+    lua_setglobal(L, "__sk_scene_node_cache__");
+
+    toLua(L, gLuaCurrentScene, *gLuaCurrentFileDefinition);
+    lua_setfield(L, moduleIndex, "scene");
+
+    lua_pushlightuserdata(L, const_cast<aiScene*>(gLuaCurrentScene));
+    lua_pushlightuserdata(L, gLuaCurrentFileDefinition);
+    toLua(L, meshGenerator);
+    lua_pushcclosure(L, luaExportDefaultMesh, 3);
+    lua_setfield(L, moduleIndex, "export_default_mesh");
 
     return 1;
 }
@@ -200,20 +290,5 @@ void populateLuaScene(lua_State* L, const aiScene* scene, CFileDefinition& fileD
     gLuaCurrentFileDefinition = &fileDefinition;
     gLuaCurrentSettings = &settings;
 
-    std::shared_ptr<MeshDefinitionGenerator> meshGenerator(new MeshDefinitionGenerator(settings));
-    meshGenerator->TraverseScene(scene);
-    meshGenerator->PopulateBones(scene, fileDefinition);
-
-
-    lua_newtable(L);
-    lua_setglobal(L, "node_cache");
-
-    toLua(L, scene, fileDefinition);
-    lua_setglobal(L, "scene");
-
-    lua_pushlightuserdata(L, const_cast<aiScene*>(scene));
-    lua_pushlightuserdata(L, &fileDefinition);
-    toLua(L, meshGenerator);
-    lua_pushcclosure(L, luaExportDefaultMesh, 3);
-    lua_setglobal(L, "export_default_mesh");
+    luaChainModuleLoader(L, "sk_scene", luaSceneAppendModule, 0);
 }
