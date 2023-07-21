@@ -4,6 +4,7 @@ local Vector3 = {}
 local Box3 = {}
 local Quaternion = {}
 local Color4 = {}
+local Plane3 = {}
 
 --- creates a new 3d vector
 --- @function vector3
@@ -67,6 +68,24 @@ end
 --- @treturn boolean
 local function isQuaternion(obj)
     return type(obj) == 'table' and type(obj.x) == 'number' and type(obj.y) == 'number' and type(obj.z) == 'number' and type(obj.w) == 'number'
+end
+
+--- creates a new Plane3
+--- @function plane3
+--- @tparam Vector3 normal the normal of the plane
+--- @tparam number d the distance to the origin
+--- @treturn Plane3
+local function plane3(normal, d) 
+    return setmetatable({ normal = normal, d = d }, Plane3)
+end
+
+--- creates a new Plane3 using a point and a normal
+--- @function plane3
+--- @tparam Vector3 normal the normal of the plane
+--- @tparam Vector3 point a point on the plane
+--- @treturn Plane3
+local function plane3_with_point(normal, point) 
+    return setmetatable({ normal = normal, d = -normal:dot(point) }, Plane3)
 end
 
 --- @type Vector3
@@ -543,6 +562,15 @@ function Color4.lerp(a, b, lerp)
     return a * (1 - lerp) + b * lerp
 end
 
+--- @type Plane3
+--- @tfield Vector3 normal
+--- @tfield number d
+Plane3.__index = Plane3;
+
+function Plane3.distance_to_point(plane, point)
+    return plane.normal:dot(point) + plane.d
+end
+
 return {
     vector3 = vector3,
     Vector3 = Vector3,
@@ -555,4 +583,7 @@ return {
     isQuaternion = isQuaternion,
     color4 = color4,
     isColor4 = isColor4,
+    plane3 = plane3,
+    plane3_with_point = plane3_with_point,
+    Plane3 = Plane3,
 }
