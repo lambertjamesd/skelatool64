@@ -719,7 +719,7 @@ std::shared_ptr<TextureDefinition> TextureDefinition::Crop(int x, int y, int w, 
 
 std::shared_ptr<TextureDefinition> TextureDefinition::Resize(int w, int h) const {
     return std::shared_ptr<TextureDefinition>(new TextureDefinition(
-        new CImgu8(mImg->mImg.get_resize(w, h, 0, 0, 5)),
+        new CImgu8(mImg->mImg.get_resize(w, h, -100, -100, 5)),
         mName,
         mFmt,
         mSiz,

@@ -146,6 +146,21 @@ int luaTextureCrop(lua_State* L) {
     return 1;
 }
 
+int luaTextureResize(lua_State* L) {
+    int w = luaL_checkinteger(L, 2);
+    int h = luaL_checkinteger(L, 3);
+
+    lua_settop(L, 1);
+
+    std::shared_ptr<TextureDefinition> texture;
+    textureFromLua(L, texture);
+
+    std::shared_ptr<TextureDefinition> result = texture->Resize(w, h);
+    textureToLua(L, result);
+
+    return 1;
+}
+
 int luaTextureData(lua_State* L) {
     lua_settop(L, 1);
 
@@ -574,6 +589,9 @@ int buildMeshModule(lua_State* L) {
 
     lua_pushcfunction(L, luaTextureCrop);
     lua_setfield(L, -2, "crop");
+
+    lua_pushcfunction(L, luaTextureResize);
+    lua_setfield(L, -2, "resize");
 
     lua_pushcfunction(L, luaTextureData);
     lua_setfield(L, -2, "get_data");
