@@ -164,6 +164,12 @@ int luaTextureResize(lua_State* L) {
 int luaTextureData(lua_State* L) {
     lua_settop(L, 1);
 
+    if (lua_isnil(L, 1)) {
+        lua_pushstring(L, "call to get_data had nil as the first paramter");
+        lua_error(L);
+        return 0;
+    }
+
     std::shared_ptr<TextureDefinition> texture;
     textureFromLua(L, texture);
 

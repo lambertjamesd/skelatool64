@@ -708,7 +708,7 @@ std::shared_ptr<PalleteDefinition> TextureDefinition::GetPallete() const {
 
 std::shared_ptr<TextureDefinition> TextureDefinition::Crop(int x, int y, int w, int h) const {
     return std::shared_ptr<TextureDefinition>(new TextureDefinition(
-        new CImgu8(mImg->mImg.get_crop(x, y, w, h)),
+        new CImgu8(mImg->mImg.get_crop(x, y, x + w - 1, y + h - 1)),
         mName,
         mFmt,
         mSiz,

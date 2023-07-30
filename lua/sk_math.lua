@@ -85,6 +85,14 @@ end
 --- @tparam Vector3 point a point on the plane
 --- @treturn Plane3
 local function plane3_with_point(normal, point) 
+    if not isVector3(normal) then
+        error('plane3_with_point expected vector as first operand got ' .. type(b), 2)
+    end
+
+    if not isVector3(point) then
+        error('plane3_with_point expected vector as second operand got ' .. type(b), 2)
+    end
+
     return setmetatable({ normal = normal, d = -normal:dot(point) }, Plane3)
 end
 
@@ -154,6 +162,15 @@ function Vector3.__sub(a, b)
 
     return vector3(a.x - b.x, a.y - b.y, a.z - b.z)
 end
+
+--- @function __unm
+--- @tparam number|Vector3 b
+--- @treturn Vector3
+function Vector3.__unm(a)
+    return vector3(-a.x, -a.y, -a.z)
+end
+
+
 
 --- @function __mul
 --- @tparam number|Vector3 b
@@ -247,6 +264,9 @@ end
 --- @tparam Vector3 b
 --- @treturn number
 function Vector3.dot(a, b)
+    if not isVector3(b) then
+        error('Vector3.dot expected another vector as second operand', 2)
+    end
     return a.x * b.x + a.y * b.y + a.z * b.z
 end
 
@@ -267,6 +287,12 @@ end
 --- @tparam Vector3 b
 --- @treturn Vector3
 function Vector3.lerp(a, b, lerp)
+    if not isVector3(b) then
+        error('Vector3.lerp expected another vector as second operand', 2)
+    end
+    if type(lerp) ~= 'number' then
+        error('Vector3.lerp expected number as third operand', 2)
+    end
     return a * (1 - lerp) + b * lerp
 end
 
